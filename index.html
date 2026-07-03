@@ -335,12 +335,13 @@ const roseTex = canvasTex(512, (g,w,h)=>{
 });
 
 const MAT = {
-  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.55, metalness:.04, envMapIntensity:.5 }),
+  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.48, metalness:.04, envMapIntensity:.62 }),
   ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.4 }),
   gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.26, metalness:1.0, envMapIntensity:1.25 }),
   goldSt: new THREE.MeshStandardMaterial({ color:0xf5c569, roughness:.34, metalness:.95, envMapIntensity:1.0,
             polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 }),
-  pearl:  new THREE.MeshStandardMaterial({ color:0xfdfaf4, roughness:.12, metalness:.15, envMapIntensity:1.4 }),
+  pearl:  new THREE.MeshPhysicalMaterial({ color:0xfdfaf4, roughness:.16, metalness:.1,
+            clearcoat:.85, clearcoatRoughness:.22, envMapIntensity:1.4 }),
   glow:   new THREE.MeshStandardMaterial({ color:0xfff3d2, emissive:0xffd98a, emissiveIntensity:2.1, roughness:.4 }),
   glowHot:new THREE.MeshStandardMaterial({ color:0xfff8e8, emissive:0xffe9b0, emissiveIntensity:3.4, roughness:.3 }),
   crimson:new THREE.MeshStandardMaterial({ color:0xc8502e, roughness:.7, metalness:0,
@@ -396,28 +397,30 @@ const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
 sunSprite.scale.set(230,230,1);
 scene.add(sunSprite);
 
-/* god-ray planes fanned along the sun direction */
+/* god-ray planes fanned along the sun direction — soft, slowly breathing */
 {
-  const mat = new THREE.ShaderMaterial({
+  const grMat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
-    uniforms:{ uOp:{value:.10} },
+    uniforms:{ uOp:{value:.07}, uTime:{value:0} },
     vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
       gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader:`uniform float uOp; varying vec2 vUv;
+    fragmentShader:`uniform float uOp; uniform float uTime; varying vec2 vUv;
       void main(){
         float a = uOp * (1.0-abs(vUv.x*2.0-1.0)) * smoothstep(0.0,0.25,vUv.y) * smoothstep(1.0,0.55,vUv.y);
+        a *= 0.72 + 0.28*sin(uTime*0.35 + vUv.y*4.0 + vUv.x*2.0);
         gl_FragColor = vec4(1.0, 0.90, 0.66, a);
       }`
   });
-  for (let i=0;i<7;i++){
-    const w = rr(16,44);
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, 520, 1, 8), mat);
+  for (let i=0;i<8;i++){
+    const w = rr(26,64);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, 520, 1, 8), grMat);
     const off = rr(-140,140);
     p.position.set(-120+off*.6, 180, 60+off*.4);
     p.lookAt(p.position.clone().add(skyUni.uSunDir.value));
     p.rotateX(PI/2);
     scene.add(p);
   }
+  tickers.push(t => { grMat.uniforms.uTime.value = t; });
 }
 
 /* drifting cloud sprites above + below */
@@ -655,6 +658,17 @@ function bake(){
   wall.castShadow = HIGH; wall.receiveShadow = HIGH;
   wall.frustumCulled = trim.frustumCulled = false;
   scene.add(wall, trim);
+
+  /* gold finials crowning every third wall segment */
+  const finA = keep.filter((_,i)=> i%3===0);
+  const fin = new THREE.InstancedMesh(new THREE.ConeGeometry(.34,1.6,6), MAT.gold, finA.length);
+  finA.forEach((a,i)=>{
+    d.position.set(Math.sin(a)*WALL_R, 9.25, Math.cos(a)*WALL_R);
+    d.rotation.set(0, a, 0); d.updateMatrix();
+    fin.setMatrixAt(i, d.matrix);
+  });
+  fin.frustumCulled = false;
+  scene.add(fin);
 
   for (let k=0;k<12;k++){
     const a = k*PI/6, sx = Math.sin(a), cz = Math.cos(a);
@@ -1195,15 +1209,24 @@ function addBuilding(x,z,ry,big){
     P.white.push(strut);
     addCircle(bx, pz, 1.1);
   }
-  /* clerestory windows on both faces of the long walls */
+  /* clerestory windows seated on both true faces of the long walls,
+     each pane framed in gold tracery */
   for (const s of [-1,1]) for (let wx=48; wx<=80; wx+=5){
-    const wz = s<0 ? Z0 : Z1;
-    P.glow.push(xf(new THREE.PlaneGeometry(1.5,5.2), wx, 11.5, wz - s*.72, s<0?0:PI));
-    P.glow.push(xf(new THREE.PlaneGeometry(1.5,5.2), wx, 11.5, wz + s*.72, s<0?PI:0));
-    const tri1 = new THREE.CircleGeometry(.75,3); tri1.rotateZ(PI/2);
-    P.glow.push(xf(tri1, wx, 14.6, wz - s*.72, s<0?0:PI));
-    const tri2 = new THREE.CircleGeometry(.75,3); tri2.rotateZ(PI/2);
-    P.glow.push(xf(tri2, wx, 14.6, wz + s*.72, s<0?PI:0));
+    const wallC = s<0 ? Z0-.6 : Z1+.6;
+    const inward = s<0 ? 1 : -1;
+    const panes = [
+      { z: wallC + inward*.63, ry: inward>0 ? 0 : PI },   // nave face
+      { z: wallC - inward*.63, ry: inward>0 ? PI : 0 },   // exterior face
+    ];
+    for (const p of panes){
+      const dir = (p.ry===0) ? 1 : -1;
+      P.glow.push(xf(new THREE.PlaneGeometry(1.5,5.2), wx, 11.5, p.z, p.ry));
+      P.gold.push(xf(new THREE.PlaneGeometry(1.82,5.55), wx, 11.5, p.z - dir*.02, p.ry));
+      const tri = new THREE.CircleGeometry(.75,3); tri.rotateZ(PI/2);
+      P.glow.push(xf(tri, wx, 14.6, p.z, p.ry));
+      const triF = new THREE.CircleGeometry(.92,3); triF.rotateZ(PI/2);
+      P.gold.push(xf(triF, wx, 14.62, p.z - dir*.02, p.ry));
+    }
   }
   /* east glory windows behind the altar */
   for (const wz of [CZ-4.5, CZ, CZ+4.5])
@@ -1484,6 +1507,166 @@ function addBuilding(x,z,ry,big){
     glows.push(mkGlow(x,4.9,z,2.4,0xffd98a,.45));
     addCircle(x,z,.55);
   }
+}
+
+/* ================================================================
+   16.5  ORNAMENT & LIFE  (visual pass 2)
+================================================================ */
+{
+  /* gold inlay spokes radiating from the Tree */
+  for (let i=0;i<12;i++){
+    const a = i*PI/6 + PI/12;
+    P.goldSt.push(xf(new THREE.BoxGeometry(.22,.04,11.2), Math.sin(a)*14.2, .05, Math.cos(a)*14.2, a));
+  }
+  /* pearl diamond inlays down the Street of Gold */
+  for (let z=40; z<=80; z+=8)
+    P.pearl.push(xf(new THREE.BoxGeometry(1.5,.03,1.5), 0, .085, z, PI/4));
+
+  /* robed marble statues with gold halos, flanking the holy portals */
+  function addStatue(x,z,ry){
+    P.white.push(xf(new THREE.BoxGeometry(1.0,.9,1.0), x,.45,z, ry));
+    P.gold.push(xf(new THREE.BoxGeometry(1.08,.12,1.08), x,.96,z, ry));
+    P.pearl.push(xf(new THREE.CylinderGeometry(.14,.52,1.8,10), x,1.92,z, ry));
+    P.pearl.push(xf(new THREE.SphereGeometry(.30,10,8), x,2.72,z, ry, 1,.7,1));
+    P.pearl.push(xf(new THREE.SphereGeometry(.17,10,8), x,3.02,z, ry));
+    P.gold.push(xf(new THREE.TorusGeometry(.23,.025,6,18),
+      x - Math.sin(ry)*.14, 3.06, z - Math.cos(ry)*.14, ry));
+    addCircle(x,z,.75);
+  }
+  addStatue(39.9,-10.8,-PI/2); addStatue(39.9,-1.2,-PI/2);   // sanctuary portal
+  addStatue(-8.4,-53.2,0);     addStatue(8.4,-53.2,0);       // throne hall portal
+  addStatue(-8,111,PI);        addStatue(8,111,PI);          // inside the south gate
+  addStatue(-39,2.5,-PI/2);    addStatue(-39,13.5,-PI/2);    // fountain court approach
+
+  /* doves circling the spires */
+  const birdGeo = new THREE.BufferGeometry();
+  birdGeo.setAttribute('position', new THREE.Float32BufferAttribute([
+    0,0,-.22,  0,0,.16,  -.62,.10,.02,
+    0,0,-.22,  .62,.10,.02,  0,0,.16,
+  ],3));
+  birdGeo.computeVertexNormals();
+  const FLOCKS = [
+    { c:[0,44,0],    r:17, n:9, sp:.22 },
+    { c:[7,52,-105], r:20, n:8, sp:.17 },
+    { c:[42,38,-6],  r:13, n:7, sp:.28 },
+  ];
+  const nBirds = FLOCKS.reduce((s,f)=>s+f.n,0);
+  const birds = new THREE.InstancedMesh(birdGeo,
+    new THREE.MeshBasicMaterial({ color:0xe6d2a4, side:THREE.DoubleSide }), nBirds);
+  birds.frustumCulled = false;
+  scene.add(birds);
+  const bd = new THREE.Object3D();
+  tickers.push((t)=>{
+    let bi = 0;
+    for (const f of FLOCKS){
+      for (let i=0;i<f.n;i++){
+        const a = t*f.sp + i/f.n*TAU;
+        bd.position.set(f.c[0]+Math.sin(a)*f.r,
+          f.c[1]+Math.sin(t*.9+i*2.1)*1.6, f.c[2]+Math.cos(a)*f.r);
+        bd.rotation.set(0, a + PI/2, Math.sin(t*7+i*1.7)*.45);
+        bd.scale.set(2.4*(0.65+0.35*Math.abs(Math.sin(t*6+i))), 2.4, 2.4);
+        bd.updateMatrix();
+        birds.setMatrixAt(bi++, bd.matrix);
+      }
+    }
+    birds.instanceMatrix.needsUpdate = true;
+  });
+
+  /* golden petals drifting down around the Tree of Life */
+  const petalTex = canvasTex(64,(g,w,h)=>{
+    g.clearRect(0,0,w,h);
+    g.translate(w/2,h/2); g.rotate(.6);
+    const gr = g.createRadialGradient(0,0,2,0,0,w*.4);
+    gr.addColorStop(0,'rgba(255,224,150,.95)'); gr.addColorStop(1,'rgba(255,214,130,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.ellipse(0,0,w*.38,h*.2,0,0,TAU); g.fill();
+  });
+  const NP = TIER===0 ? 90 : 220;
+  const ppos = new Float32Array(NP*3), pseed = new Float32Array(NP);
+  for (let i=0;i<NP;i++){
+    const a = rng()*TAU, r = 3+Math.sqrt(rng())*20;
+    ppos[i*3]=Math.sin(a)*r; ppos[i*3+1]=0; ppos[i*3+2]=Math.cos(a)*r;
+    pseed[i]=rng()*100;
+  }
+  const pgeo = new THREE.BufferGeometry();
+  pgeo.setAttribute('position', new THREE.BufferAttribute(ppos,3));
+  pgeo.setAttribute('aSeed', new THREE.BufferAttribute(pseed,1));
+  const petalMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false,
+    uniforms:{ uTime:{value:0}, uTex:{value:petalTex} },
+    vertexShader:`attribute float aSeed; uniform float uTime; varying float vA; varying float vR;
+      void main(){
+        vec3 p = position;
+        float fall = mod(aSeed*7.3 + uTime*0.5, 27.0);
+        p.y = 27.5 - fall;
+        p.x += sin(uTime*0.6+aSeed)*1.6;
+        p.z += cos(uTime*0.5+aSeed*1.3)*1.6;
+        vec4 mv = modelViewMatrix*vec4(p,1.0);
+        gl_PointSize = 46.0/max(-mv.z,1.0)*(1.2+0.5*sin(aSeed*3.0));
+        vA = smoothstep(0.0,2.0,p.y)*smoothstep(27.5,25.0,p.y);
+        vR = aSeed;
+        gl_Position = projectionMatrix*mv;
+      }`,
+    fragmentShader:`uniform sampler2D uTex; varying float vA; varying float vR;
+      void main(){
+        vec2 uv = gl_PointCoord - 0.5;
+        float c = cos(vR), s = sin(vR);
+        uv = vec2(uv.x*c-uv.y*s, uv.x*s+uv.y*c) + 0.5;
+        vec4 tx = texture2D(uTex, uv);
+        gl_FragColor = vec4(tx.rgb, tx.a*vA*0.9);
+      }`
+  });
+  const petals = new THREE.Points(pgeo, petalMat);
+  petals.frustumCulled = false;
+  scene.add(petals); particleMeshes.push(petals);
+  tickers.push(t=>{ petalMat.uniforms.uTime.value = t; });
+
+  /* robed citizens walking the avenues in slow procession */
+  const citGeo = mergeGeometries([
+    xf(new THREE.CylinderGeometry(.13,.44,1.55,8), 0,.78,0),
+    xf(new THREE.SphereGeometry(.24,8,6), 0,1.62,0, 0, 1,.7,1),
+    xf(new THREE.SphereGeometry(.145,8,6), 0,1.86,0),
+  ]);
+  const sashGeo = xf(new THREE.TorusGeometry(.30,.035,5,12).rotateX(PI/2), 0,1.02,0);
+  const PATHS = [
+    { kind:'line', a:[-2.6,86], b:[-2.6,30],  v:1.1, off:0 },
+    { kind:'line', a:[2.6,30],  b:[2.6,86],   v:0.9, off:33 },
+    { kind:'line', a:[-2.2,-28],b:[-2.2,-49], v:1.0, off:9 },
+    { kind:'circle', c:[0,0],   r:21.5, v:.055,  off:0 },
+    { kind:'circle', c:[0,0],   r:22.6, v:-.042, off:2.1 },
+    { kind:'circle', c:[0,0],   r:20.6, v:.07,   off:4.4 },
+    { kind:'circle', c:[-52,8], r:12.4, v:.08,   off:1.0 },
+    { kind:'circle', c:[-52,8], r:11.2, v:-.06,  off:3.9 },
+    { kind:'circle', c:[0,100], r:12,   v:.06,   off:.5 },
+    { kind:'line', a:[2.2,84],  b:[2.2,34],   v:1.25, off:61 },
+  ];
+  const cit = new THREE.InstancedMesh(citGeo, MAT.pearl, PATHS.length);
+  const sash = new THREE.InstancedMesh(sashGeo, MAT.gold, PATHS.length);
+  cit.castShadow = HIGH;
+  cit.frustumCulled = sash.frustumCulled = false;
+  scene.add(cit, sash);
+  const cd = new THREE.Object3D();
+  tickers.push((t)=>{
+    PATHS.forEach((p,i)=>{
+      let x,z;
+      if (p.kind==='line'){
+        const dx=p.b[0]-p.a[0], dz=p.b[1]-p.a[1];
+        const L = Math.hypot(dx,dz);
+        let ph = ((t*p.v + p.off) % (2*L)) / L;
+        const u = ph<1 ? ph : 2-ph;
+        x = p.a[0]+dx*u; z = p.a[1]+dz*u;
+      } else {
+        const a = t*p.v + p.off;
+        x = p.c[0]+Math.sin(a)*p.r; z = p.c[1]+Math.cos(a)*p.r;
+      }
+      cd.position.set(x, .04+.035*Math.sin(t*3.1+i*2.3), z);
+      cd.updateMatrix();
+      cit.setMatrixAt(i, cd.matrix);
+      sash.setMatrixAt(i, cd.matrix);
+    });
+    cit.instanceMatrix.needsUpdate = true;
+    sash.instanceMatrix.needsUpdate = true;
+  });
 }
 
 bake();
@@ -1847,7 +2030,10 @@ function animate(){
     f.userData.mat.emissiveIntensity = 1.7 + .8*Math.sin(t*1.35 + f.userData.ph);
     f.userData.glow.material.opacity = .3 + .18*Math.sin(t*1.35 + f.userData.ph);
   }
-  for (const b of banners) b.rotation.z = Math.sin(t*1.1 + b.userData.ph)*.09;
+  for (const b of banners){
+    b.rotation.z = Math.sin(t*1.1 + b.userData.ph)*.09;
+    b.rotation.x = Math.sin(t*0.8 + b.userData.ph*1.7)*.05;
+  }
   for (const w of waterDiscs) w.rotation.y = t*.22;
   for (const f of flames){
     const s = 1 + .16*Math.sin(t*9 + f.position.x);
