@@ -2654,17 +2654,58 @@ function addBuilding(x,z,ry,big){
   for (let z=40; z<=80; z+=8)
     P.pearl.push(xf(new THREE.BoxGeometry(1.5,.03,1.5), 0, .085, z, PI/4));
 
-  /* ---- HERO: robed angel statues with gold halos  (slot: angelStatue) ---- */
+  /* ---- HERO: robed angel statues with gold halos  (slot: angelStatue) ----
+     ASCENT LOOP·1 — the pawns become ANGELS (zoom-out law: the geometry
+     system itself). Lathe drapery with waist and flaring hem, praying
+     hands, notched extruded WINGS swept up behind the shoulders, gold
+     halo/collar/hem. ~1.3k tris per statue; same anchors, same slot —
+     a future GLB still replaces everything. */
   const heroAngel = new THREE.Group(); scene.add(heroAngel);
   const anW = [], anG = [], anP = [], angelAnchors = [];
+  const wingShape = new THREE.Shape();
+  wingShape.moveTo(0, 0);
+  wingShape.quadraticCurveTo(.55, .35, .72, 1.15);
+  wingShape.quadraticCurveTo(.62, 1.32, .46, 1.26);
+  wingShape.lineTo(.42, .96); wingShape.lineTo(.32, 1.00);
+  wingShape.lineTo(.30, .70); wingShape.lineTo(.20, .74);
+  wingShape.lineTo(.18, .44); wingShape.lineTo(.08, .48);
+  wingShape.lineTo(.03, .10);
+  wingShape.closePath();
   function addStatue(x,z,ry){
+    const fx = Math.sin(ry), fz = Math.cos(ry);         /* facing */
+    /* plinth */
     anW.push(xf(new THREE.BoxGeometry(1.0,.9,1.0), x,.45,z, ry));
     anG.push(xf(new THREE.BoxGeometry(1.08,.12,1.08), x,.96,z, ry));
-    anP.push(xf(new THREE.CylinderGeometry(.14,.52,1.8,10), x,1.92,z, ry));
-    anP.push(xf(new THREE.SphereGeometry(.30,10,8), x,2.72,z, ry, 1,.7,1));
-    anP.push(xf(new THREE.SphereGeometry(.17,10,8), x,3.02,z, ry));
-    anG.push(xf(new THREE.TorusGeometry(.23,.025,6,18),
-      x - Math.sin(ry)*.14, 3.06, z - Math.cos(ry)*.14, ry));
+    /* robe — waisted drapery, flaring hem */
+    const robe = new THREE.LatheGeometry([
+      new THREE.Vector2(.06,0), new THREE.Vector2(.52,.03), new THREE.Vector2(.44,.28),
+      new THREE.Vector2(.30,.78), new THREE.Vector2(.26,1.06), new THREE.Vector2(.33,1.28),
+      new THREE.Vector2(.22,1.5), new THREE.Vector2(.12,1.56)
+    ], 16);
+    robe.translate(0,.96,0);
+    anP.push(xf(robe, x,0,z, ry));
+    /* praying hands at the breast */
+    anP.push(xf(new THREE.SphereGeometry(.11,8,6), x + fx*.30, 2.02, z + fz*.30, ry, 1,1.35,.8));
+    /* head + veil knot */
+    anP.push(xf(new THREE.SphereGeometry(.24,12,9), x,2.66,z, ry, 1,.85,1));
+    anP.push(xf(new THREE.SphereGeometry(.13,8,6), x - fx*.06, 2.88, z - fz*.06, ry));
+    /* gold collar + hem band */
+    anG.push(xf(new THREE.TorusGeometry(.26,.035,6,16).rotateX(PI/2), x,2.42,z, ry));
+    anG.push(xf(new THREE.TorusGeometry(.50,.04,6,18).rotateX(PI/2), x,1.02,z, ry));
+    /* WINGS — notched silhouettes swept up behind the shoulders */
+    for (const s of [-1, 1]){
+      const wg = new THREE.ExtrudeGeometry(wingShape, {
+        depth:.07, bevelEnabled:true, bevelThickness:.02, bevelSize:.02,
+        bevelSegments:1, curveSegments:8 });
+      wg.scale(s, 1, 1);                                 /* mirror pair */
+      wg.rotateZ(s * -.24);                              /* sweep outward */
+      wg.rotateY(ry + PI);                               /* trail behind the back */
+      wg.translate(x - fx*.26 + Math.cos(ry)*s*.16, 2.05, z - fz*.26 - Math.sin(ry)*s*.16);
+      anW.push(wg);
+    }
+    /* halo */
+    anG.push(xf(new THREE.TorusGeometry(.24,.028,6,18),
+      x - fx*.14, 3.02, z - fz*.14, ry));
     addCircle(x,z,.75);
     angelAnchors.push({ x, y:0, z, ry });
   }
@@ -2675,11 +2716,24 @@ function addBuilding(x,z,ry,big){
   addStatue(13.8,13.8,-PI*.75);  addStatue(-13.8,13.8,PI*.75);   // tree plaza, facing the Tree
   addStatue(13.8,-13.8,-PI*.25); addStatue(-13.8,-13.8,PI*.25);
   addStatue(14.2,100,-PI/2);     addStatue(-14.2,100,PI/2);      // gate plaza flanks
-  const anWM = new THREE.Mesh(mergeGeometries(anW), MAT.white);
+  addStatue(5.2,-76.5,0);        addStatue(-5.2,-76.5,0);        // LOOP·1: dais guardians
+
+  /* ASCENT LOOP·1 — the Throne Hall's blank drum gains a blind arcade:
+     interior pilaster ribs with gold capitals, skipping the entrance
+     arc. Pushed into P: zero new draw calls. */
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6 + PI/12;
+    if (angDiff(a, 0) < .5) continue;                 /* the entrance keeps its arch */
+    const px2 = Math.sin(a)*15.8, pz2 = -72 + Math.cos(a)*15.8;
+    P.white.push(xf(new THREE.BoxGeometry(.55, 10.6, .8), px2, 5.3, pz2, a));
+    P.gold.push(xf(new THREE.BoxGeometry(.72, .4, .95), px2, 10.8, pz2, a));
+    P.gold.push(xf(new THREE.BoxGeometry(.66, .3, .9), px2, .95, pz2, a));
+  }
+  const anWM = new THREE.Mesh(mergeGeometries(anW.map(g=> g.index ? g.toNonIndexed() : g)), MAT.white);
   anWM.castShadow = SHADOWS; anWM.receiveShadow = SHADOWS;
-  const anGM = new THREE.Mesh(mergeGeometries(anG), MAT.gold);
+  const anGM = new THREE.Mesh(mergeGeometries(anG.map(g=> g.index ? g.toNonIndexed() : g)), MAT.gold);
   anGM.castShadow = SHADOWS; anGM.receiveShadow = SHADOWS;
-  const anPM = new THREE.Mesh(mergeGeometries(anP), MAT.pearl);
+  const anPM = new THREE.Mesh(mergeGeometries(anP.map(g=> g.index ? g.toNonIndexed() : g)), MAT.pearl);
   anPM.receiveShadow = SHADOWS;
   heroAngel.add(anWM, anGM, anPM);
   registerHero('angelStatue', heroAngel, angelAnchors);
