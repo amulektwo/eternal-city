@@ -749,14 +749,16 @@ const cloudSprites = [];
   const nLow = TIER===0 ? 12 : 28, nHigh = TIER===0 ? 6 : 14;
   for (let i=0;i<nLow;i++)  mkCloud(rr(190,430), rr(-46,-24), rr(60,130), rr(.85,1.0));
   for (let i=0;i<nHigh;i++) mkCloud(rr(120,520), rr(130,240), rr(90,180), rr(.35,.6));
-  /* a rolling bank beyond the rim so the edge always shows cloud */
+  /* a rolling bank beyond the rim — WISPS above the sea, not a curtain
+     (ASCENT PASS 3: the old opacity .9-1.0 bank was a featureless white
+     wall at eye level that hid the sculpted sea discs behind it) */
   for (let i=0;i<16;i++){
     const a = i/16*TAU + rr(-.1,.1);
-    const r = rr(175,240);
+    const r = rr(185,260);
     const m = new THREE.Sprite(new THREE.SpriteMaterial({
-      map:cloudTexSprite, color:0xfffdf6, transparent:true, opacity:rr(.9,1.0), depthWrite:false }));
-    m.position.set(Math.sin(a)*r, rr(-34,-20), Math.cos(a)*r);
-    m.scale.set(rr(55,95), rr(24,40), 1);
+      map:cloudTexSprite, color:0xfffdf6, transparent:true, opacity:rr(.30,.5), depthWrite:false }));
+    m.position.set(Math.sin(a)*r, rr(-46,-30), Math.cos(a)*r);
+    m.scale.set(rr(48,82), rr(18,30), 1);
     m.userData = { a, r, sp: rr(.003,.008)*(rng()<.5?1:-1) };
     scene.add(m); cloudSprites.push(m);
   }
@@ -794,6 +796,48 @@ const seaMeshes = [];
   const m2 = new THREE.Mesh(g2, mat(.85, 0xfff6e2)); m2.position.y = -47;
   m1.frustumCulled = m2.frustumCulled = false;
   scene.add(m1, m2); seaMeshes.push(m1, m2);
+  /* ASCENT PASS 3 — the NEAR sea: a higher, high-contrast ring lapping
+     the island's foundations (board 01's cumulus at the rim) */
+  const g3 = new THREE.RingGeometry(116, 320, 72, 4); g3.rotateX(-PI/2);
+  const m3 = new THREE.Mesh(g3, mat(1.0, 0xffffff)); m3.position.y = -24;
+  m3.frustumCulled = false;
+  scene.add(m3); seaMeshes.push(m3);
+}
+
+/* ASCENT PASS 3 — THE RIM FALLS: water pours from the island's edge all
+   around the ring (board 01), dissolving into the sea below; the terrace
+   arc keeps its own falls. One merged mesh + one shader (+1 draw); a
+   breath of rising mist at each fall (glow sprites, pulsing). Layout is
+   deterministic — no rng (THE LACE's layout law). */
+{
+  const fallMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{ uTime:{value:0} },
+    vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+      gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uTime; varying vec2 vUv;
+      void main(){
+        float fall = fract(vUv.y*2.2 + uTime*0.55);
+        float streak = 0.45 + 0.3*sin(vUv.x*70.0) + 0.35*sin(fall*6.28318 + vUv.x*23.0);
+        float a = clamp(streak, 0.0, 1.0)*0.5;
+        a *= smoothstep(1.0, 0.86, vUv.y);
+        a *= smoothstep(0.0, 0.35, vUv.y);
+        gl_FragColor = vec4(0.93, 0.97, 1.0, a);
+      }`
+  });
+  tickers.push(t=>{ fallMat.uniforms.uTime.value = t; });
+  const fallParts = [];
+  for (let i=0;i<12;i++){
+    const a = i/12*TAU + PI/12;                 /* between the gates */
+    if (angDiff(a, TERR_A) < TERR_HALF + .12) continue;
+    const w = 13 + 5*((i*7)%3), h = 30;
+    fallParts.push(xf(new THREE.PlaneGeometry(w, h, 1, 4),
+      Math.sin(a)*(CITY_R+1.5), -h*.5+1.5, Math.cos(a)*(CITY_R+1.5), a));
+    glows.push(mkGlow(Math.sin(a)*(CITY_R+3.5), -4, Math.cos(a)*(CITY_R+3.5), 15, 0xfff4e0, .15));
+  }
+  const rimFalls = new THREE.Mesh(mergeGeometries(fallParts), fallMat);
+  rimFalls.frustumCulled = false;
+  scene.add(rimFalls);
 }
 
 /* distant sister-spires on the horizon */
