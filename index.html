@@ -541,6 +541,7 @@ const skyUni = { uSunDir: { value: new THREE.Vector3(-.6,.28,.75).normalize() } 
         vec3 hor = vec3(1.00, 0.82, 0.55);
         vec3 col = mix(hor, zen, pow(max(h,0.0), 0.62));
         float sd = max(dot(vDir, uSunDir), 0.0);
+        col += vec3(1.0, 0.87, 0.64) * pow(sd, 2.5) * 0.10;
         col += vec3(1.0, 0.82, 0.52) * pow(sd, 7.0) * 0.30;
         col += vec3(1.0, 0.92, 0.72) * pow(sd, 90.0) * 1.1;
         col += vec3(1.0, 0.98, 0.90) * pow(sd, 1200.0) * 4.0;
@@ -2136,6 +2137,9 @@ function addBuilding(x,z,ry,big){
   addStatue(-8.4,-53.2,0);     addStatue(8.4,-53.2,0);       // throne hall portal
   addStatue(-8,111,PI);        addStatue(8,111,PI);          // inside the south gate
   addStatue(-39,2.5,-PI/2);    addStatue(-39,13.5,-PI/2);    // fountain court approach
+  addStatue(13.8,13.8,-PI*.75);  addStatue(-13.8,13.8,PI*.75);   // tree plaza, facing the Tree
+  addStatue(13.8,-13.8,-PI*.25); addStatue(-13.8,-13.8,PI*.25);
+  addStatue(14.2,100,-PI/2);     addStatue(-14.2,100,PI/2);      // gate plaza flanks
   const anWM = new THREE.Mesh(mergeGeometries(anW), MAT.white);
   anWM.castShadow = SHADOWS; anWM.receiveShadow = SHADOWS;
   const anGM = new THREE.Mesh(mergeGeometries(anG), MAT.gold);
@@ -2178,6 +2182,78 @@ function addBuilding(x,z,ry,big){
     }
     birds.instanceMatrix.needsUpdate = true;
   });
+
+  /* descending light upon the Tree — six soft god-shafts (ascent: atmosphere) */
+  {
+    const treeShaftParts = [];
+    for (let i=0;i<6;i++){
+      const a = i/6*TAU + .26;
+      const g = new THREE.PlaneGeometry(5.5, 34, 1, 6);
+      xf(g, Math.sin(a)*7.5, 26, Math.cos(a)*7.5, a, 1,1,1, .18, 0);
+      treeShaftParts.push(g);
+    }
+    const treeShaftMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ uOp:{value:.06} },
+      vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uOp; varying vec2 vUv;
+        void main(){
+          float a = uOp*(1.0-abs(vUv.x*2.0-1.0))*smoothstep(0.0,0.35,vUv.y)*smoothstep(1.0,0.6,vUv.y);
+          gl_FragColor = vec4(1.0,0.92,0.7,a);
+        }`
+    });
+    treeShaftMat.userData.baseOp = .06; TR.shafts.push(treeShaftMat);
+    scene.add(new THREE.Mesh(mergeGeometries(treeShaftParts), treeShaftMat));
+  }
+
+  /* THE GARDENS — planters of living green among the gold (board 04's life) */
+  {
+    const planterPos = [];
+    for (let i=0;i<6;i++){
+      const a = i/6*TAU + .55;                 /* clear of benches, lamps, AND the citizens' circuit (r12.4) */
+      planterPos.push([-52 + Math.sin(a)*15.4, 8 + Math.cos(a)*15.4]);
+    }
+    for (const z of [49, 61]) for (const sx of [-6.0, 6.0]) planterPos.push([sx, z]);
+    const leafClusters = [], blossoms = [];
+    for (const [px, pz] of planterPos){
+      P.white.push(xf(new THREE.CylinderGeometry(1.0, 1.15, .8, 12), px, .4, pz));
+      P.gold.push(xf(new THREE.TorusGeometry(1.02, .06, 6, 18).rotateX(PI/2), px, .82, pz));
+      for (let k=0;k<3;k++){
+        const aa = rng()*TAU, rr2 = rng()*.45;
+        leafClusters.push([px + Math.sin(aa)*rr2, 1.15 + rng()*.35, pz + Math.cos(aa)*rr2, .5 + rng()*.5]);
+      }
+      for (let k=0;k<5;k++){
+        const aa = rng()*TAU, rr2 = .3 + rng()*.6;
+        blossoms.push([px + Math.sin(aa)*rr2, 1.05 + rng()*.6, pz + Math.cos(aa)*rr2]);
+      }
+      addCircle(px, pz, 1.25);
+    }
+    const lc = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.55, 0), MAT.leaf, leafClusters.length);
+    const bl = new THREE.InstancedMesh(new THREE.SphereGeometry(.07, 6, 5), MAT.pearl, blossoms.length);
+    const gp = new THREE.Object3D();
+    leafClusters.forEach(([x,y,z,s], i)=>{
+      gp.position.set(x,y,z); gp.rotation.set(rng()*TAU, rng()*TAU, 0);
+      gp.scale.setScalar(s); gp.updateMatrix(); lc.setMatrixAt(i, gp.matrix);
+    });
+    gp.rotation.set(0,0,0); gp.scale.setScalar(1);
+    blossoms.forEach(([x,y,z], i)=>{ gp.position.set(x,y,z); gp.updateMatrix(); bl.setMatrixAt(i, gp.matrix); });
+    lc.castShadow = SHADOWS;
+    lc.frustumCulled = bl.frustumCulled = false;
+    lc.userData.fullCount = leafClusters.length; TR.instanced.push(lc);
+    bl.userData.fullCount = blossoms.length; TR.instanced.push(bl);
+    scene.add(lc, bl);
+  }
+
+  /* gold garland swags along the Street colonnade (board 02's density) */
+  for (const sx of [-6.5, 6.5]) for (let z = 40; z < 82; z += 6){
+    const pts = [
+      new THREE.Vector3(sx, 5.75, z),
+      new THREE.Vector3(sx, 5.32, z + 3),
+      new THREE.Vector3(sx, 5.75, z + 6),
+    ];
+    P.gold.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, .05, 5));
+  }
 
   /* golden petals drifting down around the Tree of Life */
   const petalTex = canvasTex(64,(g,w,h)=>{
@@ -2644,12 +2720,13 @@ function buildGateVaults(index){
     const plaqueText = label
       ? `${label.toUpperCase()} · ${list.length} SCROLL${list.length===1?'':'S'}`
       : 'THE VAULT AWAITS ITS SCROLLS';
-    const tex = canvasTex(64, (cg,w,h)=>{
+    const tex = canvasTex(96, (cg,w,h)=>{
       cg.clearRect(0,0,w,h);
-      cg.font = '600 26px Georgia, serif'; cg.textAlign='center'; cg.textBaseline='middle';
-      cg.shadowColor = 'rgba(120,84,0,.6)'; cg.shadowBlur = 8;
+      cg.font = '600 40px Georgia, serif'; cg.textAlign='center'; cg.textBaseline='middle';
+      cg.shadowColor = 'rgba(120,84,0,.6)'; cg.shadowBlur = 10;
       cg.fillStyle = '#ffe6a0'; cg.fillText(plaqueText, w/2, h/2);
-    }, 1024);
+    }, 1536);
+    tex.anisotropy = 8;
     const plaque = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
     plaque.position.set(px, 4.6, pz);
     plaque.scale.set(10, .62, 1);
@@ -2886,9 +2963,16 @@ if (qs.get('hud')==='fps') fpsEl.style.display='block';
 /* THE GUARD's fps watchdog — rolling 4-second average; below the floor
    it drops ONE tier live and logs it. It never raises a tier back. */
 const FPS_FLOOR = IS_TOUCH ? 25 : 50;
-let wdAcc = 0, wdFrames = 0, wdCooldownUntil = 0;
+let wdAcc = 0, wdFrames = 0, wdCooldownUntil = 0, wdLast = '';
 function watchdog(t, dt){
   if (!started || paused) return;
+  /* arming delay: the first seconds are shader-compile/upload/decode jank,
+     not steady-state cost — never let startup stutter cost a capable
+     machine its tier (drops are permanent by design) */
+  if (t < 12){ wdAcc = 0; wdFrames = 0; return; }
+  /* stall rejection: one long frozen frame (asset decode, GC, tab switch)
+     is a STALL, not a frame rate — only sustained slowness may drop a tier */
+  if (dt > .25){ return; }
   wdAcc += dt; wdFrames++;
   if (wdAcc < 4) return;
   const avg = wdFrames / wdAcc;
@@ -2896,6 +2980,7 @@ function watchdog(t, dt){
   if (t < wdCooldownUntil || avg >= FPS_FLOOR) return;
   if (TIER > 0){
     applyTier(TIER - 1);
+    wdLast = `wd@${t.toFixed(0)}s ${avg.toFixed(0)}fps`;
     console.log(`WATCHDOG: ${avg.toFixed(1)} fps < floor ${FPS_FLOOR} — tier dropped to ${TIER} (${['LOW','MEDIUM','HIGH'][TIER]})`);
   } else if (!emergency){
     emergency = true;
@@ -2960,7 +3045,8 @@ function animate(){
   fpsAcc += dt; fpsN++;
   if (fpsAcc >= 1){
     fpsAvg = fpsN/fpsAcc; fpsAcc=0; fpsN=0;
-    fpsEl.textContent = fpsAvg.toFixed(0)+' fps · tier '+TIER+(emergency?' · emg':'');
+    fpsEl.textContent = fpsAvg.toFixed(0)+' fps · tier '+TIER+(emergency?' · emg':'')
+      + ' · t'+(IS_TOUCH?1:0)+' s'+Math.min(screen.width,screen.height)+(wdLast?' · '+wdLast:'');
   }
   watchdog(t, dt);
 
