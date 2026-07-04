@@ -422,6 +422,36 @@ composer.addPass(gradePass);
 ================================================================ */
 const TR = { instanced: [], shafts: [] };   /* tier-scalable registries */
 let emergency = false;
+
+/* ASCENT PASS 8 — ONE FLESH: every soul in the city shares one sculpted
+   body. The old figure was a featureless pawn at close range; this one
+   has a hood over a bowed head, shoulders, sleeved arms meeting in
+   prayed hands — still ~400 tris, still two instanced draws for every
+   still soul. SOULS collects [x,y,z,face,bow,scale] from every station
+   (the Tree witnesses join the host); the hem sits +.04 so the deepest
+   bow never dips below the floor. */
+const SOULS = [];
+/* THE RECLAMATION (Pass 9): same silhouette, leaner flesh — reduced
+   sphere segments, open-ended caps where sleeves and shoulders hide
+   them, a lighter sash. ~178+80 tris/soul (was 284+120); across ~138
+   souls and the shadow pass this returns ~40k tris to the budget. */
+function soulGeo(){
+  const g = mergeGeometries([
+    xf(new THREE.CylinderGeometry(.16,.50,1.42,8), 0,.73,0),
+    xf(new THREE.SphereGeometry(.30,7,4), 0,1.42,0, 0, 1,.62,.82),
+    xf(new THREE.SphereGeometry(.21,7,5), 0,1.60,.02),
+    xf(new THREE.ConeGeometry(.27,.5,8,1,true), 0,1.72,-.05, 0, 1,null,null, .18),
+    xf(new THREE.CylinderGeometry(.055,.075,.60,5,1,true), .19,.98,.10, 0, 1,null,null, .42, -.5),
+    xf(new THREE.CylinderGeometry(.055,.075,.60,5,1,true), -.19,.98,.10, 0, 1,null,null, .42, .5),
+    xf(new THREE.SphereGeometry(.075,5,3), 0,.80,.27),
+  ]);
+  g.translate(0, .04, 0);
+  return g;
+}
+function soulSashGeo(){
+  return xf(new THREE.TorusGeometry(.31,.035,4,10).rotateX(PI/2), 0,1.06,0);
+}
+
 function applyPostSizes(){
   const f = TIER===2 ? 1 : (TIER===1 ? .5 : .25);
   bloomPass.setSize(innerWidth*f, innerHeight*f);
@@ -894,6 +924,63 @@ const seaMeshes = [];
   scene.add(rimFalls);
 }
 
+/* ========== ASCENT ROUND 3 · HALF 1 — THE LIGHTING RIG ==========
+   (a) Board 04 — the light DESCENDS into the Fountain Court: the Tree's
+       god-column recipe, smaller and fainter, over the fountain (+1 draw).
+   (b) Board 05 — THE TWELVE THRESHOLDS: every portal mouth holds a
+       luminous sheet, warm light standing in the passage — ONE merged
+       mesh, ONE shader, TR.shafts-registered (+1 draw). REUBEN's 2·II
+       terminal-glory sprite is folded in, not duplicated.
+   Near-zero tris: column ~288, sheets 12×2. */
+{
+  const colMat2 = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    uniforms:{ uOp:{value:.055}, uTime:{value:0} },
+    vertexShader:`varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      void main(){ vUv=uv; vN=normalMatrix*normal;
+        vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz;
+        gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`uniform float uOp,uTime; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      void main(){
+        float f = abs(dot(normalize(vN),normalize(vV)));
+        float a = pow(f,1.6)*uOp*(0.86+0.14*sin(uTime*0.45));
+        a *= smoothstep(0.0,0.18,vUv.y)*smoothstep(1.0,0.7,vUv.y);
+        gl_FragColor = vec4(1.0,0.92,0.74,a);
+      }`
+  });
+  colMat2.userData.baseOp = .055; TR.shafts.push(colMat2);
+  const fCol = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 8.2, 30, 24, 5, true), colMat2);
+  fCol.position.set(-52, 15, 8);
+  scene.add(fCol);
+  tickers.push(t=>{ colMat2.uniforms.uTime.value = t; });
+
+  const thMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    uniforms:{ uOp:{value:.11}, uTime:{value:0} },
+    vertexShader:`varying vec2 vUv;
+      void main(){ vUv=uv;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uOp,uTime; varying vec2 vUv;
+      void main(){
+        float ax = smoothstep(0.0,0.28,vUv.x)*smoothstep(1.0,0.72,vUv.x);
+        float ay = smoothstep(0.0,0.10,vUv.y)*smoothstep(1.0,0.55,vUv.y);
+        float a = ax*ay*uOp*(0.88+0.12*sin(uTime*0.6 + vUv.y*2.2));
+        gl_FragColor = vec4(1.0,0.90,0.70,a);
+      }`
+  });
+  thMat.userData.baseOp = .11; TR.shafts.push(thMat);
+  const thParts = [];
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6;
+    const g = new THREE.PlaneGeometry(3.8, 12.5);
+    thParts.push(xf(g, Math.sin(a)*WALL_R, 6.4, Math.cos(a)*WALL_R, a));
+  }
+  const thresholds = new THREE.Mesh(mergeGeometries(thParts), thMat);
+  thresholds.frustumCulled = false;
+  scene.add(thresholds);
+  tickers.push(t=>{ thMat.uniforms.uTime.value = t; });
+}
+
 /* distant sister-spires on the horizon */
 {
   const parts = [];
@@ -1042,19 +1129,38 @@ async function initSlots(){
     let status = 'PROCEDURAL';
     if (hero && entry && loader){
       try {
-        const gltf = await loader.loadAsync(entry.file);
-        const src = gltf.scene;
-        src.traverse(o=>{
+        /* ASCENT ROUND 3 · HALF 2 — THE SECOND QUARRY (manifest-driven):
+           entry.castShadow:false frees a hero from the shadow pass
+           (casters count double in the in-view figure); entry.far +
+           entry.farDist give a slot a shared far-LOD — distant anchors
+           render the lean silhouette instead of the full mesh. */
+        const casts = SHADOWS && entry.castShadow !== false;
+        const dress = (root)=> root.traverse(o=>{
           if (o.isMesh){
-            o.castShadow = SHADOWS; o.receiveShadow = SHADOWS;
+            o.castShadow = casts; o.receiveShadow = SHADOWS;
             const ms = Array.isArray(o.material) ? o.material : [o.material];
             for (const m of ms) if (m && m.envMapIntensity !== undefined) m.envMapIntensity = 1.0;
           }
         });
+        const gltf = await loader.loadAsync(entry.file);
+        const src = gltf.scene;
+        dress(src);
+        let farSrc = null;
+        if (entry.far){
+          try { farSrc = (await loader.loadAsync(entry.far)).scene; dress(farSrc); }
+          catch(e){ console.warn(`SLOT ${slot}: far-LOD failed (${entry.far}) — near mesh everywhere.`, e); }
+        }
         const sc = (typeof entry.scale === 'number') ? entry.scale : 1;
         const yo = (typeof entry.yOffset === 'number') ? entry.yOffset : 0;
         for (const anc of hero.anchors){
-          const inst = cloneRig(src);
+          let inst;
+          if (farSrc){
+            inst = new THREE.LOD();
+            inst.addLevel(cloneRig(src), 0);
+            inst.addLevel(cloneRig(farSrc), entry.farDist || 90);
+          } else {
+            inst = cloneRig(src);
+          }
           inst.position.set(anc.x, (anc.y||0) + yo, anc.z);
           inst.rotation.y = anc.ry || 0;
           inst.scale.setScalar(sc);
@@ -1555,10 +1661,9 @@ function addBuilding(x,z,ry,big){
   postI.frustumCulled = orbI.frustumCulled = false;
   scene.add(postI, orbI);
 
-  /* ASCENT PASS 2·II — terminal glory: the avenue's whole axis aims at
-     the REUBEN portal; the procession's eye is rewarded with a warm
-     radiance in the gate's mouth instead of haze (+1 glow sprite) */
-  glows.push(mkGlow(0, 11.5, 116.5, 22, 0xffe3ac, .22));
+  /* ASCENT PASS 2·II terminal glory — FOLDED into ROUND 3's twelve
+     luminous thresholds (one merged sheet at every portal mouth);
+     the single REUBEN sprite retired so the gate is not doubled */
   if (TIER>0){
     for (const z of [52,70]){
       const pl = new THREE.PointLight(0xffc978, 26, 16, 2);
@@ -1968,7 +2073,12 @@ function addBuilding(x,z,ry,big){
          a warm base light, a soft ground halo: the light gathers at
          the roots. +2 draw calls. */
   {
-    const wWhite = [], wGold = [];
+    /* ASCENT PASS 8 — ONE FLESH: the witnesses keep their exact ring
+       placement (same seeded stream) but join the instanced soul host
+       (section 16.65) instead of building two merged meshes: the same
+       souls, −2 draw calls, the sculpted body and the breath. They sit
+       at the HEAD of the host so the MEDIUM trim never empties the
+       Tree plaza. */
     const wr = mulberry32(4144);
     for (const [ring, n, aOff] of [[14.0, 18, 0], [16.4, 14, .13]]){
       for (let i = 0; i < n; i++){
@@ -1980,18 +2090,9 @@ function addBuilding(x,z,ry,big){
         const face = Math.atan2(-x, -z);        /* eyes to the Tree */
         const bow  = .05 + wr()*.10;            /* reverent lean */
         const s    = .93 + wr()*.13;
-        const robe = new THREE.CylinderGeometry(.13,.44,1.55,8); robe.translate(0,.78,0);
-        const head = new THREE.SphereGeometry(.24,8,6); head.scale(1,.7,1); head.translate(0,1.62,0);
-        const knot = new THREE.SphereGeometry(.145,8,6); knot.translate(0,1.86,0);
-        const sashg = new THREE.TorusGeometry(.30,.035,5,12); sashg.rotateX(PI/2); sashg.translate(0,1.02,0);
-        for (const g of [robe, head, knot]) wWhite.push(xf(g, x,.02,z, face, s,null,null, bow));
-        wGold.push(xf(sashg, x,.02,z, face, s,null,null, bow));
+        SOULS.push([x, .02, z, face, bow, s]);
       }
     }
-    const wWhiteM = new THREE.Mesh(mergeGeometries(wWhite), MAT.pearl);
-    wWhiteM.castShadow = SHADOWS; wWhiteM.receiveShadow = SHADOWS;
-    const wGoldM = new THREE.Mesh(mergeGeometries(wGold), MAT.gold);
-    scene.add(wWhiteM, wGoldM);
 
     /* the descending radiance */
     const colMat = new THREE.ShaderMaterial({
@@ -2802,13 +2903,11 @@ function addBuilding(x,z,ry,big){
   scene.add(petals); particleMeshes.push(petals);
   tickers.push(t=>{ petalMat.uniforms.uTime.value = t; });
 
-  /* robed citizens walking the avenues in slow procession */
-  const citGeo = mergeGeometries([
-    xf(new THREE.CylinderGeometry(.13,.44,1.55,8), 0,.78,0),
-    xf(new THREE.SphereGeometry(.24,8,6), 0,1.62,0, 0, 1,.7,1),
-    xf(new THREE.SphereGeometry(.145,8,6), 0,1.86,0),
-  ]);
-  const sashGeo = xf(new THREE.TorusGeometry(.30,.035,5,12).rotateX(PI/2), 0,1.02,0);
+  /* robed citizens walking the avenues in slow procession —
+     ONE FLESH (Pass 8): the walkers wear the same sculpted body as
+     every still soul */
+  const citGeo = soulGeo();
+  const sashGeo = soulSashGeo();
   const PATHS = [
     { kind:'line', a:[-2.6,86], b:[-2.6,30],  v:1.1, off:0 },
     { kind:'line', a:[2.6,30],  b:[2.6,86],   v:0.9, off:33 },
@@ -2827,6 +2926,22 @@ function addBuilding(x,z,ry,big){
     { kind:'line', a:[-2.2,70], b:[-2.2,33],  v:1.15, off:27 },
     { kind:'line', a:[-.45,82], b:[-.45,36],  v:0.85, off:12 },
     { kind:'line', a:[.45,82],  b:[.45,36],   v:0.85, off:12.6 },
+    /* ASCENT PASS 7 — THE PILGRIM FILE: seven souls in shared step,
+       from the gate plaza down the avenue toward the Tree and back —
+       one path each, offsets spaced so the file holds its order on
+       both legs (the ping-pong wrap preserves spacing). And a file of
+       three on the throne approach. Same two draws — the instanced
+       walker meshes grow by PATHS.length automatically. */
+    { kind:'line', a:[-.55,112],b:[-.55,30],  v:1.0,  off:0 },
+    { kind:'line', a:[.55,112], b:[.55,30],   v:1.0,  off:2.6 },
+    { kind:'line', a:[-.55,112],b:[-.55,30],  v:1.0,  off:5.2 },
+    { kind:'line', a:[.55,112], b:[.55,30],   v:1.0,  off:7.8 },
+    { kind:'line', a:[-.55,112],b:[-.55,30],  v:1.0,  off:10.4 },
+    { kind:'line', a:[.55,112], b:[.55,30],   v:1.0,  off:13.0 },
+    { kind:'line', a:[0,112],   b:[0,30],     v:1.0,  off:-2.6 },
+    { kind:'line', a:[-1.6,-28],b:[-1.6,-49], v:0.9,  off:0 },
+    { kind:'line', a:[-2.8,-28],b:[-2.8,-49], v:0.9,  off:2.2 },
+    { kind:'line', a:[-2.2,-28],b:[-2.2,-49], v:0.9,  off:4.4 },
   ];
   const cit = new THREE.InstancedMesh(citGeo, MAT.pearl, PATHS.length);
   const sash = new THREE.InstancedMesh(sashGeo, MAT.gold, PATHS.length);
@@ -2902,29 +3017,38 @@ function addBuilding(x,z,ry,big){
       stations[2].push([jx, .42, jz, Math.atan2(81.5-jx, -6-jz), .08 + pr()*.10, .93 + pr()*.12]);
     }
   }
-  /* interleave stations so the tier trim keeps presence everywhere */
-  const order = [];
+  /* ONE FLESH (Pass 8): the Tree witnesses already fill SOULS — they
+     stay at the HEAD (the Tree plaza never empties at MEDIUM), then
+     the stations interleave so the tier trim keeps presence everywhere */
+  const order = SOULS.slice();
   const idx = [0, 0, 0];
-  while (order.length < stations[0].length + stations[1].length + stations[2].length)
+  const stationTotal = stations[0].length + stations[1].length + stations[2].length;
+  while (order.length < SOULS.length + stationTotal)
     for (let s = 0; s < 3; s++)
       if (idx[s] < stations[s].length) order.push(stations[s][idx[s]++]);
-  const bodyG = mergeGeometries([
-    xf(new THREE.CylinderGeometry(.13,.44,1.55,8), 0,.78,0),
-    xf(new THREE.SphereGeometry(.24,8,6), 0,1.62,0, 0, 1,.7,1),
-    xf(new THREE.SphereGeometry(.145,8,6), 0,1.86,0),
-  ]);
-  const sashG = xf(new THREE.TorusGeometry(.30,.035,5,12).rotateX(PI/2), 0,1.02,0);
+  const bodyG = soulGeo();
+  const sashG = soulSashGeo();
   const bodyI = new THREE.InstancedMesh(bodyG, MAT.pearl, order.length);
   const sashI = new THREE.InstancedMesh(sashG, MAT.gold, order.length);
   const o3 = new THREE.Object3D();
-  order.forEach(([x, y, z, face, bow, s], i)=>{
-    o3.position.set(x, y, z);
-    o3.rotation.set(bow, face, 0);          /* the witnesses' own order */
-    o3.scale.setScalar(s);
-    o3.updateMatrix();
-    bodyI.setMatrixAt(i, o3.matrix);
-    sashI.setMatrixAt(i, o3.matrix);
-  });
+  /* ASCENT PASS 7 — THE BREATH: the still souls are alive, not statues.
+     A slow reverent sway (±.014 rad, ~14s, phased per soul) recomposes
+     the same matrices each frame — the walkers' own update pattern,
+     zero new draws. */
+  const setPose = (t)=>{
+    order.forEach(([x, y, z, face, bow, s], i)=>{
+      o3.position.set(x, y, z);
+      o3.rotation.set(bow + (t ? .014*Math.sin(t*.45 + i*1.7) : 0), face, 0);
+      o3.scale.setScalar(s);
+      o3.updateMatrix();
+      bodyI.setMatrixAt(i, o3.matrix);
+      sashI.setMatrixAt(i, o3.matrix);
+    });
+    bodyI.instanceMatrix.needsUpdate = true;
+    sashI.instanceMatrix.needsUpdate = true;
+  };
+  setPose(0);
+  tickers.push(setPose);
   bodyI.castShadow = SHADOWS; bodyI.receiveShadow = SHADOWS;
   bodyI.frustumCulled = sashI.frustumCulled = false;
   bodyI.userData.fullCount = order.length;
