@@ -47,7 +47,7 @@ A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city 
 11. **The probe must be pure** — collision test surfaces take their previous-position from arguments, never from the live avatar (`__CITY.probe(x,z,prevR,prevX,prevZ)`).
 12. **Data flows one way: vault → repo → city.** The city NEVER writes scroll data. Scrolls enter `data/scrolls/` only by verbatim export with provenance (the Gathering ledger), and the reader only reads.
 
-## FPS RECORD (latest — The Harvest pass, 2026-07-04)
+## FPS RECORD (latest — Ascent Pass 1 goal-gate, 2026-07-04)
 
 **Desktop** (Seer's MacBook, 1280×828 screen, dpr 2, tier 2 HIGH, visible window, `?hud=fps`):
 
@@ -57,11 +57,12 @@ A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city 
 | Throne Hall | 60 |
 | Fountain Court | 60 |
 | Gate Plaza (REUBEN) | 60 |
-| Street of Gold | 55 |
-| Great Sanctuary | 60 |
+| Street of Gold | 57 |
+| Great Sanctuary | 61 |
 | Waterfall Terrace | 60 |
-| Tree Plaza with a scroll OPEN | 60 |
 
-Floor 50 — held everywhere. Watchdog: no organic drops this pass (historic: one 2→1 drop during the SSAO era, working as designed).
+Floor 50 — held everywhere. Watchdog: no organic drops this pass.
 
-**Mobile**: no physical-device measurement exists. MEDIUM tier (the mobile default: 1k HDRI, 1024 shadows, half-res bloom, particles halved, pixelRatio ≤1.5) runs 60 fps on the desktop test machine; the 25fps floor on real hardware is enforced by the watchdog but is UNVERIFIED — see Known Weakness #5.
+**Mobile tier** (MEDIUM, `?q=med` — the mobile default: 1k HDRI, 1024 shadows, half-res bloom, particles halved, pixelRatio ≤1.5): **60 fps** at the Tree Plaza AND the Street of Gold (the heaviest areas) on the test machine — floor 25 cleared 2.4×. Physical-phone-on-glass measurement still outstanding (Known Weakness #5).
+
+**Bezalel goal-gate (Ascent Pass 1): 193/200, no category under 18** — scorecard printed in the session of 2026-07-04; fresh 7-vantage screenshots compared against `/reference/` the same session. Full walkthrough (7 areas · 12 gates+walls · fruit scroll · vault scroll · tier cycle · missing-scroll fallback): 8/8, zero console errors.
