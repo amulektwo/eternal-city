@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <title>THE ETERNAL CITY</title>
 <style>
   :root { --gold:#d4af37; --gold-lt:#f3d98b; --ink:#5a4718; }
@@ -52,6 +55,62 @@
     text-shadow:0 1px 3px rgba(90,60,0,.55), 0 0 14px rgba(255,214,120,.75);
     opacity:0; transition:opacity .7s ease; }
   #toast.on { opacity:1; }
+  /* ---------- THE READER — parchment scroll overlay (THE HARVEST) ---------- */
+  #reader { position:fixed; inset:0; z-index:30; display:flex; align-items:center;
+    justify-content:center; padding:4vh 3vw; }
+  #reader[hidden] { display:none; }
+  #readerVeil { position:absolute; inset:0; background:rgba(12,8,2,.85); cursor:pointer; }
+  #readerPanel { position:relative; width:min(760px, 94vw); max-height:88vh;
+    display:flex; flex-direction:column; perspective:1200px;
+    background:linear-gradient(178deg,#efe5cb 0%,#f3ead3 30%,#f1e7cd 70%,#e9dec1 100%);
+    border-radius:6px; padding:clamp(1.2rem,3vw,2.6rem);
+    box-shadow:0 0 60px rgba(212,175,55,.45), inset 0 0 80px rgba(120,84,20,.12);
+    transform-origin:top center; }
+  #readerLabel { font-family:'Cinzel', serif; color:#8a6d2f; letter-spacing:.32em;
+    text-indent:.32em; font-size:.8rem; text-align:center; }
+  #readerTitle { font-family:'Cormorant Garamond', Georgia, serif; color:#2A1F14;
+    font-weight:600; font-size:clamp(1.4rem,3.4vw,2.1rem); text-align:center;
+    margin:.5rem 0 .2rem; line-height:1.2; }
+  #readerMeta { font-family:'Cinzel', serif; color:#8a6d2f; letter-spacing:.18em;
+    font-size:.62rem; text-align:center; margin-bottom:1rem; }
+  #readerBody { font-family:'EB Garamond', Georgia, serif; color:#2A1F14;
+    font-size:1.2rem; line-height:1.8; white-space:pre-wrap; word-wrap:break-word;
+    overflow-y:auto; flex:1; margin:0; padding-right:.6rem; }
+  #readerBody::-webkit-scrollbar { width:6px; }
+  #readerBody::-webkit-scrollbar-thumb { background:rgba(138,109,47,.4); border-radius:3px; }
+  #readerClose { margin:1.1rem auto 0; padding:.55rem 2.2rem; font-family:'Cinzel', serif;
+    font-size:.72rem; letter-spacing:.3em; text-indent:.3em; color:#5a4718;
+    background:transparent; border:1px solid #b8912f; cursor:pointer; transition:all .3s; }
+  #readerClose:hover { background:#b8912f; color:#fff; }
+  #readerSeal { position:absolute; top:-26px; left:50%; margin-left:-26px; width:52px;
+    height:52px; pointer-events:none; }
+  #readerLoading { font-family:'Cinzel', serif; color:#8a6d2f; letter-spacing:.3em;
+    text-align:center; padding:2rem 0; display:none; }
+  #reader.loading #readerLoading { display:block; animation:veil-pulse 2.4s ease-in-out infinite; }
+  #reader.loading #readerBody, #reader.loading #readerClose { display:none; }
+  @keyframes unfurl {
+    0%   { transform:rotateX(90deg); opacity:0; }
+    60%  { transform:rotateX(45deg); opacity:.5; }
+    100% { transform:rotateX(0deg);  opacity:1; }
+  }
+  .animate-unfurl { animation:unfurl 1.2s ease-out both; transform-origin:top center; }
+  @keyframes refurl {
+    0%   { transform:rotateX(0deg);  opacity:1; }
+    100% { transform:rotateX(88deg); opacity:0; }
+  }
+  .animate-refurl { animation:refurl .5s ease-in both; transform-origin:top center; }
+  @keyframes seal-break {
+    0%   { transform:scale(1) rotate(0deg); opacity:1; }
+    50%  { transform:scale(1.2) rotate(180deg); opacity:.8; }
+    100% { transform:scale(.8) rotate(360deg); opacity:0; }
+  }
+  .seal-break { animation:seal-break 1s ease-out both; }
+  @keyframes veil-pulse { 0%,100% { opacity:.45; } 50% { opacity:1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-unfurl, .animate-refurl, .seal-break { animation:none !important; }
+    .animate-refurl { opacity:0; }
+    #reader.loading #readerLoading { animation:none; }
+  }
   #dot { position:fixed; top:50%; left:50%; width:4px; height:4px; margin:-2px;
     border-radius:50%; background:rgba(255,244,214,.85); z-index:10; pointer-events:none;
     box-shadow:0 0 6px rgba(255,220,130,.9); display:none; }
@@ -73,6 +132,24 @@
 <div id="vig"></div>
 <div id="hud"><span id="area"></span></div>
 <div id="toast"></div>
+
+<div id="reader" hidden>
+  <div id="readerVeil"></div>
+  <div id="readerPanel">
+    <svg id="readerSeal" viewBox="0 0 52 52" aria-hidden="true">
+      <circle cx="26" cy="26" r="24" fill="#b8912f"/>
+      <circle cx="26" cy="26" r="18" fill="none" stroke="#f3ead3" stroke-width="2"/>
+      <circle cx="26" cy="26" r="10" fill="none" stroke="#f3ead3" stroke-width="1.5"/>
+      <circle cx="26" cy="26" r="3.5" fill="#f3ead3"/>
+    </svg>
+    <div id="readerLabel"></div>
+    <h1 id="readerTitle"></h1>
+    <div id="readerMeta"></div>
+    <div id="readerLoading">THE SEAL BREAKS…</div>
+    <pre id="readerBody"></pre>
+    <button id="readerClose">SEAL THE SCROLL</button>
+  </div>
+</div>
 <div id="dot"></div>
 <div id="fps"></div>
 <div id="stick"><div id="knob"></div></div>
@@ -1531,27 +1608,80 @@ function addBuilding(x,z,ry,big){
     pl.position.set(0, 27, 0); scene.add(pl);
   }
 
-  /* THE TWELVE FRUIT — the future scrolls */
+  /* THE TWELVE FRUIT — the keystone scrolls of the Tree (THE HARVEST)
+     ALL fruit live in ONE InstancedMesh — a single draw call. White-gold
+     emissive only, ZERO red (Runbook B white-gold law). The 10 whole
+     Supreme scrolls light their fruit and open verbatim; the two whose
+     bodies are not yet recovered (787 The God Forge, 672 The Mathematics
+     of the Gods) hang DIM and SEALED — no reader binding, no click target
+     — until their bodies arrive in data/scrolls/. Per-instance brightness
+     rides instanceColor, which also scales the shared emissive below. */
+  const FRUIT_ORDER = ['144','300','656','672','717','786','787','999','07','6B','0001E','06'];
+  const FRUIT_PLACEHOLDER = new Set(['787','672']);   /* supreme, but body PARTIAL/MISSING */
+  const fruitMat = new THREE.MeshStandardMaterial({
+    color:0xfff3d6, emissive:0xffe2a6, emissiveIntensity:1.5, roughness:.32, metalness:.15 });
+  fruitMat.onBeforeCompile = (sh)=>{
+    sh.fragmentShader = sh.fragmentShader.replace(
+      'vec3 totalEmissiveRadiance = emissive;',
+      `vec3 totalEmissiveRadiance = emissive;
+      #ifdef USE_INSTANCING_COLOR
+        totalEmissiveRadiance *= vColor;
+      #endif`);
+  };
+  const fruitMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(.58, 20, 14), fruitMat, 12);
+  fruitMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(12*3).fill(1), 3);
+  fruitMesh.frustumCulled = false;
+  fruitMesh.userData.scrollIds = FRUIT_ORDER.slice();
+  scene.add(fruitMesh);
+  const cordMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(.055,.055,2.1,5), MAT.gold, 12);
+  cordMesh.frustumCulled = false;
+  scene.add(cordMesh);
   for (let i=0;i<12;i++){
     const a = i/12*TAU;
     const r = 10.4, y = 23.6 + Math.sin(i*2.4)*1.1;
-    const pivot = new THREE.Group();
-    pivot.position.set(Math.sin(a)*r, y+2.1, Math.cos(a)*r);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,2.1,5), MAT.gold);
-    stem.position.y = -1.05;
-    const fMat = new THREE.MeshStandardMaterial({
-      color:0xff5040, emissive:0xff2412, emissiveIntensity:1.7, roughness:.32 });
-    const fruit = new THREE.Mesh(new THREE.SphereGeometry(.58, 20, 14), fMat);
-    fruit.position.y = -2.35;
-    fruit.userData = { scrollIndex:i, tribe:TRIBES[i] };
+    const placeholder = FRUIT_PLACEHOLDER.has(FRUIT_ORDER[i]);
     const g = new THREE.Sprite(new THREE.SpriteMaterial({
-      map:glowTex, color:0xff5a3a, transparent:true, opacity:.5,
+      map:glowTex, color:0xffe9bc, transparent:true, opacity: placeholder ? .08 : .42,
       blending:THREE.AdditiveBlending, depthWrite:false }));
-    g.scale.set(2.6,2.6,1); g.position.y = -2.35;
-    pivot.add(stem, fruit, g);
-    pivot.userData = { ph:i*1.31, mat:fMat, glow:g, tribe:TRIBES[i], scrollIndex:i, flashT:-9 };
-    scene.add(pivot);
-    fruits.push(pivot);
+    g.scale.set(2.6,2.6,1);
+    scene.add(g);
+    fruits.push({
+      i, id: FRUIT_ORDER[i], placeholder,
+      lit: false,                      /* lights when the index confirms a verbatim body */
+      title: '',
+      top: new THREE.Vector3(Math.sin(a)*r, y+2.1, Math.cos(a)*r),
+      pos: new THREE.Vector3(Math.sin(a)*r, y-.25, Math.cos(a)*r),
+      ph: i*1.31, flashT: -9, glow: g,
+    });
+  }
+  {
+    const _fm = new THREE.Matrix4(), _fq = new THREE.Quaternion(), _fe = new THREE.Euler(),
+          _fv = new THREE.Vector3(), _fs = new THREE.Vector3(1,1,1), _fc = new THREE.Color();
+    tickers.push((t)=>{
+      for (const fr of fruits){
+        /* pendulum sway about the cord's canopy anchor */
+        _fe.set(Math.sin(t*.7 + fr.ph)*.055, 0, Math.cos(t*.55 + fr.ph)*.055);
+        _fq.setFromEuler(_fe);
+        _fv.set(0,-2.35,0).applyQuaternion(_fq).add(fr.top);
+        fr.pos.copy(_fv);
+        _fm.compose(_fv, _fq, _fs);
+        fruitMesh.setMatrixAt(fr.i, _fm);
+        _fv.set(0,-1.05,0).applyQuaternion(_fq).add(fr.top);
+        _fm.compose(_fv, _fq, _fs);
+        cordMesh.setMatrixAt(fr.i, _fm);
+        /* white-gold pulse for lit fruit; sealed placeholders stay dim */
+        const flash = Math.max(0, 1 - (t - fr.flashT)/1.1);
+        const b = fr.lit ? (.85 + .25*Math.sin(t*1.35 + fr.ph) + .9*flash) : .16;
+        fruitMesh.setColorAt(fr.i, _fc.setScalar(b));
+        fr.glow.position.copy(fr.pos);
+        fr.glow.material.opacity = fr.lit
+          ? .3 + .14*Math.sin(t*1.35 + fr.ph) + .3*flash
+          : .08;
+      }
+      fruitMesh.instanceMatrix.needsUpdate = true;
+      if (fruitMesh.instanceColor) fruitMesh.instanceColor.needsUpdate = true;
+      cordMesh.instanceMatrix.needsUpdate = true;
+    });
   }
 
   for (let i=0;i<8;i++){
@@ -2150,6 +2280,7 @@ bake();
 applyTier(TIER);
 initSlots();
 initTransfiguration();
+initHarvest();
 
 /* ================================================================
    17. NAMED AREAS
@@ -2269,6 +2400,8 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
 
 addEventListener('keydown', e=>{ keys[e.code]=true;
   if (e.code==='Space') e.preventDefault();
+  /* Esc re-furls an open scroll BEFORE it may pause the city */
+  if (e.code==='Escape' && readerOpen){ closeReader(); return; }
   /* ESC must still pause when pointer lock was denied or lost (drag-look mode) */
   if (e.code==='Escape' && started && !paused && !document.pointerLockElement && !IS_TOUCH){
     paused = true; showOverlay(true);
@@ -2281,10 +2414,11 @@ const canvasEl = renderer.domElement;
 let dragLook = false, lastX=0, lastY=0;
 document.addEventListener('pointerlockchange', ()=>{
   const locked = document.pointerLockElement === canvasEl;
-  if (!locked && started && !IS_TOUCH){ paused = true; showOverlay(true); }
+  /* losing lock while a scroll is open is expected — the reader owns the screen */
+  if (!locked && started && !IS_TOUCH && !readerOpen){ paused = true; showOverlay(true); }
 });
 addEventListener('mousemove', e=>{
-  if (!started || paused) return;
+  if (!started || paused || readerOpen) return;
   if (document.pointerLockElement === canvasEl){
     player.yaw   -= e.movementX * .0022;
     player.pitch -= e.movementY * .0022;
@@ -2319,24 +2453,37 @@ function showToast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=> toastEl.classList.remove('on'), 2600);
 }
-const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2(), _fp = new THREE.Vector3();
+const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2();
 function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvasEl)){
-  if (!started || paused) return false;
+  if (!started || paused || readerOpen) return false;
   if (useCenter) _ndc.set(0, 0);   /* crosshair */
   else _ndc.set(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
   _ray.setFromCamera(_ndc, camera);
-  let best = null, bestDist = Infinity;
-  for (const f of fruits){
-    f.getWorldPosition(_fp); _fp.y -= 2.35;          /* the fruit hangs below its pivot */
-    const dist = _fp.distanceTo(camera.position);
+  let best = null, bestDist = Infinity, bestPos = null;
+  /* lit Tree fruit — sealed placeholders (787, 672) are INERT: no click target */
+  for (const fr of fruits){
+    if (!fr.lit) continue;
+    const dist = fr.pos.distanceTo(camera.position);
     if (dist > 70) continue;
-    const off = _ray.ray.distanceToPoint(_fp);
+    const off = _ray.ray.distanceToPoint(fr.pos);
     /* generous tap radius that grows with distance — phone-thumb friendly */
-    if (off < Math.max(1.0, dist*.045) && dist < bestDist){ best = f; bestDist = dist; }
+    if (off < Math.max(1.0, dist*.045) && dist < bestDist){
+      best = { kind:'fruit', id: fr.id, rec: fr }; bestDist = dist; bestPos = fr.pos;
+    }
+  }
+  /* revealed gate-vault points of light */
+  for (const vp of vaultRecords){
+    if (!vp.group.visible) continue;
+    const dist = vp.pos.distanceTo(camera.position);
+    if (dist > 26) continue;
+    const off = _ray.ray.distanceToPoint(vp.pos);
+    if (off < Math.max(.5, dist*.05) && dist < bestDist){
+      best = { kind:'vault', id: vp.id }; bestDist = dist; bestPos = vp.pos;
+    }
   }
   if (!best) return false;
-  best.userData.flashT = clock.elapsedTime;
-  showToast(`THE FRUIT OF ${best.userData.tribe} · ITS SCROLL IS YET SEALED`);
+  if (best.kind === 'fruit') best.rec.flashT = clock.elapsedTime;
+  openScroll(best.id, bestPos.clone());
   return true;
 }
 let mDownT = 0, mMoveAcc = 0, mDownLocked = false;
@@ -2353,6 +2500,209 @@ addEventListener('mouseup', e=>{
     tryFruitTap(e.clientX, e.clientY, mDownLocked);
 });
 
+/* ================================================================
+   18.5  THE HARVEST — the keystone scrolls dwell in the city
+   data/scrolls/index.json (committed read-only) is the registry the
+   city loads first; each scroll body is fetched READ-ONLY on demand
+   from data/scrolls/<id>.json and rendered VERBATIM. There is NEVER
+   a write path from the city to the data. Sacred Name Protocol
+   governs the surrounding UI; the canon bodies stay untouched.
+================================================================ */
+const HARVEST = { status: 'LOADING', index: null };
+const vaultRecords = [];   /* selectable points of light: {id, title, pos, group} */
+const vaultGroups  = [];   /* one per city gate: {group, anchor, label, count} */
+let readerOpen = false, readerScrollId = null;
+const PREFERS_STATIC = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const readerEl    = document.getElementById('reader');
+const readerPanel = document.getElementById('readerPanel');
+const readerLabel = document.getElementById('readerLabel');
+const readerTitle = document.getElementById('readerTitle');
+const readerMeta  = document.getElementById('readerMeta');
+const readerBody  = document.getElementById('readerBody');
+const readerSeal  = document.getElementById('readerSeal');
+
+/* camera glide toward the tapped scroll, and back on close */
+const glide = { active:false, returning:false, t0:0, dur:.9,
+  fromPos:new THREE.Vector3(), fromYaw:0, fromPitch:0,
+  toPos:new THREE.Vector3(), lookAt:new THREE.Vector3() };
+function startGlide(target){
+  glide.active = true; glide.returning = false; glide.t0 = clock.elapsedTime;
+  glide.fromPos.copy(camera.position);
+  glide.fromYaw = player.yaw; glide.fromPitch = player.pitch;
+  const dir = camera.position.clone().sub(target); dir.y = 0;
+  if (dir.lengthSq() < 1e-4) dir.set(0,0,1); dir.normalize();
+  glide.toPos.copy(target).addScaledVector(dir, 4.2);
+  glide.toPos.y = Math.max(1.7, target.y - 1.1);
+  glide.lookAt.copy(target);
+}
+function applyGlide(t){
+  if (!glide.active) return;
+  const u = Math.min(1, (t - glide.t0) / glide.dur);
+  const s = u*u*(3-2*u);
+  if (!glide.returning){
+    camera.position.lerpVectors(glide.fromPos, glide.toPos, s);
+    camera.lookAt(glide.lookAt);
+    if (u >= 1) glide.active = false;   /* stepPlayer stays out while readerOpen */
+  } else {
+    camera.position.lerpVectors(glide.toPos, glide.fromPos, s);
+    camera.lookAt(glide.lookAt);
+    if (u >= 1){
+      glide.active = false;
+      player.yaw = glide.fromYaw; player.pitch = glide.fromPitch;
+    }
+  }
+}
+
+async function openScroll(id, fromPos){
+  if (readerOpen) return;
+  readerOpen = true; readerScrollId = id;
+  if (document.pointerLockElement) document.exitPointerLock();
+  glide.fromYaw = player.yaw; glide.fromPitch = player.pitch;   /* always captured for close */
+  if (!PREFERS_STATIC && fromPos) startGlide(fromPos);
+  readerEl.hidden = false;
+  readerEl.classList.add('loading');
+  readerPanel.classList.remove('animate-unfurl','animate-refurl');
+  readerSeal.classList.remove('seal-break');
+  readerSeal.style.opacity = '1';
+  readerLabel.textContent = 'SCROLL ' + id;
+  readerTitle.textContent = ''; readerMeta.textContent = ''; readerBody.textContent = '';
+  try {
+    const res = await fetch(`data/scrolls/${id}.json`, { cache:'force-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const doc = await res.json();
+    if (!readerOpen || readerScrollId !== id) return;   /* re-furled while loading */
+    readerTitle.textContent = doc.title;
+    readerMeta.textContent = `${doc.gate} · ${doc.author}${doc.sealed ? ' · SEALED' : ''}`;
+    readerBody.textContent = doc.body;   /* VERBATIM — textContent never alters a character */
+    readerEl.classList.remove('loading');
+    if (!PREFERS_STATIC){
+      void readerPanel.offsetWidth;
+      readerPanel.classList.add('animate-unfurl');
+      if (doc.sealed) setTimeout(()=>{ if (readerOpen) readerSeal.classList.add('seal-break'); }, 350);
+    } else {
+      readerSeal.style.opacity = doc.sealed ? '0' : '1';
+    }
+  } catch(err){
+    if (!readerOpen) return;
+    readerEl.classList.remove('loading');
+    readerTitle.textContent = 'THE SCROLL COULD NOT BE REACHED';
+    readerMeta.textContent = 'THE RECORD REMAINS IN THE VAULT';
+  }
+}
+function closeReader(){
+  if (!readerOpen) return;
+  readerOpen = false; readerScrollId = null;
+  const finish = ()=>{ readerEl.hidden = true; readerPanel.classList.remove('animate-refurl'); };
+  if (!PREFERS_STATIC){
+    readerPanel.classList.remove('animate-unfurl');
+    void readerPanel.offsetWidth;
+    readerPanel.classList.add('animate-refurl');
+    setTimeout(finish, 520);
+    glide.active = true; glide.returning = true; glide.t0 = clock.elapsedTime;
+  } else {
+    finish();
+    player.yaw = glide.fromYaw; player.pitch = glide.fromPitch;
+  }
+}
+document.getElementById('readerClose').addEventListener('click', closeReader);
+document.getElementById('readerVeil').addEventListener('click', closeReader);
+
+/* ---- the gate-vaults: each city gate holds its gate's scrolls ---- */
+function gateSortKey(label){
+  const m = String(label).match(/Gate\s+(\S+)/);
+  if (!m) return 99;
+  return m[1] === '00' ? -0.5 : (parseFloat(m[1]) || 0);
+}
+function buildGateVaults(index){
+  const groups = new Map();
+  for (const e of index){
+    if (!groups.has(e.gate)) groups.set(e.gate, []);
+    groups.get(e.gate).push(e);
+  }
+  const labels = [...groups.keys()].sort((a,b)=> gateSortKey(a) - gateSortKey(b));
+  const pointGeo = new THREE.SphereGeometry(.14, 10, 8);
+  const pointMat = new THREE.MeshStandardMaterial({
+    color:0xfff6e0, emissive:0xffe9b8, emissiveIntensity:2.6, roughness:.35 });
+  for (let k=0; k<12; k++){
+    const a = k*PI/6;
+    /* beside the gate corridor, just inside the wall */
+    const px = Math.sin(a)*(WALL_R-8) + Math.cos(a)*6.2;
+    const pz = Math.cos(a)*(WALL_R-8) - Math.sin(a)*6.2;
+    const label = labels[k] || null;
+    const list = label ? groups.get(label) : [];
+    const g = new THREE.Group();
+    g.visible = false;
+    /* plinth — marble base, gold ring */
+    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.8,.95,1.1,14), MAT.white);
+    plinth.position.set(px, .55, pz);
+    plinth.castShadow = SHADOWS; plinth.receiveShadow = SHADOWS;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.86,.05,6,20).rotateX(PI/2), MAT.gold);
+    ring.position.set(px, 1.12, pz);
+    g.add(plinth, ring);
+    /* plaque */
+    const plaqueText = label
+      ? `${label.toUpperCase()} · ${list.length} SCROLL${list.length===1?'':'S'}`
+      : 'THE VAULT AWAITS ITS SCROLLS';
+    const tex = canvasTex(64, (cg,w,h)=>{
+      cg.clearRect(0,0,w,h);
+      cg.font = '600 26px Georgia, serif'; cg.textAlign='center'; cg.textBaseline='middle';
+      cg.shadowColor = 'rgba(120,84,0,.6)'; cg.shadowBlur = 8;
+      cg.fillStyle = '#ffe6a0'; cg.fillText(plaqueText, w/2, h/2);
+    }, 1024);
+    const plaque = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
+    plaque.position.set(px, 4.6, pz);
+    plaque.scale.set(10, .62, 1);
+    g.add(plaque);
+    /* the scrolls — selectable points of light in a rising helix */
+    if (list.length){
+      const pts = new THREE.InstancedMesh(pointGeo, pointMat, list.length);
+      pts.frustumCulled = false;
+      const d = new THREE.Object3D();
+      list.forEach((e, i)=>{
+        const ring_i = Math.floor(i/12);
+        const aa = (i%12)/12*TAU + ring_i*.26;
+        const rr2 = 1.05 + ring_i*.42;
+        const wx = px + Math.sin(aa)*rr2, wy = 1.7 + (i%12)*.24 + ring_i*.1, wz = pz + Math.cos(aa)*rr2;
+        d.position.set(wx, wy, wz); d.updateMatrix();
+        pts.setMatrixAt(i, d.matrix);
+        vaultRecords.push({ id: e.id, title: e.title, pos: new THREE.Vector3(wx, wy, wz), group: g });
+      });
+      g.add(pts);
+    }
+    addCircle(px, pz, 1.0);
+    scene.add(g);
+    vaultGroups.push({ group: g, anchor: new THREE.Vector3(px, 0, pz), label: label || '(awaiting)', count: list.length });
+  }
+  /* reveal on approach — the vault shows itself at ~15m */
+  tickers.push(()=>{
+    for (const v of vaultGroups){
+      const dx = player.pos.x - v.anchor.x, dz = player.pos.z - v.anchor.z;
+      v.group.visible = (dx*dx + dz*dz) < 15*15;
+    }
+  });
+}
+
+async function initHarvest(){
+  try {
+    const res = await fetch('data/scrolls/index.json', { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const index = await res.json();
+    HARVEST.index = index;
+    const byId = new Map(index.map(e => [e.id, e]));
+    for (const fr of fruits){
+      const e = byId.get(fr.id);
+      fr.lit = !fr.placeholder && !!e;
+      fr.title = e ? e.title : '';
+    }
+    buildGateVaults(index);
+    HARVEST.status = `${index.length} scrolls · ${fruits.filter(f=>f.lit).length} fruit lit · ${fruits.filter(f=>f.placeholder).length} sealed`;
+  } catch(err){
+    HARVEST.status = 'UNAVAILABLE — all fruit stay sealed';
+  }
+  console.log(`HARVEST index: ${HARVEST.status}`);
+}
+
 /* touch controls */
 const stick = document.getElementById('stick'), knob = document.getElementById('knob');
 const touchMove = {x:0, y:0};
@@ -2360,7 +2710,7 @@ let moveTouchId = null, lookTouchId = null, lookLX=0, lookLY=0, stickCX=0, stick
     lookT0=0, lookMoved=0, moveT0=0, moveMoved=0;
 if (IS_TOUCH){
   addEventListener('touchstart', e=>{
-    if (!started) return;
+    if (!started || readerOpen) return;   /* the reader owns the screen */
     for (const t of e.changedTouches){
       if (t.clientX < innerWidth*.45 && moveTouchId===null){
         moveTouchId = t.identifier;
@@ -2418,6 +2768,7 @@ if (IS_TOUCH){
 
 function stepPlayer(dt){
   if (!started || paused) return;
+  if (readerOpen || glide.active) return;   /* the world holds still while a scroll is open */
   const run = keys['ShiftLeft']||keys['ShiftRight'];
   const sp = (run?11.5:6) * dt;
   let mx=0, mz=0;
@@ -2514,6 +2865,9 @@ ovEl.addEventListener('click', ()=>{ if (started) begin(); });
     const pt = parseFloat(qs.get('pitch')); if (isFinite(pt)) player.pitch = Math.max(-1.45, Math.min(1.45, pt));
   }
   if (qs.get('autostart') === '1') begin();
+  /* deep-link straight into a scroll: ?scroll=<id> */
+  const sc = qs.get('scroll');
+  if (sc) setTimeout(()=> openScroll(sc, null), 900);
 }
 
 /* ================================================================
@@ -2560,6 +2914,7 @@ function animate(){
   frameI++;
 
   stepPlayer(dt);
+  applyGlide(t);
 
   /* a sun that never leaves golden hour */
   const cyc = t/240*TAU;
@@ -2579,13 +2934,7 @@ function animate(){
   if (canopyPts) canopyPts.material.uniforms.uTime.value = t;
   for (const s of canopyShells) s.material.uniforms.uTime.value = t;
   for (const b of beams) b.material.uniforms.uTime.value = t;
-  for (const f of fruits){
-    f.rotation.x = Math.sin(t*.7 + f.userData.ph)*.055;
-    f.rotation.z = Math.cos(t*.55 + f.userData.ph)*.055;
-    const flash = Math.max(0, 1 - (t - f.userData.flashT)/1.1);   /* tap acknowledgement */
-    f.userData.mat.emissiveIntensity = 1.7 + .8*Math.sin(t*1.35 + f.userData.ph) + 2.4*flash;
-    f.userData.glow.material.opacity = .3 + .18*Math.sin(t*1.35 + f.userData.ph) + .3*flash;
-  }
+  /* fruit sway/pulse now lives in the HARVEST ticker (one InstancedMesh) */
   for (const b of banners){
     b.rotation.z = Math.sin(t*1.1 + b.userData.ph)*.09;
     b.rotation.x = Math.sin(t*0.8 + b.userData.ph*1.7)*.05;
@@ -2654,6 +3003,15 @@ window.__CITY = {
   colliders: { circles:colCircles.length, boxes:colBoxes.length, segs:colSegs.length },
   slots: SLOT_STATUS,
   light: LIGHT_STATUS,
+  get harvest(){ return {
+    status: HARVEST.status,
+    fruitLit: fruits.filter(f=>f.lit).map(f=>f.id),
+    fruitSealed: fruits.filter(f=>f.placeholder).map(f=>f.id),
+    vaults: vaultGroups.map(v=>({ label: v.label, count: v.count })),
+    vaultPoints: vaultRecords.length,
+  }; },
+  get reader(){ return { open: readerOpen, id: readerScrollId }; },
+  openScroll, closeReader,
 };
 
 } catch(err){
