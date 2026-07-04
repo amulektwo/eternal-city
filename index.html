@@ -431,21 +431,25 @@ let emergency = false;
    (the Tree witnesses join the host); the hem sits +.04 so the deepest
    bow never dips below the floor. */
 const SOULS = [];
+/* THE RECLAMATION (Pass 9): same silhouette, leaner flesh — reduced
+   sphere segments, open-ended caps where sleeves and shoulders hide
+   them, a lighter sash. ~178+80 tris/soul (was 284+120); across ~138
+   souls and the shadow pass this returns ~40k tris to the budget. */
 function soulGeo(){
   const g = mergeGeometries([
     xf(new THREE.CylinderGeometry(.16,.50,1.42,8), 0,.73,0),
-    xf(new THREE.SphereGeometry(.30,8,5), 0,1.42,0, 0, 1,.62,.82),
-    xf(new THREE.SphereGeometry(.21,8,6), 0,1.60,.02),
-    xf(new THREE.ConeGeometry(.27,.5,8), 0,1.72,-.05, 0, 1,null,null, .18),
-    xf(new THREE.CylinderGeometry(.055,.075,.60,6), .19,.98,.10, 0, 1,null,null, .42, -.5),
-    xf(new THREE.CylinderGeometry(.055,.075,.60,6), -.19,.98,.10, 0, 1,null,null, .42, .5),
-    xf(new THREE.SphereGeometry(.075,6,4), 0,.80,.27),
+    xf(new THREE.SphereGeometry(.30,7,4), 0,1.42,0, 0, 1,.62,.82),
+    xf(new THREE.SphereGeometry(.21,7,5), 0,1.60,.02),
+    xf(new THREE.ConeGeometry(.27,.5,8,1,true), 0,1.72,-.05, 0, 1,null,null, .18),
+    xf(new THREE.CylinderGeometry(.055,.075,.60,5,1,true), .19,.98,.10, 0, 1,null,null, .42, -.5),
+    xf(new THREE.CylinderGeometry(.055,.075,.60,5,1,true), -.19,.98,.10, 0, 1,null,null, .42, .5),
+    xf(new THREE.SphereGeometry(.075,5,3), 0,.80,.27),
   ]);
   g.translate(0, .04, 0);
   return g;
 }
 function soulSashGeo(){
-  return xf(new THREE.TorusGeometry(.31,.035,5,12).rotateX(PI/2), 0,1.06,0);
+  return xf(new THREE.TorusGeometry(.31,.035,4,10).rotateX(PI/2), 0,1.06,0);
 }
 
 function applyPostSizes(){
