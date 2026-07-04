@@ -664,6 +664,80 @@ async function initSlots(){
 }
 
 /* ================================================================
+   6.6  THE TRANSFIGURATION — real light, real stone
+   The quarried CC0 assets (assets/LICENSES.md) become the city's
+   master light and materials at runtime:
+     assets/hdri/golden_sky_{2k|1k}.hdr → PMREM → scene.environment
+       (2k on the high tier, 1k feeds mobile)
+     assets/textures/marble/*           → MAT.white, city-wide
+     assets/textures/gold/*             → MAT.gold + MAT.goldSt
+   Every element falls back to the procedural canvas version on any
+   load error. One console line per element. Sun+shadows, bloom,
+   god-rays and ACES tone mapping live in sections 2 & 4.
+================================================================ */
+const LIGHT_STATUS = {};
+async function initTransfiguration(){
+  /* real HDRI environment light */
+  try {
+    const { RGBELoader } = await import('three/addons/loaders/RGBELoader.js');
+    const res = HIGH ? '2k' : '1k';
+    const hdr = await new RGBELoader().loadAsync(`assets/hdri/golden_sky_${res}.hdr`);
+    hdr.mapping = THREE.EquirectangularReflectionMapping;
+    const pm = new THREE.PMREMGenerator(renderer);
+    const oldEnv = scene.environment;
+    scene.environment = pm.fromEquirectangular(hdr).texture;
+    if (oldEnv) oldEnv.dispose();
+    hdr.dispose(); pm.dispose();
+    LIGHT_STATUS.hdri = `REAL (${res})`;
+  } catch(err){ LIGHT_STATUS.hdri = 'PROCEDURAL fallback'; }
+  console.log(`LIGHT hdri: ${LIGHT_STATUS.hdri}`);
+
+  const tl = new THREE.TextureLoader();
+  const tex = async (url, srgb=false)=>{
+    const t = await tl.loadAsync(url);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 8;
+    return t;
+  };
+  /* marble master material — Marble021, city-wide white stone */
+  try {
+    const [c,n,r] = await Promise.all([
+      tex('assets/textures/marble/color.jpg', true),
+      TIER>0 ? tex('assets/textures/marble/normal.jpg') : null,
+      tex('assets/textures/marble/roughness.jpg'),
+    ]);
+    MAT.white.map = c;
+    if (n){ MAT.white.normalMap = n; MAT.white.normalScale.set(.55,.55); }
+    MAT.white.roughnessMap = r; MAT.white.roughness = 1.0;
+    MAT.white.color.set(0xffffff);
+    MAT.white.needsUpdate = true;
+    LIGHT_STATUS.marble = 'REAL';
+  } catch(err){ LIGHT_STATUS.marble = 'PROCEDURAL fallback'; }
+  console.log(`STONE marble: ${LIGHT_STATUS.marble}`);
+
+  /* gold master material — Metal034, city-wide living gold */
+  try {
+    const [c,n,r,m] = await Promise.all([
+      tex('assets/textures/gold/color.jpg', true),
+      TIER>0 ? tex('assets/textures/gold/normal.jpg') : null,
+      tex('assets/textures/gold/roughness.jpg'),
+      tex('assets/textures/gold/metalness.jpg'),
+    ]);
+    for (const g of [MAT.gold, MAT.goldSt]){
+      g.map = c;
+      if (n){ g.normalMap = n; g.normalScale.set(.5,.5); }
+      g.roughnessMap = r; g.roughness = 1.0;
+      g.metalnessMap = m; g.metalness = 1.0;
+      g.color.set(0xffffff);
+      g.needsUpdate = true;
+    }
+    LIGHT_STATUS.gold = 'REAL';
+  } catch(err){ LIGHT_STATUS.gold = 'PROCEDURAL fallback'; }
+  console.log(`STONE gold: ${LIGHT_STATUS.gold}`);
+}
+
+/* ================================================================
    7. FOUNDATION · GROUND · WATERFALLS
 ================================================================ */
 {
@@ -1987,6 +2061,7 @@ function addBuilding(x,z,ry,big){
 
 bake();
 initSlots();
+initTransfiguration();
 
 /* ================================================================
    17. NAMED AREAS
@@ -2406,6 +2481,7 @@ window.__CITY = {
   begin,
   colliders: { circles:colCircles.length, boxes:colBoxes.length, segs:colSegs.length },
   slots: SLOT_STATUS,
+  light: LIGHT_STATUS,
 };
 
 } catch(err){
