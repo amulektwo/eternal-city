@@ -2496,6 +2496,24 @@ function addBuilding(x,z,ry,big){
     P.gold.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, .05, 5));
   }
 
+  /* ========== ASCENT PASS 2 — the sunlit golden avenue ==========
+     (2) THE STRING-COURSES — continuous gilded architrave rails along
+         both facade lines at two heights, catching the low sun. Pushed
+         into P.gold: ZERO new draw calls. */
+  for (const sx of [-8.2, 8.2]) for (const sy of [4.2, 8.4])
+    P.gold.push(xf(new THREE.BoxGeometry(.18, .18, 52), sx, sy, 59));
+
+  /* (1) THE GOLDEN PAVEMENT — a burnished processional band down the
+     avenue's heart, polished to catch the sun (+1 draw call). */
+  {
+    const paveMat = new THREE.MeshStandardMaterial({
+      color:0xffd894, roughness:.12, metalness:1.0, envMapIntensity:1.55 });
+    const pave = new THREE.Mesh(new THREE.BoxGeometry(3.6, .06, 54), paveMat);
+    pave.position.set(0, .03, 59);
+    pave.receiveShadow = SHADOWS;
+    scene.add(pave);
+  }
+
   /* golden petals drifting down around the Tree of Life */
   const petalTex = canvasTex(64,(g,w,h)=>{
     g.clearRect(0,0,w,h);
@@ -2563,6 +2581,13 @@ function addBuilding(x,z,ry,big){
     { kind:'circle', c:[-52,8], r:11.2, v:-.06,  off:3.9 },
     { kind:'circle', c:[0,100], r:12,   v:.06,   off:.5 },
     { kind:'line', a:[2.2,84],  b:[2.2,34],   v:1.25, off:61 },
+    /* ASCENT PASS 2 (3) — more souls on the avenue: five new walkers,
+       two of them side-by-side in shared step (a companioned walk) */
+    { kind:'line', a:[-2.45,35],b:[-2.45,80], v:1.05, off:18 },
+    { kind:'line', a:[2.5,40],  b:[2.5,85],   v:0.95, off:45 },
+    { kind:'line', a:[-2.2,70], b:[-2.2,33],  v:1.15, off:27 },
+    { kind:'line', a:[-.45,82], b:[-.45,36],  v:0.85, off:12 },
+    { kind:'line', a:[.45,82],  b:[.45,36],   v:0.85, off:12.6 },
   ];
   const cit = new THREE.InstancedMesh(citGeo, MAT.pearl, PATHS.length);
   const sash = new THREE.InstancedMesh(sashGeo, MAT.gold, PATHS.length);
