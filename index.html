@@ -1766,6 +1766,77 @@ function addBuilding(x,z,ry,big){
     pl.position.set(0, 27, 0); scene.add(pl);
   }
 
+  /* ========== ASCENT PASS 1 — board 02: the worshipped Tree ==========
+     (1) THE WITNESSES — robed figures ringing the dais in stillness,
+         set OFF the walkers' circuits (r20.6–22.6, Law 15), aisles at
+         the four cardinals. Two merged meshes: +2 draw calls, ~9k tris.
+     (2) THE DESCENDING RADIANCE — one vast god-column onto the Tree
+         (the throne-beam recipe, fainter and wide): +1 draw call.
+     (3) THE GOLDEN FOOT — a polished gold pool between the dais rings,
+         a warm base light, a soft ground halo: the light gathers at
+         the roots. +2 draw calls. */
+  {
+    const wWhite = [], wGold = [];
+    const wr = mulberry32(4144);
+    for (const [ring, n, aOff] of [[14.0, 18, 0], [16.4, 14, .13]]){
+      for (let i = 0; i < n; i++){
+        const a = i/n*TAU + aOff;
+        let nearAisle = false;
+        for (let k = 0; k < 4; k++) if (angDiff(a, k*PI/2) < .21) nearAisle = true;
+        if (nearAisle) continue;
+        const x = Math.sin(a)*ring, z = Math.cos(a)*ring;
+        const face = Math.atan2(-x, -z);        /* eyes to the Tree */
+        const bow  = .05 + wr()*.10;            /* reverent lean */
+        const s    = .93 + wr()*.13;
+        const robe = new THREE.CylinderGeometry(.13,.44,1.55,8); robe.translate(0,.78,0);
+        const head = new THREE.SphereGeometry(.24,8,6); head.scale(1,.7,1); head.translate(0,1.62,0);
+        const knot = new THREE.SphereGeometry(.145,8,6); knot.translate(0,1.86,0);
+        const sashg = new THREE.TorusGeometry(.30,.035,5,12); sashg.rotateX(PI/2); sashg.translate(0,1.02,0);
+        for (const g of [robe, head, knot]) wWhite.push(xf(g, x,.02,z, face, s,null,null, bow));
+        wGold.push(xf(sashg, x,.02,z, face, s,null,null, bow));
+      }
+    }
+    const wWhiteM = new THREE.Mesh(mergeGeometries(wWhite), MAT.pearl);
+    wWhiteM.castShadow = SHADOWS; wWhiteM.receiveShadow = SHADOWS;
+    const wGoldM = new THREE.Mesh(mergeGeometries(wGold), MAT.gold);
+    scene.add(wWhiteM, wGoldM);
+
+    /* the descending radiance */
+    const colMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ uOp:{value:.062}, uTime:{value:0} },
+      vertexShader:`varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+        void main(){ vUv=uv; vN=normalMatrix*normal;
+          vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz;
+          gl_Position=projectionMatrix*mv; }`,
+      fragmentShader:`uniform float uOp,uTime; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+        void main(){
+          float f = abs(dot(normalize(vN),normalize(vV)));
+          float a = pow(f,1.6)*uOp*(0.86+0.14*sin(uTime*0.5));
+          a *= smoothstep(0.0,0.18,vUv.y)*smoothstep(1.0,0.7,vUv.y);
+          gl_FragColor = vec4(1.0,0.92,0.74,a);
+        }`
+    });
+    colMat.userData.baseOp = .062; TR.shafts.push(colMat);
+    const godCol = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 12.8, 44, 28, 6, true), colMat);
+    godCol.position.set(0, 22, 0);
+    scene.add(godCol);
+    tickers.push(t=>{ colMat.uniforms.uTime.value = t; });
+
+    /* the golden foot */
+    const poolMat = new THREE.MeshStandardMaterial({
+      color:0xffd894, roughness:.10, metalness:1.0, envMapIntensity:1.7 });
+    const pool = new THREE.Mesh(new THREE.RingGeometry(7.9, 11.6, 56).rotateX(-PI/2), poolMat);
+    pool.position.set(0, .045, 0);
+    pool.receiveShadow = SHADOWS;
+    scene.add(pool);
+    if (TIER>0){
+      const bl = new THREE.PointLight(0xffdf9a, 42, 24, 2);
+      bl.position.set(0, 3.2, 0); scene.add(bl);
+    }
+    glows.push(mkGlow(0, 1.0, 0, 24, 0xffe2a6, .13));
+  }
+
   /* THE TWELVE FRUIT — the keystone scrolls of the Tree (THE HARVEST)
      ALL fruit live in ONE InstancedMesh — a single draw call. White-gold
      emissive only, ZERO red (Runbook B white-gold law). The 10 whole
@@ -2372,7 +2443,8 @@ function addBuilding(x,z,ry,big){
           gl_FragColor = vec4(1.0,0.92,0.7,a);
         }`
     });
-    treeShaftMat.userData.baseOp = .06; TR.shafts.push(treeShaftMat);
+    /* lifted .06 → .095 (ASCENT PASS 1 — board 02's visible god-light) */
+    treeShaftMat.userData.baseOp = .095; TR.shafts.push(treeShaftMat);
     scene.add(new THREE.Mesh(mergeGeometries(treeShaftParts), treeShaftMat));
   }
 
