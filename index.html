@@ -116,6 +116,29 @@
     box-shadow:0 0 6px rgba(255,220,130,.9); display:none; }
   #fps { position:fixed; bottom:8px; left:10px; color:#8a6400; font:12px monospace;
     z-index:10; display:none; pointer-events:none; }
+  /* ---------- THE SEEKER'S HAND — the invitation ---------- */
+  #invite { position:fixed; left:50%; bottom:16%; transform:translateX(-50%);
+    z-index:11; pointer-events:none; text-align:center; padding:.55rem 1.6rem;
+    background:rgba(10,7,3,.42); border:1px solid rgba(255,220,150,.22);
+    border-radius:3px; opacity:0; transition:opacity .35s ease; max-width:82vw; }
+  #invite.show { opacity:1; }
+  #invite .t { font-family:'Cinzel', serif; color:#ffe2a0; font-size:.78rem;
+    letter-spacing:.22em; text-transform:uppercase; }
+  #invite .s { font-family:'Cinzel', serif; color:rgba(255,226,160,.78);
+    font-size:.62rem; letter-spacing:.30em; text-transform:uppercase; margin-top:.28rem; }
+  #invite .s:empty { display:none; }
+  #whisper { position:fixed; left:50%; top:26%; transform:translateX(-50%);
+    z-index:11; pointer-events:none; text-align:center;
+    font-family:'Cinzel', serif; color:#ffe6ae; font-size:1.02rem;
+    letter-spacing:.20em; padding:.7rem 1.9rem;
+    background:rgba(10,7,3,.44); border:1px solid rgba(255,220,150,.20);
+    border-radius:3px; text-shadow:0 1px 10px rgba(30,18,2,.8);
+    opacity:0; transition:opacity 1.6s ease; max-width:86vw; }
+  #whisper.show { opacity:.92; }
+  @media (prefers-reduced-motion: reduce){
+    #invite { transition:none; }
+    #whisper { transition:opacity .3s linear; }
+  }
   #vig { position:fixed; inset:0; z-index:5; pointer-events:none;
     background:radial-gradient(ellipse at center, transparent 66%, rgba(255,196,110,.10) 100%); }
   /* ---------- touch controls ---------- */
@@ -152,6 +175,8 @@
 </div>
 <div id="dot"></div>
 <div id="fps"></div>
+<div id="invite"><div class="t"></div><div class="s"></div></div>
+<div id="whisper">The fruit of the Tree hold the scrolls — draw near and touch one.</div>
 <div id="stick"><div id="knob"></div></div>
 <div id="err"></div>
 
@@ -1788,6 +1813,8 @@ function addBuilding(x,z,ry,big){
     const _fm = new THREE.Matrix4(), _fq = new THREE.Quaternion(), _fe = new THREE.Euler(),
           _fv = new THREE.Vector3(), _fs = new THREE.Vector3(1,1,1), _fc = new THREE.Color();
     tickers.push((t)=>{
+      /* THE SEEKER'S HAND — distance from the seeker to the Tree's heart */
+      const _seekerDist = Math.hypot(player.pos.x, player.pos.z);
       for (const fr of fruits){
         /* pendulum sway about the cord's canopy anchor */
         _fe.set(Math.sin(t*.7 + fr.ph)*.055, 0, Math.cos(t*.55 + fr.ph)*.055);
@@ -1801,11 +1828,21 @@ function addBuilding(x,z,ry,big){
         cordMesh.setMatrixAt(fr.i, _fm);
         /* white-gold pulse for lit fruit; sealed placeholders stay dim */
         const flash = Math.max(0, 1 - (t - fr.flashT)/1.1);
-        const b = fr.lit ? (.85 + .25*Math.sin(t*1.35 + fr.ph) + .9*flash) : .16;
+        /* THE SEEKER'S HAND — the light itself says "touch me":
+           near = seeker within ~13m of the Tree (swell eases in from 26m),
+           hov  = the crosshair/finger rests on THIS fruit right now.
+           All of it is brightness of the same white-gold — never a new hue. */
+        const near = fr.lit ? Math.min(1, Math.max(0, (26 - _seekerDist)/13)) : 0;
+        const hov  = fr.lit && (t - (fr.hoverT || -9)) < .12 ? 1 : 0;
+        const b = fr.lit
+          ? (.85 + .25*Math.sin(t*1.35 + fr.ph) + .9*flash
+             + near*(.28 + .22*Math.sin(t*2.3 + fr.ph)) + .55*hov)
+          : .16;
         fruitMesh.setColorAt(fr.i, _fc.setScalar(b));
         fr.glow.position.copy(fr.pos);
+        fr.glow.scale.set(2.6 + near*.5 + hov*.6, 2.6 + near*.5 + hov*.6, 1);
         fr.glow.material.opacity = fr.lit
-          ? .3 + .14*Math.sin(t*1.35 + fr.ph) + .3*flash
+          ? .3 + .14*Math.sin(t*1.35 + fr.ph) + .3*flash + near*.16 + hov*.22
           : .08;
       }
       fruitMesh.instanceMatrix.needsUpdate = true;
@@ -2877,21 +2914,23 @@ function showToast(msg){
   toastTimer = setTimeout(()=> toastEl.classList.remove('on'), 2600);
 }
 const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2();
-function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvasEl)){
-  if (!started || paused || readerOpen) return false;
-  if (useCenter) _ndc.set(0, 0);   /* crosshair */
-  else _ndc.set(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
+/* THE SEEKER'S HAND — ONE scan serves both the tap and the living
+   invitation, so what glows is EXACTLY what a touch will open. Radii are
+   generous by law: an honest aim (a thumb on a phone, a mouse at walking
+   distance) must succeed on the first try. The fruit target reads ~2x the
+   old radius; pitch is the tight axis when looking up at the canopy. */
+function scanScrollTarget(ndcX, ndcY){
+  _ndc.set(ndcX, ndcY);
   _ray.setFromCamera(_ndc, camera);
-  let best = null, bestDist = Infinity, bestPos = null;
-  /* lit Tree fruit — sealed placeholders (787, 672) are INERT: no click target */
+  let best = null, bestDist = Infinity;
+  /* lit Tree fruit — sealed placeholders (787, 672) are INERT: no target */
   for (const fr of fruits){
     if (!fr.lit) continue;
     const dist = fr.pos.distanceTo(camera.position);
     if (dist > 70) continue;
     const off = _ray.ray.distanceToPoint(fr.pos);
-    /* generous tap radius that grows with distance — phone-thumb friendly */
-    if (off < Math.max(1.0, dist*.045) && dist < bestDist){
-      best = { kind:'fruit', id: fr.id, rec: fr }; bestDist = dist; bestPos = fr.pos;
+    if (off < Math.max(1.8, dist*.085) && dist < bestDist){
+      best = { kind:'fruit', id: fr.id, rec: fr, pos: fr.pos }; bestDist = dist;
     }
   }
   /* revealed gate-vault points of light */
@@ -2900,15 +2939,51 @@ function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvas
     const dist = vp.pos.distanceTo(camera.position);
     if (dist > 26) continue;
     const off = _ray.ray.distanceToPoint(vp.pos);
-    if (off < Math.max(.5, dist*.05) && dist < bestDist){
-      best = { kind:'vault', id: vp.id }; bestDist = dist; bestPos = vp.pos;
+    if (off < Math.max(.9, dist*.07) && dist < bestDist){
+      best = { kind:'vault', id: vp.id, title: vp.title, pos: vp.pos }; bestDist = dist;
     }
   }
+  return best;
+}
+function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvasEl)){
+  if (!started || paused || readerOpen) return false;
+  const best = useCenter ? scanScrollTarget(0, 0)
+    : scanScrollTarget(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
   if (!best) return false;
   if (best.kind === 'fruit') best.rec.flashT = clock.elapsedTime;
-  openScroll(best.id, bestPos.clone());
+  openScroll(best.id, best.pos.clone());
   return true;
 }
+
+/* THE SEEKER'S HAND — the invitation: a reverent line that names the touch */
+const inviteEl = document.getElementById('invite');
+const inviteT = inviteEl.querySelector('.t'), inviteS = inviteEl.querySelector('.s');
+const invite = { text:'', sub:'', until:0 };
+function showInvite(text, sub, holdS){
+  invite.text = text; invite.sub = sub || '';
+  invite.until = clock.elapsedTime + holdS;
+}
+let aimTarget = null;
+tickers.push((t)=>{
+  /* crosshair/center-aim scan — the fruit that would open brightens NOW */
+  aimTarget = (started && !paused && !readerOpen && !glide.active)
+    ? scanScrollTarget(0, 0) : null;
+  if (aimTarget){
+    if (aimTarget.kind === 'fruit'){
+      aimTarget.rec.hoverT = t;
+      showInvite(IS_TOUCH ? 'Touch the fruit' : 'Click to open the scroll', '', .3);
+    } else {
+      showInvite(IS_TOUCH ? 'Touch the scroll to read' : 'Click to read the scroll',
+        aimTarget.title || '', .3);
+    }
+  }
+  const show = started && !readerOpen && !paused && t < invite.until;
+  if (show){
+    if (inviteT.textContent !== invite.text) inviteT.textContent = invite.text;
+    if (inviteS.textContent !== invite.sub) inviteS.textContent = invite.sub;
+  }
+  inviteEl.classList.toggle('show', show);
+});
 let mDownT = 0, mMoveAcc = 0, mDownLocked = false;
 canvasEl.addEventListener('mousedown', e=>{
   if (e.button !== 0) return;
@@ -3098,12 +3173,26 @@ function buildGateVaults(index){
     scene.add(g);
     vaultGroups.push({ group: g, anchor: new THREE.Vector3(px, 0, pz), label: label || '(awaiting)', count: list.length });
   }
-  /* reveal on approach — the vault shows itself at ~15m */
-  tickers.push(()=>{
+  /* reveal on approach — the vault shows itself at ~15m; at the moment of
+     revealing, its points of light pulse once and the invitation names the
+     vault (THE SEEKER'S HAND) */
+  let revealT = -9;
+  tickers.push((t)=>{
     for (const v of vaultGroups){
       const dx = player.pos.x - v.anchor.x, dz = player.pos.z - v.anchor.z;
-      v.group.visible = (dx*dx + dz*dz) < 15*15;
+      const vis = (dx*dx + dz*dz) < 15*15;
+      if (vis && !v.group.visible){
+        revealT = t;
+        if (v.label && v.label !== '(awaiting)')
+          showInvite(`Enter the vault of ${v.label}`,
+            IS_TOUCH ? 'touch a scroll to read' : 'click a scroll to read', 4.5);
+        else
+          showInvite('The vault awaits its scrolls', '', 3.5);
+      }
+      v.group.visible = vis;
     }
+    /* one reverent white-gold pulse rides the shared point material */
+    pointMat.emissiveIntensity = 2.6 + 2.6*Math.max(0, 1 - (t - revealT)/2.2);
   });
 }
 
@@ -3174,14 +3263,16 @@ if (IS_TOUCH){
         moveTouchId=null; touchMove.x=touchMove.y=0;
         knob.style.transform='translate(0,0)';
         /* a short, still first-finger touch on the LEFT side is a TAP too —
-           without this, fruits in the left 45% of the screen are unreachable */
-        if (!canceled && performance.now() - moveT0 < 350 && moveMoved < 14)
+           without this, fruits in the left 45% of the screen are unreachable.
+           450ms/22px: a real thumb wobbles (THE SEEKER'S HAND) */
+        if (!canceled && performance.now() - moveT0 < 450 && moveMoved < 22)
           tryFruitTap(t.clientX, t.clientY, false);
       }
       if (t.identifier === lookTouchId){
         lookTouchId = null;
-        /* a short, still touch is a TAP — try the fruit targets */
-        if (!canceled && performance.now() - lookT0 < 350 && lookMoved < 14)
+        /* a short, still touch is a TAP — try the fruit targets.
+           450ms/22px: a real thumb wobbles (THE SEEKER'S HAND) */
+        if (!canceled && performance.now() - lookT0 < 450 && lookMoved < 22)
           tryFruitTap(t.clientX, t.clientY, false);
       }
     }
@@ -3248,6 +3339,18 @@ function checkArea(){
         areaEl.classList.remove('on');
         void areaEl.offsetWidth;
         areaEl.classList.add('on');
+        /* THE SEEKER'S HAND — first-visit whisper: once per session,
+           never repeats, never nags */
+        if (a.n === 'THE TREE OF LIFE PLAZA'){
+          let seen = false;
+          try { seen = sessionStorage.getItem('whisper.tree') === '1'; } catch(e){}
+          if (!seen){
+            try { sessionStorage.setItem('whisper.tree', '1'); } catch(e){}
+            const w = document.getElementById('whisper');
+            w.classList.add('show');
+            setTimeout(()=> w.classList.remove('show'), 6200);
+          }
+        }
       }
       return;
     }
@@ -3423,6 +3526,7 @@ window.__CITY = {
   lookAt(x,z){ player.yaw = Math.atan2(-(x-player.pos.x), -(z-player.pos.z)); },
   press(code,down){ keys[code] = !!down; },
   get area(){ return curArea; },
+  get vaults(){ return vaultGroups.map(v=>({ label:v.label, x:+v.anchor.x.toFixed(1), z:+v.anchor.z.toFixed(1), count:v.count, visible:v.group.visible })); },
   get fps(){ return fpsAvg; },
   get tier(){ return TIER; },
   get watchdog(){ return { floor: FPS_FLOOR, emergency }; },
