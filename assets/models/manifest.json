@@ -1,0 +1,5 @@
+[
+  { "slot": "throne",   "file": "assets/models/throne.glb",   "scale": 2.3,  "yOffset": 0 },
+  { "slot": "fountain", "file": "assets/models/fountain.glb", "scale": 3.8,  "yOffset": 0 },
+  { "slot": "gateArch", "file": "assets/models/gateArch.glb", "scale": 12,   "yOffset": -8.4 }
+]

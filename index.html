@@ -1026,9 +1026,11 @@ async function initTransfiguration(){
       g.fillRect(w/2-150, h-22, 300, 2.5);
     }, 512);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
-    sp.position.set(sx*(WALL_R-2.5), 21.7, cz*(WALL_R-2.5));
+    /* y=25.4 clears the GLB gate-portal crown (~22.8 at manifest scale 12);
+       at the old 21.7 the plates sat inside the portal roof (THE FORGE) */
+    sp.position.set(sx*(WALL_R-2.5), 25.4, cz*(WALL_R-2.5));
     sp.scale.set(13, 3.25, 1);
-    sp.userData.baseY = 21.7;
+    sp.userData.baseY = 25.4;
     scene.add(sp);
     nameplates.push(sp);
   }
@@ -1379,7 +1381,7 @@ function addBuilding(x,z,ry,big){
     map:rainbowTex, transparent:true, opacity:.20, depthWrite:false }));
   rainbow.position.set(FX+1.6, 5.4, FZ+1.2);
   rainbow.scale.set(5.2, 3.0, 1);
-  heroFountain.add(rainbow);
+  scene.add(rainbow);   /* survives a GLB fountain swap, like the spray */
   tickers.push(t=>{ rainbow.material.opacity = .15 + .07*Math.sin(t*1.7); });
 
   const wMat = new THREE.MeshStandardMaterial({ color:0xcfeaff, transparent:true, opacity:.8,
@@ -1435,7 +1437,10 @@ function addBuilding(x,z,ry,big){
       }`
   });
   const spray = new THREE.Points(sg, sprayMat);
-  spray.frustumCulled = false; heroFountain.add(spray);
+  /* the spray lives at scene root (positions are absolute), NOT in the
+     heroFountain group — a GLB fountain hides the group, and the city's
+     own water must survive the swap (THE FORGE) */
+  spray.frustumCulled = false; scene.add(spray);
   particleMeshes.push(spray);
   registerHero('fountain', heroFountain, [{ x:FX, y:0, z:FZ, ry:0 }]);
 
