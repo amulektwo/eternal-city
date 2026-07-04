@@ -71,7 +71,7 @@ own factors, not Meshy output.
 |---|---|---|
 | `models/throne.glb` | `Meshy_AI_ornate_gothic_throne__0704144159_generate.glb` | 543,200 → 19,986 |
 | `models/fountain.glb` | `Meshy_AI_tiered_white_marble_f_0704144005_generate.glb` | 660,066 → 24,994 |
-| `models/gateArch.glb` | `Meshy_AI_grand_gothic_cathedra_0704143946_generate.glb` | 1,859,582 → 19,866 |
+| `models/gateArch.glb` | `Meshy_AI_grand_gothic_cathedra_0704143946_generate.glb` | 1,859,582 → 9,992 (re-refined from the preserved original in Ascent Pass 3 — 12 instances made the 19,866 version the worst-case tris driver under Law 28) |
 
 Originals preserved in the iCloud dropbox `_PROCESSED/` folder.
 
