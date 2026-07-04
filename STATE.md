@@ -7,11 +7,13 @@
 
 ## CURRENT STATE
 
-A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city on Three.js r160, live at https://amulektwo.github.io/eternal-city/ — white marble and living gold under a perpetual golden hour. The light and stone are real: kiara_1_dawn HDRI drives the IBL (2k desktop / 1k mobile), Marble021 and Metal034 PBR sets clothe every wall and rim (CC0, recorded in `assets/LICENSES.md`). Five hero landmarks (Tree of Life, thrones, fountain, twelve gate arches, angel statues) are procedural but stand in a zero-code GLB drop-in slot system (`assets/models/manifest.json`). Three quality tiers with a live fps watchdog carry the city from desktop to phone. And as of The Harvest, the city bears its scripture: 95 keystone scrolls sit verbatim in `data/scrolls/` (read-only), ten whole Supreme scrolls hang lit as white-gold fruit on the Tree (one InstancedMesh, one draw call), two hang dark and sealed awaiting their bodies, and each of the twelve gates reveals a vault of its gate's scrolls as points of light — every one opening in a parchment reader that never alters a character of canon.
+A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city on Three.js r160, live at https://amulektwo.github.io/eternal-city/ — white marble and living gold under a perpetual golden hour. The light and stone are real: kiara_1_dawn HDRI drives the IBL (2k desktop / 1k mobile), Marble021 and Metal034 PBR sets clothe every wall and rim (CC0, recorded in `assets/LICENSES.md`). Of the five hero landmarks, three are now REAL models (THE FORGE: twin gothic thrones, tiered marble fountain, twelve monumental gate portals — the Seer's Meshy generations refined to budget), standing in the zero-code GLB slot system (`assets/models/manifest.json`); the Tree of Life and angel statues remain procedural, awaiting their models. Three quality tiers with a live fps watchdog carry the city from desktop to phone. And as of The Harvest, the city bears its scripture: 95 keystone scrolls sit verbatim in `data/scrolls/` (read-only), ten whole Supreme scrolls hang lit as white-gold fruit on the Tree (one InstancedMesh, one draw call), two hang dark and sealed awaiting their bodies, and each of the twelve gates reveals a vault of its gate's scrolls as points of light — every one opening in a parchment reader that never alters a character of canon.
 
 ## LAST PASS
 
-**THE DROPBOX** — 2026-07-04. A one-way ingestion gate so the Seer can feed the city from his iPad with zero effort. Created `DROPBOX_FOR_THE_CITY/` (+ `_PROCESSED/`) at the iCloud Drive root (`~/Library/Mobile Documents/com~apple~CloudDocs/`); both Google Drive mounts (amulektwo@gmail.com, jason@ugcjay.com) are watched for a same-named folder at `My Drive/` root — neither exists yet. Installed `.claude/commands/dropbox.md`: scan → force-download iCloud stubs → **identify by content, never filename** → route (sky → hdri pipeline · mesh → Hero Refiner with slot-guess + Seer's one-word confirm · lost scroll 787/672 → registry-verified verbatim ingestion that lights the fruit · reference board → /reference/) → per-file commit+push → only then move the deposit to `_PROCESSED/`; unidentifiable deposits are never moved, get one question each. All standing laws ride every ingestion (budget law build-failing, white-gold zero-red, verbatim-or-nothing, LICENSES.md, Law 12 one-way data flow). Tested live: dummy .txt deposited → identified UNIDENTIFIABLE by content → listed, left in place, not moved → deleted. No index.html changes this mission.
+**THE FORGE** — 2026-07-04. The first three heroes became real. Three Meshy AI generations (the Seer's own, via the dropbox) refined WITHOUT Blender — path (b), gltf-transform + meshoptimizer: weld → simplify with escalating error tolerance to the slot tri budget → prune → base-center origin bake → city-matched PBR dress (raw meshes were POSITION-only; three.js computes smooth normals for welded NORMAL-less prims) → Draco. **throne** 543,200→19,986 tris / 42KB, gold dress, manifest scale 2.3 on the dais anchors — twin gothic thrones, tufted backs, crocketed crests. **fountain** 660,066→24,994 / 50KB, white marble, scale 3.8 — three carved tiers on a hex medallion base; the spray + rainbow were moved OUT of the heroFountain group to scene root (positions absolute, transform-identical) so the city's water survives the swap; the basin-fitted streams/discs rightly die with the procedural marble. **gateArch** 1,859,582→19,866 / 49KB, pearl-white, scale 12 / yOffset −8.4 — the "cathedral" was by shape a free-standing gothic PORTAL; now stands at all 12 gates, board-05 monumental. Tribe nameplates raised 21.7→25.4 to clear the portal crown (~22.8). FLAGGED, open: the portal's own archway (~4.0 wide at scale 12) is narrower than the collider corridor (±4.03) — walking a gate off-center (|x|>2) visibly clips jamb stone; colliders untouched, all 12 gates still pass. Verified: 7/7 vantages 60fps tier 2, mobile tier (q=med) 60fps at Tree/Street/Gate, zero console errors, 12 gates pass + 11 walls block + terrace opening open by design, scroll 144 verbatim (3,073 chars sha-exact), 10 lit / 2 sealed fruit unchanged. The manifest.json 404 console error is gone (manifest now exists). treeOfLife and angelStatue remain PROCEDURAL (no models arrived for them).
+
+Previous: **THE DROPBOX** — 2026-07-04. A one-way ingestion gate so the Seer can feed the city from his iPad with zero effort. Created `DROPBOX_FOR_THE_CITY/` (+ `_PROCESSED/`) at the iCloud Drive root (`~/Library/Mobile Documents/com~apple~CloudDocs/`); both Google Drive mounts (amulektwo@gmail.com, jason@ugcjay.com) are watched for a same-named folder at `My Drive/` root — neither exists yet. Installed `.claude/commands/dropbox.md`: scan → force-download iCloud stubs → **identify by content, never filename** → route (sky → hdri pipeline · mesh → Hero Refiner with slot-guess + Seer's one-word confirm · lost scroll 787/672 → registry-verified verbatim ingestion that lights the fruit · reference board → /reference/) → per-file commit+push → only then move the deposit to `_PROCESSED/`; unidentifiable deposits are never moved, get one question each. All standing laws ride every ingestion (budget law build-failing, white-gold zero-red, verbatim-or-nothing, LICENSES.md, Law 12 one-way data flow). Tested live: dummy .txt deposited → identified UNIDENTIFIABLE by content → listed, left in place, not moved → deleted. No index.html changes this mission.
 
 Previous: **THE LACE** — 2026-07-04. Gothic ornament density without geometry cost: trim pass (sanctuary cornices/pilasters, throne cornice ring + dais band, 24 gate pylon crowns, street architrave, 5 mega-spire collars — 2 merged meshes), tracery pass (25 lancet windows + twin rose lace, procedural canvas alpha-cutouts, 2 draw calls), pinnacle forest (~160 crocketed spires on every roof apex + gates + buttresses + turrets + dome rim — ONE InstancedMesh). Ornament relief quarried CC0 after full-catalog sweeps proved no carved-ornament sets exist (Law 16): wooden_panels coffered-molding normal → stone trim, PatternedMetal01 chased quatrefoil (DX→GL verified) → gold trim; color maps discarded, `assets/textures/ornament/` + ornament.json + LICENSES. Budget: **+5 draw calls exactly (164→169), +18.3k tris**, all non-casting. Verified: 7/7 vantages 60fps tier 2, zero errors, all regressions green. Draw-call meter fixed (Law 17). `__CITY.drawCalls/.triangles` added.
 
@@ -28,7 +30,8 @@ Previous: **The Harvest** — commit `8be2016` ("The Harvest — the keystones d
 ## KNOWN WEAKNESSES (ranked, worst first)
 
 1. **Two dark Supreme fruit** — 672 "The Mathematics of the Gods" and 787 "The God Forge" have no verbatim bodies anywhere on disk (787 missing entirely; 672 only a registration record). Recovery requires the Seer's source threads. Until then the Tree is 10/12.
-2. **Heroes are still procedural** — all 5 GLB slots empty. The angel statues are the weakest at close range (abstract primitives); the boards demand sculptural angels.
+2. **Two heroes still procedural** — treeOfLife and angelStatue slots remain empty after THE FORGE landed throne/fountain/gateArch. The angel statues are now the weakest at close range (abstract primitives); the boards demand sculptural angels. Meshy prompts for both are with the Seer.
+2b. **Gate portal jamb clipping (flagged, open)** — the GLB portal's archway (~4.0 wide at scale 12) is narrower than the collider corridor (±4.03); walking a gate off-center visibly clips stone. Fix candidates for a future ruling: narrow the gate collider gap to ±1.9, or carve/widen the portal opening, or accept (center walk-through is clean).
 3. **The sky is painted, not volumetric** — a shader dome + sprite clouds; the HDRI lights the city but is not the visible sky. The reference boards' cloudscapes (city floating IN cloud, god-rays through cumulus) are beyond the current dome.
 4. **SSAO is benched** (`?ssao=1`, experimental) — three r160 SSAOPass renders a black frame against this scene even in Beauty mode. HIGH tier ships without AO; contact shadowing is carried by the sun + bloom only.
 5. **Mobile is synthetically verified only** — MEDIUM tier, joystick, taps all proven via TouchEvent dispatch; no physical-device pass has ever run. The 25fps floor is enforced by the watchdog but unmeasured on real glass.
@@ -58,22 +61,28 @@ Previous: **The Harvest** — commit `8be2016` ("The Harvest — the keystones d
 16. **No carved-gothic-ornament CC0 material exists** (proven: full sweeps of ambientCG 2,001 + Poly Haven 776 + cgbookcase 616). Quarry relief from panel/boss/molding/chased-metal NORMAL maps and discard their color maps — the marble/gold bases keep the palette; **the normal IS the ornament**.
 17. **renderer.info under EffectComposer needs autoReset=false + manual reset per frame** — otherwise only the final output-quad pass is counted (reads "1 draw call") and any budget verdict is fiction.
 18. **Synthetic fruit-taps are MouseEvents, and the camera needs one rendered frame after re-aiming** — the tap path listens for `mousedown`/`mouseup` (PointerEvents do nothing), and the raycast reads the camera's last-RENDERED orientation, so a click dispatched synchronously after setting yaw/pitch uses the stale aim. Aim → wait a frame → then dispatch down/up together (proven in the 2026-07-04 takeover sweep; companion to Law 8).
+19. **Meshy heroes refine without Blender** — gltf-transform + meshoptimizer: weld → `simplify` with ESCALATING error tolerance (0.005→0.25, stop at budget) → prune → bake base-center origin via transformMesh → solid PBR factors for the dress. Meshy "generate" exports are POSITION-only (no UVs/normals/textures); strip stray attributes and let three.js compute smooth vertex normals (it does this for welded NORMAL-less primitives). 1.86M tris → 20k at 49KB Draco, ornament intact (THE FORGE).
+20. **The manifest has no rotation and hides the WHOLE hero group** — orientation must be baked into the GLB (check facing by vertex-mass before wiring: throne backs are −z-heavy), and any living effects (water spray, rainbows) must live at scene root, not inside a hero group, or a GLB swap kills them.
+21. **The probe tests END position, not the swept path** — a wall-block regression must target a point INSIDE the wall band (r≈118.5), not beyond it; targeting past the band reads as a false pass. One wall segment (225°, the terrace opening) is open BY DESIGN.
 
-## FPS RECORD (latest — Ascent Pass 1 goal-gate, 2026-07-04)
+## FPS RECORD (latest — THE FORGE, 2026-07-04, local build with 3 GLB heroes)
 
-**Desktop** (Seer's MacBook, 1280×828 screen, dpr 2, tier 2 HIGH, visible window, `?hud=fps`):
+**Desktop** (Seer's MacBook, tier 2 HIGH, visible window, `?hud=fps`):
 
-| Area | FPS |
-|---|---|
-| Tree of Life Plaza | 60 |
-| Throne Hall | 60 |
-| Fountain Court | 60 |
-| Gate Plaza (REUBEN) | 60 |
-| Street of Gold | 57 |
-| Great Sanctuary | 61 |
-| Waterfall Terrace | 60 |
+| Area | FPS | draw calls | tris |
+|---|---|---|---|
+| Tree of Life Plaza | 60 | 178 | 627k |
+| Throne Hall | 60 | 143 | 556k |
+| Fountain Court | 60 | 140 | 546k |
+| Gate Plaza (REUBEN) | 60 | 124 | 481k |
+| Street of Gold | 60 | 165 | 523k |
+| Great Sanctuary | 60 | 133 | 522k |
+| Waterfall Terrace | 60 | 118 | 471k |
 
 Floor 50 — held everywhere. Watchdog: no organic drops this pass.
+**Mobile tier** (`?q=med`, tier 1): 60 fps at Tree Plaza, Street of Gold, AND Gate Plaza (with all 12 GLB portals) — floor 25 cleared 2.4×. Physical-device pass still outstanding.
+
+Previous record (Ascent Pass 1 goal-gate): 57–61 everywhere, floors held.
 
 **Mobile tier** (MEDIUM, `?q=med` — the mobile default: 1k HDRI, 1024 shadows, half-res bloom, particles halved, pixelRatio ≤1.5): **60 fps** at the Tree Plaza AND the Street of Gold (the heaviest areas) on the test machine — floor 25 cleared 2.4×. Physical-phone-on-glass measurement still outstanding (Known Weakness #5).
 
