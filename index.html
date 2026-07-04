@@ -215,6 +215,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 try {
 
@@ -361,6 +362,55 @@ if (TIER === 2 && qs.get('ssao') === '1'){
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.5, 1.0);
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
+
+/* THE GRADE (ASCENT PASS 4) — the final cinematic finish, applied in
+   display space AFTER tone mapping (the boards' body lives here): a
+   gentle filmic S-curve that gives the golden-hour wash its depth back,
+   a warm gold lift, a breath of saturation, and a quiet vignette that
+   keeps the eye in the glory. One fullscreen pass at every tier.
+   A/B: ?grade=0 ships it dark; __CITY.grade(x) scales it live. */
+const gradePass = new ShaderPass({
+  uniforms: {
+    tDiffuse: { value: null },
+    uAmt:     { value: qs.get('grade') === '0' ? 0 : 1 },
+  },
+  vertexShader: `varying vec2 vUv;
+    void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uAmt; varying vec2 vUv;
+    void main(){
+      vec4 tex = texture2D(tDiffuse, vUv);
+      vec3 c = tex.rgb;
+      /* display-exposure breath — pull the milk off the whites */
+      c *= 0.94;
+      /* high-pivot contrast ON LUMINANCE ONLY — hue-exact by
+         construction, so no gold can drift toward red (Law 3):
+         the city lives in the highlights, the body comes from
+         pulling the mids DOWN, never lifting the whites */
+      float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      float lc = 0.78 + (lum - 0.78)*1.16;
+      float l3 = clamp(lc, 0.0, 1.0);
+      lc = mix(lc, l3*l3*(3.0 - 2.0*l3), 0.22);
+      c *= lc / max(lum, 1e-4);
+      /* chroma guard — warm the LIGHT, never the pigments: saturated
+         gold inlay and the lawful royal reds keep their own hue
+         (zero-red Law 3 + royal-accent Law 29, proven by pixel scan) */
+      float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+      float sat = clamp((mx - mn) / max(mx, 1e-4) * 3.2, 0.0, 1.0);
+      /* warm gold cast on the near-neutral wash, blue gently pulled */
+      c *= mix(vec3(1.035, 1.000, 0.945), vec3(1.0), sat);
+      /* warm toe — shadows stay golden, not sooty */
+      c += vec3(0.008, 0.006, 0.004) * (1.0 - c);
+      /* a breath of saturation, fully held where pigment already sings */
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      c = mix(vec3(l), c, mix(1.10, 1.00, sat));
+      /* quiet vignette */
+      float v = length(vUv - 0.5);
+      c *= 1.0 - smoothstep(0.42, 0.85, v) * 0.16;
+      gl_FragColor = vec4(mix(tex.rgb, clamp(c, 0.0, 1.0), uAmt), tex.a);
+    }`
+});
+composer.addPass(gradePass);
 
 /* ================================================================
    2.5  THE GUARD — quality tiers, applied live
@@ -3677,6 +3727,7 @@ window.__CITY = {
   get drawCalls(){ return renderer.info.render.calls; },
   get triangles(){ return renderer.info.render.triangles; },
   setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
+  grade(x){ gradePass.uniforms.uAmt.value = Math.max(0, Math.min(1, +x)); },
   /* collision probe for tests: attempt to stand at (x,z) coming from
      prevR / (prevX,prevZ) — pure in its arguments, never the live avatar */
   probe(x, z, prevR = Math.hypot(x, z), prevX = x, prevZ = z){
