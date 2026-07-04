@@ -979,6 +979,15 @@ const seaMeshes = [];
   thresholds.frustumCulled = false;
   scene.add(thresholds);
   tickers.push(t=>{ thMat.uniforms.uTime.value = t; });
+
+  /* ASCENT LOOP·2 — the column of consecration onto the altar table */
+  const altMat = colMat2.clone();
+  altMat.uniforms.uOp.value = .07; altMat.userData.baseOp = .07;
+  TR.shafts.push(altMat);
+  const altCol = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 3.0, 14, 20, 4, true), altMat);
+  altCol.position.set(81.5, 8.2, -6);
+  scene.add(altCol);
+  tickers.push(t=>{ altMat.uniforms.uTime.value = t + 2.1; });
 }
 
 /* distant sister-spires on the horizon */
@@ -2895,6 +2904,27 @@ function addBuilding(x,z,ry,big){
       if (angDiff(a, TERR_A) < TERR_HALF + .12) continue;             /* the terrace keeps its sky */
       needle(Math.sin(a) * 126.5, Math.cos(a) * 126.5, 15 + (k % 3) * 2.5);
     }
+  }
+
+  /* ========== ASCENT LOOP·2 — THE APSE GLORY (board 02's glowing heart) ==========
+     The Sanctuary's chancel was a blank wall: a gilded sunburst with a
+     rose at its heart now stands behind the altar (P.gold — zero new
+     draws), and a column of consecration descends onto the altar table
+     (the god-column recipe, TR.shafts, +1 draw). */
+  {
+    const AX = 84.3, AY = 7.4, AZ = -6;
+    for (let k = 0; k < 12; k++){
+      const t = k*PI/6 + PI/12;
+      const ray = new THREE.BoxGeometry(.1, 2.9, .38);
+      ray.rotateX(t);
+      P.gold.push(xf(ray, AX, AY + Math.cos(t)*2.45, AZ + Math.sin(t)*2.45));
+    }
+    const rose1 = new THREE.TorusGeometry(1.15, .07, 6, 22); rose1.rotateY(PI/2);
+    P.gold.push(xf(rose1, AX, AY, AZ));
+    const rose2 = new THREE.TorusGeometry(2.05, .05, 6, 26); rose2.rotateY(PI/2);
+    P.gold.push(xf(rose2, AX, AY, AZ));
+    const heart = new THREE.CircleGeometry(.55, 18); heart.rotateY(-PI/2);
+    P.gold.push(xf(heart, AX - .06, AY, AZ));
   }
 
   /* (1) THE GOLDEN PAVEMENT — a burnished processional band down the
