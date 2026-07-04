@@ -229,7 +229,10 @@ const TERR_A = 225 * D2R;    // waterfall terrace azimuth
 const TERR_HALF = 18 * D2R;  // terrace floor half-angle
 const TERR_OPEN = 8 * D2R;   // wall opening half-angle at terrace
 const TERR_RAIL = 137.3;     // terrace railing radius
-const GATE_HALF = 0.040;     // gate opening half-angle (rad)
+const GATE_HALF = 0.040;     // gate opening half-angle (rad) — visual wall gap
+const GATE_PASS = 0.016;     // collider half-angle (~±1.9 at the wall) — matches
+                             // the GLB portal's archway so walkers can no longer
+                             // clip through jamb stone (THE PROVING, was ±4.0)
 const TRIBES = ['REUBEN','SIMEON','LEVI','JUDAH','DAN','NAPHTALI',
                 'GAD','ASHER','ISSACHAR','ZEBULUN','JOSEPH','BENJAMIN'];
 
@@ -2824,7 +2827,7 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
     const IN = WALL_R-1.65, OUT = WALL_R+1.65;
     if (r > IN-PR && r < OUT+PR){
       let open = angDiff(a,TERR_A) < TERR_OPEN - .012;
-      for (let k=0;k<12 && !open;k++) if (angDiff(a,k*PI/6) < GATE_HALF - .006) open = true;
+      for (let k=0;k<12 && !open;k++) if (angDiff(a,k*PI/6) < GATE_PASS) open = true;
       if (!open){
         const target = prevR < WALL_R ? IN-PR : OUT+PR;
         const sc = target / (r||1e-6);
