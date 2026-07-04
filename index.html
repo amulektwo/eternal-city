@@ -422,6 +422,32 @@ composer.addPass(gradePass);
 ================================================================ */
 const TR = { instanced: [], shafts: [] };   /* tier-scalable registries */
 let emergency = false;
+
+/* ASCENT PASS 8 — ONE FLESH: every soul in the city shares one sculpted
+   body. The old figure was a featureless pawn at close range; this one
+   has a hood over a bowed head, shoulders, sleeved arms meeting in
+   prayed hands — still ~400 tris, still two instanced draws for every
+   still soul. SOULS collects [x,y,z,face,bow,scale] from every station
+   (the Tree witnesses join the host); the hem sits +.04 so the deepest
+   bow never dips below the floor. */
+const SOULS = [];
+function soulGeo(){
+  const g = mergeGeometries([
+    xf(new THREE.CylinderGeometry(.16,.50,1.42,8), 0,.73,0),
+    xf(new THREE.SphereGeometry(.30,8,5), 0,1.42,0, 0, 1,.62,.82),
+    xf(new THREE.SphereGeometry(.21,8,6), 0,1.60,.02),
+    xf(new THREE.ConeGeometry(.27,.5,8), 0,1.72,-.05, 0, 1,null,null, .18),
+    xf(new THREE.CylinderGeometry(.055,.075,.60,6), .19,.98,.10, 0, 1,null,null, .42, -.5),
+    xf(new THREE.CylinderGeometry(.055,.075,.60,6), -.19,.98,.10, 0, 1,null,null, .42, .5),
+    xf(new THREE.SphereGeometry(.075,6,4), 0,.80,.27),
+  ]);
+  g.translate(0, .04, 0);
+  return g;
+}
+function soulSashGeo(){
+  return xf(new THREE.TorusGeometry(.31,.035,5,12).rotateX(PI/2), 0,1.06,0);
+}
+
 function applyPostSizes(){
   const f = TIER===2 ? 1 : (TIER===1 ? .5 : .25);
   bloomPass.setSize(innerWidth*f, innerHeight*f);
@@ -1968,7 +1994,12 @@ function addBuilding(x,z,ry,big){
          a warm base light, a soft ground halo: the light gathers at
          the roots. +2 draw calls. */
   {
-    const wWhite = [], wGold = [];
+    /* ASCENT PASS 8 — ONE FLESH: the witnesses keep their exact ring
+       placement (same seeded stream) but join the instanced soul host
+       (section 16.65) instead of building two merged meshes: the same
+       souls, −2 draw calls, the sculpted body and the breath. They sit
+       at the HEAD of the host so the MEDIUM trim never empties the
+       Tree plaza. */
     const wr = mulberry32(4144);
     for (const [ring, n, aOff] of [[14.0, 18, 0], [16.4, 14, .13]]){
       for (let i = 0; i < n; i++){
@@ -1980,18 +2011,9 @@ function addBuilding(x,z,ry,big){
         const face = Math.atan2(-x, -z);        /* eyes to the Tree */
         const bow  = .05 + wr()*.10;            /* reverent lean */
         const s    = .93 + wr()*.13;
-        const robe = new THREE.CylinderGeometry(.13,.44,1.55,8); robe.translate(0,.78,0);
-        const head = new THREE.SphereGeometry(.24,8,6); head.scale(1,.7,1); head.translate(0,1.62,0);
-        const knot = new THREE.SphereGeometry(.145,8,6); knot.translate(0,1.86,0);
-        const sashg = new THREE.TorusGeometry(.30,.035,5,12); sashg.rotateX(PI/2); sashg.translate(0,1.02,0);
-        for (const g of [robe, head, knot]) wWhite.push(xf(g, x,.02,z, face, s,null,null, bow));
-        wGold.push(xf(sashg, x,.02,z, face, s,null,null, bow));
+        SOULS.push([x, .02, z, face, bow, s]);
       }
     }
-    const wWhiteM = new THREE.Mesh(mergeGeometries(wWhite), MAT.pearl);
-    wWhiteM.castShadow = SHADOWS; wWhiteM.receiveShadow = SHADOWS;
-    const wGoldM = new THREE.Mesh(mergeGeometries(wGold), MAT.gold);
-    scene.add(wWhiteM, wGoldM);
 
     /* the descending radiance */
     const colMat = new THREE.ShaderMaterial({
@@ -2802,13 +2824,11 @@ function addBuilding(x,z,ry,big){
   scene.add(petals); particleMeshes.push(petals);
   tickers.push(t=>{ petalMat.uniforms.uTime.value = t; });
 
-  /* robed citizens walking the avenues in slow procession */
-  const citGeo = mergeGeometries([
-    xf(new THREE.CylinderGeometry(.13,.44,1.55,8), 0,.78,0),
-    xf(new THREE.SphereGeometry(.24,8,6), 0,1.62,0, 0, 1,.7,1),
-    xf(new THREE.SphereGeometry(.145,8,6), 0,1.86,0),
-  ]);
-  const sashGeo = xf(new THREE.TorusGeometry(.30,.035,5,12).rotateX(PI/2), 0,1.02,0);
+  /* robed citizens walking the avenues in slow procession —
+     ONE FLESH (Pass 8): the walkers wear the same sculpted body as
+     every still soul */
+  const citGeo = soulGeo();
+  const sashGeo = soulSashGeo();
   const PATHS = [
     { kind:'line', a:[-2.6,86], b:[-2.6,30],  v:1.1, off:0 },
     { kind:'line', a:[2.6,30],  b:[2.6,86],   v:0.9, off:33 },
@@ -2918,18 +2938,17 @@ function addBuilding(x,z,ry,big){
       stations[2].push([jx, .42, jz, Math.atan2(81.5-jx, -6-jz), .08 + pr()*.10, .93 + pr()*.12]);
     }
   }
-  /* interleave stations so the tier trim keeps presence everywhere */
-  const order = [];
+  /* ONE FLESH (Pass 8): the Tree witnesses already fill SOULS — they
+     stay at the HEAD (the Tree plaza never empties at MEDIUM), then
+     the stations interleave so the tier trim keeps presence everywhere */
+  const order = SOULS.slice();
   const idx = [0, 0, 0];
-  while (order.length < stations[0].length + stations[1].length + stations[2].length)
+  const stationTotal = stations[0].length + stations[1].length + stations[2].length;
+  while (order.length < SOULS.length + stationTotal)
     for (let s = 0; s < 3; s++)
       if (idx[s] < stations[s].length) order.push(stations[s][idx[s]++]);
-  const bodyG = mergeGeometries([
-    xf(new THREE.CylinderGeometry(.13,.44,1.55,8), 0,.78,0),
-    xf(new THREE.SphereGeometry(.24,8,6), 0,1.62,0, 0, 1,.7,1),
-    xf(new THREE.SphereGeometry(.145,8,6), 0,1.86,0),
-  ]);
-  const sashG = xf(new THREE.TorusGeometry(.30,.035,5,12).rotateX(PI/2), 0,1.02,0);
+  const bodyG = soulGeo();
+  const sashG = soulSashGeo();
   const bodyI = new THREE.InstancedMesh(bodyG, MAT.pearl, order.length);
   const sashI = new THREE.InstancedMesh(sashG, MAT.gold, order.length);
   const o3 = new THREE.Object3D();
