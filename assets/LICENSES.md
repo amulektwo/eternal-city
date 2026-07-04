@@ -61,3 +61,30 @@ rejected (dark or grey stone — the City's stone must be white).*
 
 Empty for now (`.gitkeep` only). Future models will be recorded here with the
 same rigor: exact source URL and CC0 dedication, or they do not enter the repo.
+
+---
+
+## Ornament (THE LACE) — `assets/textures/ornament/`
+
+Quarried for RELIEF: after full-catalog sweeps of ambientCG (2,001 materials),
+Poly Haven (776 textures) and cgbookcase (616 textures) found **no dedicated
+carved-gothic-ornament CC0 sets in existence**, these were chosen by the
+Quarry law — the attribute (dimensional carved relief in the NORMAL map) over
+the name. Their color maps are deliberately unused in the build; the city's
+marble/gold bases keep the palette and the normals carve them.
+
+**Asset:** Wooden Garage Door (panel-and-boss relief), 2K JPG set
+**Author/Source:** Poly Haven — https://polyhaven.com/a/wooden_garage_door
+**License:** CC0 1.0 — per Poly Haven's license (https://polyhaven.com/license)
+Files: `carvedstone1_{color,normal,roughness,ao,height}.jpg`
+
+**Asset:** Wooden Panels (coffered molding relief), 2K JPG set
+**Author/Source:** Poly Haven — https://polyhaven.com/a/wooden_panels
+**License:** CC0 1.0 — per Poly Haven's license (https://polyhaven.com/license)
+Files: `carvedstone2_{color,normal,roughness,ao,height}.jpg` — ACTIVE (stone trim)
+
+**Asset:** Patterned Metal 01 (chased quatrefoil lattice), 2K set
+**Author/Source:** cgbookcase — https://www.cgbookcase.com/textures/patterned-metal-01
+**License:** CC0 — per cgbookcase's license (https://www.cgbookcase.com/about)
+Files: `filigree1_{color,normal,roughness,height}.jpg` — ACTIVE (gold trim);
+normal converted DirectX→OpenGL (green-channel flip, numerically verified)

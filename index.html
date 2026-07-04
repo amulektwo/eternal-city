@@ -271,6 +271,8 @@ renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.enabled = SHADOWS;
 document.body.appendChild(renderer.domElement);
+renderer.info.autoReset = false;   /* reset once per frame in animate — else the
+                                      composer's last pass masks the real call count */
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xffd9a4, 150, 780);   /* far is tier-managed in applyTier */
@@ -510,7 +512,8 @@ const MAT = {
 
 /* shared animated/registry lists */
 const tickers = [], nameplates = [], banners = [], waterDiscs = [],
-      flames = [], glows = [], beams = [], particleMeshes = [], fruits = [];
+      flames = [], glows = [], beams = [], particleMeshes = [], fruits = [],
+      lacePinnacles = [];   /* [x, y, z, scale] — THE LACE skyline forest */
 let canopyShells = [], canopyPts = null, sprayMat = null;
 function mkGlow(x,y,z,s,color,op){
   const m = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1123,6 +1126,8 @@ function addBuilding(x,z,ry,big){
   const roofH = h*.42;
   P.ivory.push(xf(new THREE.ConeGeometry(Math.max(w,dpt)*.74, roofH, 4), x, h+roofH/2, z, ry+PI/4));
   P.gold.push(xf(new THREE.ConeGeometry(.5,1.6,4), x, h+roofH+.7, z, ry));
+  /* THE LACE: every roof apex joins the skyline forest (deterministic scale — no rng, layout law) */
+  lacePinnacles.push([x, h+roofH+.9, z, .85 + (Math.abs(x*7 + z*13) % 10) * .04]);
   const rows = Math.max(2, h/5|0), cols = Math.max(2, w/3|0);
   for (let rI=0;rI<rows;rI++) for (let c=0;c<cols;c++){
     const lx = -w/2 + (c+.5)*(w/cols), ly = 2.5 + rI*(h-4)/rows;
@@ -2352,11 +2357,229 @@ function addBuilding(x,z,ry,big){
   });
 }
 
+/* ================================================================
+   16.7  THE LACE — gothic ornament density without geometry cost
+   The silhouette stays procedural; the SURFACE becomes carved.
+   Budget: +5 draw calls total (2 trim, 2 tracery, 1 pinnacle forest),
+   none casting shadows. Ornament maps load async via initLace() from
+   assets/textures/ornament/ornament.json — procedural fallback if
+   absent (Quarry fallback law). No rng in this section (layout law).
+================================================================ */
+function tileUV(geo, u, v = 1){
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * u, uv.getY(i) * v);
+  return geo;
+}
+const laceStone = new THREE.MeshStandardMaterial({
+  color:0xf4eddc, roughness:.55, metalness:.05, envMapIntensity:.7 });
+const laceGold = new THREE.MeshStandardMaterial({
+  color:0xffc964, roughness:.30, metalness:1.0, envMapIntensity:1.2 });
+{
+  const LS = [], LG2 = [];   /* stone trim parts, gold trim parts */
+  /* — sanctuary cornices + portal pilaster bands — */
+  const SX0=42, SX1=86, SZ0=-21, SZ1=9, SCZ=-6;
+  for (const zz of [SZ0-1.35, SZ1+1.35])
+    LS.push(tileUV(xf(new THREE.BoxGeometry(SX1-SX0+2, .55, .5), (SX0+SX1)/2, 17.65, zz), 22));
+  for (const zz of [SCZ-4.6, SCZ+4.6])
+    LS.push(tileUV(xf(new THREE.BoxGeometry(.5, 9.5, .8), SX0-1.35, 5.0, zz), 1, 5));
+  /* — throne hall exterior cornice ring + dais edge band — */
+  LS.push(tileUV(xf(new THREE.CylinderGeometry(17.55, 17.55, .6, 64, 1, true), 0, 13.45, -72), 54));
+  LS.push(tileUV(xf(new THREE.CylinderGeometry(6.58, 6.58, .5, 48, 1, true), 0, .3, -79.5), 20));
+  /* — gate pylon crown bands (24) — */
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6;
+    for (const s of [-1, 1]){
+      const px = Math.sin(a)*WALL_R + Math.cos(a)*s*5.6;
+      const pz = Math.cos(a)*WALL_R - Math.sin(a)*s*5.6;
+      LG2.push(tileUV(xf(new THREE.BoxGeometry(3.7, .45, 3.7), px, 15.75, pz, a), 4));
+    }
+  }
+  /* — street architrave fascia — */
+  for (const sx of [-6.5, 6.5])
+    LG2.push(tileUV(xf(new THREE.BoxGeometry(.5, .4, 46), sx, 6.7, 61), 1, 23));
+  /* — mega-spire collars — */
+  for (const deg of [158, 166, 174, 186, 194]){
+    const a = deg*D2R, r = 101 + (deg%2)*6;
+    const x = Math.sin(a)*r, z = Math.cos(a)*r, h = 34 + (deg%3)*5;
+    LS.push(tileUV(xf(new THREE.CylinderGeometry(3.35, 3.35, 1.0, 16, 1, true), x, h-.6, z), 10));
+  }
+  const laceStoneMesh = new THREE.Mesh(mergeGeometries(LS.map(g=> g.index ? g.toNonIndexed() : g)), laceStone);
+  const laceGoldMesh  = new THREE.Mesh(mergeGeometries(LG2.map(g=> g.index ? g.toNonIndexed() : g)), laceGold);
+  laceStoneMesh.receiveShadow = SHADOWS; laceGoldMesh.receiveShadow = SHADOWS;
+  scene.add(laceStoneMesh, laceGoldMesh);
+
+  /* — THE TRACERY — gothic lace cut from light (alpha-cutout planes) — */
+  const lancetTex = canvasTex(512, (g,w,h)=>{
+    g.clearRect(0,0,w,h);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 20; g.lineCap = 'round';
+    /* pointed-arch outer frame */
+    g.beginPath();
+    g.moveTo(24, h-14); g.lineTo(24, h*.36);
+    g.quadraticCurveTo(24, h*.16, w/2, h*.055);
+    g.quadraticCurveTo(w-24, h*.16, w-24, h*.36);
+    g.lineTo(w-24, h-14);
+    g.lineTo(24, h-14);
+    g.stroke();
+    /* central mullion */
+    g.lineWidth = 14;
+    g.beginPath(); g.moveTo(w/2, h-14); g.lineTo(w/2, h*.40); g.stroke();
+    /* twin sub-lancets */
+    g.beginPath();
+    g.moveTo(24, h*.52); g.quadraticCurveTo(24, h*.40, w*.27, h*.36);
+    g.quadraticCurveTo(w/2, h*.40, w/2, h*.52); g.stroke();
+    g.beginPath();
+    g.moveTo(w/2, h*.52); g.quadraticCurveTo(w/2, h*.40, w*.73, h*.36);
+    g.quadraticCurveTo(w-24, h*.40, w-24, h*.52); g.stroke();
+    /* quatrefoil */
+    g.lineWidth = 12;
+    const qx = w/2, qy = h*.21, qr = 20;
+    for (const [ox, oy] of [[0,-qr],[qr,0],[0,qr],[-qr,0]]){
+      g.beginPath(); g.arc(qx+ox, qy+oy, qr*.8, 0, TAU); g.stroke();
+    }
+  }, 256);
+  const roseLaceTex = canvasTex(512, (g,w,h)=>{
+    g.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2, R = w/2 - 10;
+    g.strokeStyle = '#ffffff'; g.lineCap = 'round';
+    g.lineWidth = 16; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+    g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R*.32, 0, TAU); g.stroke();
+    g.beginPath(); g.arc(cx, cy, R*.10, 0, TAU); g.stroke();
+    for (let i = 0; i < 12; i++){
+      const a = i/12*TAU;
+      g.lineWidth = 10;
+      g.beginPath(); g.moveTo(cx + Math.cos(a)*R*.32, cy + Math.sin(a)*R*.32);
+      g.lineTo(cx + Math.cos(a)*R, cy + Math.sin(a)*R); g.stroke();
+      /* petal arcs between spokes */
+      const am = a + TAU/24;
+      g.lineWidth = 9;
+      g.beginPath(); g.arc(cx + Math.cos(am)*R*.66, cy + Math.sin(am)*R*.66, R*.20, 0, TAU); g.stroke();
+    }
+  });
+  const traceryMatOf = (tex)=> new THREE.MeshStandardMaterial({
+    map: tex, alphaTest: .55, side: THREE.DoubleSide,
+    color: 0xe9d094, roughness: .35, metalness: .7, envMapIntensity: 1.0 });
+  const lancetParts = [];
+  /* sanctuary clerestory — exterior faces */
+  for (const s of [-1, 1]) for (let wx = 48; wx <= 80; wx += 5){
+    const wallC = s < 0 ? SZ0-.6 : SZ1+.6;
+    lancetParts.push(xf(new THREE.PlaneGeometry(1.75, 5.45), wx, 11.5, wallC + s*.70, s < 0 ? PI : 0));
+  }
+  /* sanctuary east glory windows — exterior */
+  for (const wz of [SCZ-4.5, SCZ, SCZ+4.5])
+    lancetParts.push(xf(new THREE.PlaneGeometry(2.3, 9.3), SX1+.68, 9.5, wz, PI/2));
+  /* throne hall ring windows — exterior */
+  for (let i = 0; i < 12; i++){
+    const a = i*PI/6;
+    if (angDiff(a, 0) < 24*D2R + .18) continue;
+    lancetParts.push(xf(new THREE.PlaneGeometry(1.75, 4.9),
+      Math.sin(a)*17.18, 8.5, -72 + Math.cos(a)*17.18, a));
+  }
+  const lancetMesh = new THREE.Mesh(
+    mergeGeometries(lancetParts.map(g=> g.index ? g.toNonIndexed() : g)), traceryMatOf(lancetTex));
+  scene.add(lancetMesh);
+  const roseParts = [
+    xf(new THREE.CircleGeometry(3.62, 36), SX0-1.42, 14, SCZ, -PI/2),
+    xf(new THREE.CircleGeometry(3.62, 36), SX0+.82, 14, SCZ, PI/2),
+  ];
+  const roseLaceMesh = new THREE.Mesh(
+    mergeGeometries(roseParts.map(g=> g.index ? g.toNonIndexed() : g)), traceryMatOf(roseLaceTex));
+  scene.add(roseLaceMesh);
+
+  /* — PINNACLES + CROCKETS — the skyline forest, one draw call — */
+  /* deterministic extra sites (no rng): gates, buttresses, mega-spire turrets, throne dome rim */
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6;
+    for (const s of [-1, 1])
+      lacePinnacles.push([Math.sin(a)*WALL_R + Math.cos(a)*s*5.6, 17.3,
+                          Math.cos(a)*WALL_R - Math.sin(a)*s*5.6, 1.1]);
+  }
+  for (const s of [-1, 1]) for (let bx = 50; bx <= 80; bx += 7.5)
+    lacePinnacles.push([bx, 13.0, s < 0 ? SZ0-3.4 : SZ1+3.4, .9]);
+  for (const deg of [158, 166, 174, 186, 194]){
+    const a = deg*D2R, r = 101 + (deg%2)*6;
+    const x = Math.sin(a)*r, z = Math.cos(a)*r, h = 34 + (deg%3)*5;
+    for (let k = 0; k < 4; k++){
+      const b = k*PI/2;
+      lacePinnacles.push([x + Math.sin(b)*3.4, h*.5 + 2.0, z + Math.cos(b)*3.4, 1.0]);
+    }
+  }
+  for (let i = 0; i < 8; i++){
+    const a = i*PI/4;
+    if (angDiff(a, 0) < .5) continue;
+    lacePinnacles.push([Math.sin(a)*17.2, 12.3, -72 + Math.cos(a)*17.2, .85]);
+  }
+  /* one pinnacle geometry: collar + spire + 6 crockets + tip */
+  const pinParts = [
+    xf(new THREE.CylinderGeometry(.40, .48, .35, 6), 0, .18, 0),
+    xf(new THREE.ConeGeometry(.30, 3.4, 6), 0, 2.05, 0),
+    xf(new THREE.SphereGeometry(.11, 6, 5), 0, 3.85, 0),
+  ];
+  for (let ring = 0; ring < 2; ring++){
+    const ry2 = .9 + ring*1.0, rr2 = .30 - ring*.09;
+    for (let k = 0; k < 3; k++){
+      const b = k*TAU/3 + ring*TAU/6;
+      const cg = new THREE.ConeGeometry(.08, .30, 3);
+      xf(cg, Math.sin(b)*rr2, ry2, Math.cos(b)*rr2, 0, 1, 1, 1, .6*Math.cos(b), -.6*Math.sin(b));
+      pinParts.push(cg);
+    }
+  }
+  const pinGeo = mergeGeometries(pinParts.map(g=> g.index ? g.toNonIndexed() : g));
+  const pinMesh = new THREE.InstancedMesh(pinGeo, laceGold, lacePinnacles.length);
+  const pd = new THREE.Object3D();
+  lacePinnacles.forEach(([x, y, z, s], i)=>{
+    pd.position.set(x, y, z); pd.scale.setScalar(s); pd.updateMatrix();
+    pinMesh.setMatrixAt(i, pd.matrix);
+  });
+  pinMesh.frustumCulled = false;
+  scene.add(pinMesh);
+}
+
+/* ornament maps enter async — the lace stands procedural until then */
+const LACE_STATUS = { value: 'LOADING' };
+async function initLace(){
+  try {
+    const res = await fetch('assets/textures/ornament/ornament.json', { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const man = await res.json();
+    const tl = new THREE.TextureLoader();
+    const tex = async (p, srgb)=>{
+      const t = await tl.loadAsync('assets/textures/ornament/' + p);
+      if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+      return t;
+    };
+    if (man.stone){
+      if (man.stone.color) laceStone.map = await tex(man.stone.color, true);
+      if (man.stone.normal && TIER > 0){
+        laceStone.normalMap = await tex(man.stone.normal);
+        laceStone.normalScale.set(.9, .9);
+      }
+      if (man.stone.roughness){ laceStone.roughnessMap = await tex(man.stone.roughness); laceStone.roughness = 1.0; }
+      if (man.stone.ao) laceStone.aoMap = await tex(man.stone.ao);
+      laceStone.color.set(0xf6f0e4);
+      laceStone.needsUpdate = true;
+    }
+    if (man.gold){
+      if (man.gold.normal && TIER > 0){
+        laceGold.normalMap = await tex(man.gold.normal);
+        laceGold.normalScale.set(.75, .75);
+      }
+      if (man.gold.roughness){ laceGold.roughnessMap = await tex(man.gold.roughness); laceGold.roughness = 1.0; }
+      laceGold.needsUpdate = true;
+    }
+    LACE_STATUS.value = `REAL (stone:${man.stone ? man.stone.id : '—'} gold:${man.gold ? man.gold.id : '—'})`;
+  } catch(err){
+    LACE_STATUS.value = 'PROCEDURAL fallback';
+  }
+  console.log(`LACE ornament: ${LACE_STATUS.value}`);
+}
+
 bake();
 applyTier(TIER);
 initSlots();
 initTransfiguration();
 initHarvest();
+initLace();
 
 /* ================================================================
    17. NAMED AREAS
@@ -2994,6 +3217,7 @@ function watchdog(t, dt){
 const _sd = new THREE.Vector3();
 let frameI = 0;
 function animate(){
+  renderer.info.reset();
   const dt = Math.min(clock.getDelta(), .05);
   const t = clock.elapsedTime;
   frameI++;
@@ -3077,6 +3301,8 @@ window.__CITY = {
   get fps(){ return fpsAvg; },
   get tier(){ return TIER; },
   get watchdog(){ return { floor: FPS_FLOOR, emergency }; },
+  get drawCalls(){ return renderer.info.render.calls; },
+  get triangles(){ return renderer.info.render.triangles; },
   setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
   /* collision probe for tests: attempt to stand at (x,z) coming from
      prevR / (prevX,prevZ) — pure in its arguments, never the live avatar */

@@ -1,0 +1,13 @@
+{
+  "note": "THE LACE ornament manifest — read by initLace(). The relief lives in the NORMAL maps; wood/metal color maps are deliberately unused so the marble and gold bases keep the city's palette (the normal IS the ornament).",
+  "stone": {
+    "id": "wooden_panels (Poly Haven, CC0) — coffered molding relief",
+    "normal": "carvedstone2_normal.jpg",
+    "roughness": "carvedstone2_roughness.jpg"
+  },
+  "gold": {
+    "id": "PatternedMetal01 (cgbookcase, CC0) — chased quatrefoil lattice",
+    "normal": "filigree1_normal.jpg",
+    "roughness": "filigree1_roughness.jpg"
+  }
+}
