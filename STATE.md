@@ -11,7 +11,9 @@ A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city 
 
 ## LAST PASS
 
-**The Harvest** — commit `8be2016` ("The Harvest — the keystones dwell in the Tree and the gates"), 2026-07-04.
+**Ascent pass (pilot of /ascend)** — 2026-07-04. Gaps named against the boards: (1) atmosphere/light depth, (2) life/greenery, (3) eye-level ornament density. Fixed: six god-shafts descending on the Tree (TR-registered), warm sun-radiance term in the sky, THE GARDENS (10 marble-and-gold planters with gold-green foliage + pearl blossoms at the Fountain Court ring r15.4 and the Street, TR-registered instancing), gold garland swags along the street colonnade, six new angel statues (Tree plaza diagonals + gate plaza flanks, all through the heroAngel group so GLB anchors follow), vault plaque de-aliasing (96×1536 canvas, anisotropy 8). Hardened the watchdog (12s arming + stall-frame rejection) after a self-inflicted GPU-contention drop taught Laws 13–14. KEPT: all 7 vantages 60fps tier 2, zero errors, all regressions green. The /ascend command itself installed at `.claude/commands/ascend.md`.
+
+Previous: **The Harvest** — commit `8be2016` ("The Harvest — the keystones dwell in the Tree and the gates"), 2026-07-04.
 - Tree fruit rebuilt as ONE InstancedMesh (12 instances; per-instance emissive via instanceColor + onBeforeCompile). White-gold only — zero red.
 - 10 lit supreme fruit bound to scrolls: 144, 300, 656, 717, 786, 999, 07, 6B, 0001E, 06. Sealed placeholders (no click target): 672, 787.
 - 12 gate-vaults built from `data/scrolls/index.json` (Gate 00→12 taxonomy order): plinth + plaque + helix of selectable light-points, reveal at ~15m. 11 populated, the 12th awaits.
@@ -28,8 +30,8 @@ A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city 
 5. **Mobile is synthetically verified only** — MEDIUM tier, joystick, taps all proven via TouchEvent dispatch; no physical-device pass has ever run. The 25fps floor is enforced by the watchdog but unmeasured on real glass.
 6. **Vault points are anonymous until opened** — no hover/gaze title, no per-point label; the 12th vault stands empty ("THE VAULT AWAITS ITS SCROLLS").
 7. **The reader shows raw frontmatter** — the verbatim law means YAML headers and colophons render as-is above the scripture. Doctrinally safe, liturgically plain. Any presentation layer needs a Seer ruling that it does not violate verbatim-or-nothing.
-8. **Street-level ornament density** trails the boards — banners, filigree, statuary per square meter.
-9. **Plaque text sprites alias** at oblique angles/distance (canvas sprites, no mipmap tuning).
+8. **Street-level ornament density** trails the boards — improved this pass (garlands, 6 more angels, gardens) but the boards still show more statuary and filigree per square meter.
+9. ~~Plaque text sprites alias~~ — addressed this pass (96×1536 canvas, anisotropy 8); re-judge at next pass.
 10. **The city is silent** — by the Seer's decree (Scroll 889.14: the Sacred Silence). Listed for completeness, not as a defect. Do NOT re-add audio unasked.
 
 ## LAWS-LEARNED (permanent — never delete, only add)
@@ -46,6 +48,9 @@ A single-file (`index.html`, ~3,000 lines) walkable first-person 3D golden city 
 10. **One InstancedMesh can carry per-instance emissive** — instanceColor + one-line onBeforeCompile (`totalEmissiveRadiance *= vColor`). One draw call for all twelve fruit.
 11. **The probe must be pure** — collision test surfaces take their previous-position from arguments, never from the live avatar (`__CITY.probe(x,z,prevR,prevX,prevZ)`).
 12. **Data flows one way: vault → repo → city.** The city NEVER writes scroll data. Scrolls enter `data/scrolls/` only by verbatim export with provenance (the Gathering ledger), and the reader only reads.
+13. **Never measure the city while a second instance renders on the same GPU** — the test harness contends with its subject and reads as low fps (a self-inflicted `wd@16s 47fps` drop was traced to a second live tab). Kill every other instance before an FPS verdict.
+14. **The watchdog arms at t=12s and ignores stall frames (dt > 0.25s)** — shader-compile/decode jank at startup and single frozen frames are STALLS, not frame rates; only sustained slowness may cost a tier (drops are permanent by design).
+15. **Every scene addition must be checked against the citizens' processional paths** (fountain circuits r≈11.2/12.4, street lines x≈±2.2-2.6) — the first garden ring was planted directly on the walkers' circuit and had to move to r15.4.
 
 ## FPS RECORD (latest — Ascent Pass 1 goal-gate, 2026-07-04)
 
