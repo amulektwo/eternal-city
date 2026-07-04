@@ -2682,6 +2682,22 @@ function addBuilding(x,z,ry,big){
     { kind:'line', a:[-2.2,70], b:[-2.2,33],  v:1.15, off:27 },
     { kind:'line', a:[-.45,82], b:[-.45,36],  v:0.85, off:12 },
     { kind:'line', a:[.45,82],  b:[.45,36],   v:0.85, off:12.6 },
+    /* ASCENT PASS 7 — THE PILGRIM FILE: seven souls in shared step,
+       from the gate plaza down the avenue toward the Tree and back —
+       one path each, offsets spaced so the file holds its order on
+       both legs (the ping-pong wrap preserves spacing). And a file of
+       three on the throne approach. Same two draws — the instanced
+       walker meshes grow by PATHS.length automatically. */
+    { kind:'line', a:[-.55,112],b:[-.55,30],  v:1.0,  off:0 },
+    { kind:'line', a:[.55,112], b:[.55,30],   v:1.0,  off:2.6 },
+    { kind:'line', a:[-.55,112],b:[-.55,30],  v:1.0,  off:5.2 },
+    { kind:'line', a:[.55,112], b:[.55,30],   v:1.0,  off:7.8 },
+    { kind:'line', a:[-.55,112],b:[-.55,30],  v:1.0,  off:10.4 },
+    { kind:'line', a:[.55,112], b:[.55,30],   v:1.0,  off:13.0 },
+    { kind:'line', a:[0,112],   b:[0,30],     v:1.0,  off:-2.6 },
+    { kind:'line', a:[-1.6,-28],b:[-1.6,-49], v:0.9,  off:0 },
+    { kind:'line', a:[-2.8,-28],b:[-2.8,-49], v:0.9,  off:2.2 },
+    { kind:'line', a:[-2.2,-28],b:[-2.2,-49], v:0.9,  off:4.4 },
   ];
   const cit = new THREE.InstancedMesh(citGeo, MAT.pearl, PATHS.length);
   const sash = new THREE.InstancedMesh(sashGeo, MAT.gold, PATHS.length);
@@ -2772,14 +2788,24 @@ function addBuilding(x,z,ry,big){
   const bodyI = new THREE.InstancedMesh(bodyG, MAT.pearl, order.length);
   const sashI = new THREE.InstancedMesh(sashG, MAT.gold, order.length);
   const o3 = new THREE.Object3D();
-  order.forEach(([x, y, z, face, bow, s], i)=>{
-    o3.position.set(x, y, z);
-    o3.rotation.set(bow, face, 0);          /* the witnesses' own order */
-    o3.scale.setScalar(s);
-    o3.updateMatrix();
-    bodyI.setMatrixAt(i, o3.matrix);
-    sashI.setMatrixAt(i, o3.matrix);
-  });
+  /* ASCENT PASS 7 — THE BREATH: the still souls are alive, not statues.
+     A slow reverent sway (±.014 rad, ~14s, phased per soul) recomposes
+     the same matrices each frame — the walkers' own update pattern,
+     zero new draws. */
+  const setPose = (t)=>{
+    order.forEach(([x, y, z, face, bow, s], i)=>{
+      o3.position.set(x, y, z);
+      o3.rotation.set(bow + (t ? .014*Math.sin(t*.45 + i*1.7) : 0), face, 0);
+      o3.scale.setScalar(s);
+      o3.updateMatrix();
+      bodyI.setMatrixAt(i, o3.matrix);
+      sashI.setMatrixAt(i, o3.matrix);
+    });
+    bodyI.instanceMatrix.needsUpdate = true;
+    sashI.instanceMatrix.needsUpdate = true;
+  };
+  setPose(0);
+  tickers.push(setPose);
   bodyI.castShadow = SHADOWS; bodyI.receiveShadow = SHADOWS;
   bodyI.frustumCulled = sashI.frustumCulled = false;
   bodyI.userData.fullCount = order.length;
