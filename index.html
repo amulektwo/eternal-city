@@ -1473,6 +1473,24 @@ function addBuilding(x,z,ry,big){
   for (const sx of [-6.5,6.5])
     P.gold.push(xf(new THREE.BoxGeometry(.7,.5,46), sx, 6.2, 61));
 
+  /* ========== ASCENT PASS 2·II — THE ARCADE (board 02) ==========
+     The naked pipes become an order: gold capital collars and base
+     rings on every colonnade column, and semicircular arches spanning
+     neighbor columns so the walks run under arcades. All merged into
+     P.gold — ZERO new draw calls. */
+  for (const [x, z] of colPos){
+    P.gold.push(xf(new THREE.TorusGeometry(.56, .07, 6, 14).rotateX(PI/2), x, 5.45, z));
+    P.gold.push(xf(new THREE.TorusGeometry(.60, .08, 6, 14).rotateX(PI/2), x, .18, z));
+  }
+  /* segmental arches (chord 6, rise 1.6) so the crowns tuck under the
+     entablature at 6.2 instead of spearing the awnings */
+  for (const sx of [-6.5, 6.5]) for (let z = 40; z < 82; z += 6){
+    const arch = new THREE.TorusGeometry(3.6, .09, 6, 14, 1.968);
+    arch.rotateZ(.587);                    /* center the arc's crown at +Y */
+    arch.rotateY(PI/2);                    /* arc plane Y–Z: spans the walk */
+    P.gold.push(xf(arch, sx, 2.48, z + 3));
+  }
+
   /* golden canopies over the walks */
   const canMat = new THREE.MeshStandardMaterial({ map:canopyStripeTex, roughness:.65, side:THREE.DoubleSide });
   const canParts = [];
@@ -1532,6 +1550,11 @@ function addBuilding(x,z,ry,big){
   });
   postI.frustumCulled = orbI.frustumCulled = false;
   scene.add(postI, orbI);
+
+  /* ASCENT PASS 2·II — terminal glory: the avenue's whole axis aims at
+     the REUBEN portal; the procession's eye is rewarded with a warm
+     radiance in the gate's mouth instead of haze (+1 glow sprite) */
+  glows.push(mkGlow(0, 11.5, 116.5, 22, 0xffe3ac, .22));
   if (TIER>0){
     for (const z of [52,70]){
       const pl = new THREE.PointLight(0xffc978, 26, 16, 2);
