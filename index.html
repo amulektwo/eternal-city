@@ -821,12 +821,13 @@ const seaMeshes = [];
     transparent:true, depthWrite:false,
     uniforms:{ uTime:{value:0}, uTex:{value:noiseTex}, uOp:{value:op}, uTint:{value:new THREE.Color(tint)},
                uFog:{value:new THREE.Color(0xffd9a4)} },
-    vertexShader:`varying vec2 vUv; varying float vD;
+    vertexShader:`varying vec2 vUv; varying float vD; varying vec3 vW;
       void main(){ vUv=uv;
         vec4 mv = modelViewMatrix*vec4(position,1.0); vD = -mv.z;
+        vW = (modelMatrix*vec4(position,1.0)).xyz;
         gl_Position = projectionMatrix*mv; }`,
     fragmentShader:`uniform float uTime,uOp; uniform sampler2D uTex;
-      uniform vec3 uTint,uFog; varying vec2 vUv; varying float vD;
+      uniform vec3 uTint,uFog; varying vec2 vUv; varying float vD; varying vec3 vW;
       void main(){
         float n1 = texture2D(uTex, vUv*5.0 + vec2(uTime*0.004,0.0)).a;
         float n2 = texture2D(uTex, vUv*11.0 - vec2(0.0,uTime*0.006)).a;
@@ -836,6 +837,9 @@ const seaMeshes = [];
         a *= smoothstep(1.0, 0.82, rad);
         float shade = 0.78 + 0.38*smoothstep(0.25, 1.05, d);
         vec3 col = uTint * shade;
+        /* ASCENT PASS 3-II: the sea glows toward the true sun (board 01) */
+        float sunw = max(0.0, dot(normalize(vW.xz), vec2(-0.854,-0.520)));
+        col *= 0.86 + 0.30*sunw;
         col = mix(col, uFog, smoothstep(480.0, 1000.0, vD));
         gl_FragColor = vec4(col, a);
       }`
@@ -2692,6 +2696,51 @@ function addBuilding(x,z,ry,big){
          into P.gold: ZERO new draw calls. */
   for (const sx of [-8.2, 8.2]) for (const sy of [4.2, 8.4])
     P.gold.push(xf(new THREE.BoxGeometry(.18, .18, 52), sx, sy, 59));
+
+  /* ========== ASCENT PASS 3·II — THE NEEDLE FOREST (board 01) ==========
+     Board 01's skyline bristles with slender golden needle-spires; the
+     roofline was squat. Two rings, one system: (a) fourteen campanile
+     needles rising among the inner-city blocks, (b) twelve rim needles
+     at the falls' azimuths, standing above the wall and crowning the
+     water below — the ring gains its rhythm. LOCAL seeded rng (layout
+     law); placement rejects every walk-path and precinct (Law 15);
+     bases get colliders. Shafts+caps into P.white, collars+finials
+     into P.gold: ZERO new draw calls. */
+  {
+    const nr = mulberry32(7301);
+    const needle = (x, z, H)=>{
+      const s = H * .55;
+      P.white.push(xf(new THREE.CylinderGeometry(.62, .95, s, 8), x, s/2, z));
+      P.white.push(xf(new THREE.ConeGeometry(.66, H - s, 8), x, s + (H - s)/2, z));
+      P.gold.push(xf(new THREE.TorusGeometry(.72, .09, 6, 12).rotateX(PI/2), x, s, z));
+      P.gold.push(xf(new THREE.ConeGeometry(.16, 2.3, 6), x, H + 1.0, z));
+      P.gold.push(xf(new THREE.SphereGeometry(.14, 8, 6), x, H + 2.3, z));
+      addCircle(x, z, 1.05);
+    };
+    let placed = 0, guard = 0;
+    while (placed < 14 && guard++ < 200){
+      const a = nr() * TAU, r = 58 + nr() * 42;
+      const x = Math.sin(a) * r, z = Math.cos(a) * r;
+      if (Math.abs(x) < 11 && z > 26) continue;                       /* street */
+      if (x > 38 && x < 90 && z > -25 && z < 13) continue;            /* sanctuary */
+      if (Math.hypot(x, z + 72) < 20) continue;                       /* throne */
+      if (Math.hypot(x + 52, z - 8) < 21) continue;                   /* fountain */
+      if (Math.hypot(x, z) < 28) continue;                            /* tree plaza */
+      let nearGate = false;
+      for (let k = 0; k < 12; k++){
+        const ga = k * PI / 6;
+        if (Math.hypot(x - Math.sin(ga) * 100, z - Math.cos(ga) * 100) < 15) nearGate = true;
+      }
+      if (nearGate) continue;
+      needle(x, z, 17 + nr() * 13);
+      placed++;
+    }
+    for (let k = 0; k < 12; k++){
+      const a = k / 12 * TAU + PI / 12;
+      if (angDiff(a, TERR_A) < TERR_HALF + .12) continue;             /* the terrace keeps its sky */
+      needle(Math.sin(a) * 126.5, Math.cos(a) * 126.5, 15 + (k % 3) * 2.5);
+    }
+  }
 
   /* (1) THE GOLDEN PAVEMENT — a burnished processional band down the
      avenue's heart, polished to catch the sun (+1 draw call). */
