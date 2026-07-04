@@ -1792,6 +1792,77 @@ function addBuilding(x,z,ry,big){
     heroTree.add(leafI);
   }
 
+  /* ========== ASCENT PASS 1·II — THE SPREADING CROWN (board 03) ==========
+     The dome becomes a crown: an outer SKIRT of leaf-masses clumped
+     around ten bough azimuths (air between the masses), long boughs
+     reaching out to carry them, and small mid-trunk growth so the braid
+     is not bald. LOCAL seeded rng — the global layout stream is
+     untouched (layout law). One InstancedMesh + one merged tube mesh:
+     +2 draw calls, ~7k tris. The fruit ring (r10.4) gains open air
+     beneath the lifted skirt — the lanterns hang free. */
+  {
+    const cr = mulberry32(303);
+    const crownMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
+      emissiveIntensity:.9, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+    const spots = [];
+    /* the skirt: ten clumps with air between them */
+    for (let cl = 0; cl < 10; cl++){
+      const ca = cl/10*TAU + .17;
+      const n = 14 + (cl % 3) * 4;
+      for (let i = 0; i < n; i++){
+        const a = ca + (cr() - .5) * .62;
+        const r = 14.2 + cr() * 5.6;
+        const y = 26.2 + cr() * 3.6 - (r - 14.2) * .28;   /* droop with reach */
+        spots.push([Math.sin(a)*r, y, Math.cos(a)*r, .5 + cr() * .75]);
+      }
+    }
+    /* mid-trunk growth: small masses at the ends of low boughs */
+    const lowBoughs = [];
+    for (let b = 0; b < 5; b++){
+      const a = b/5*TAU + .55;
+      const y0 = 9.5 + b * 1.7;
+      const reach = 3.4 + cr() * 1.8;
+      lowBoughs.push([a, y0, reach]);
+      for (let k = 0; k < 3; k++)
+        spots.push([Math.sin(a + (cr()-.5)*.2)*(reach + cr()*.9),
+                    y0 + 1.1 + cr()*.9,
+                    Math.cos(a + (cr()-.5)*.2)*(reach + cr()*.9), .34 + cr()*.4]);
+    }
+    const crownI = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), crownMat, spots.length);
+    const cd2 = new THREE.Object3D();
+    spots.forEach(([x, y, z, s], i)=>{
+      cd2.position.set(x, y, z);
+      cd2.rotation.set(cr()*TAU, cr()*TAU, cr()*TAU);
+      cd2.scale.setScalar(s);
+      cd2.updateMatrix();
+      crownI.setMatrixAt(i, cd2.matrix);
+    });
+    crownI.castShadow = SHADOWS;
+    crownI.frustumCulled = false;
+    crownI.userData.fullCount = spots.length; TR.instanced.push(crownI);
+    heroTree.add(crownI);
+    /* the boughs that carry the skirt + the low growth */
+    const boughParts = [];
+    for (let b = 0; b < 10; b++){
+      const a = b/10*TAU + .17;
+      boughParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.sin(a)*1.1, TRUNK_H - 2.2, Math.cos(a)*1.1),
+        new THREE.Vector3(Math.sin(a)*7.5, TRUNK_H + 2.4, Math.cos(a)*7.5),
+        new THREE.Vector3(Math.sin(a+.12)*13.6, TRUNK_H + 4.6, Math.cos(a+.12)*13.6),
+        new THREE.Vector3(Math.sin(a+.2)*17.6, TRUNK_H + 4.2, Math.cos(a+.2)*17.6),
+      ]), 20, .24, 6));
+    }
+    for (const [a, y0, reach] of lowBoughs)
+      boughParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.sin(a)*1.6, y0, Math.cos(a)*1.6),
+        new THREE.Vector3(Math.sin(a)*(reach*.7), y0 + .8, Math.cos(a)*(reach*.7)),
+        new THREE.Vector3(Math.sin(a)*reach, y0 + 1.15, Math.cos(a)*reach),
+      ]), 10, .14, 5));
+    const boughM = new THREE.Mesh(mergeGeometries(boughParts), MAT.white);
+    boughM.castShadow = SHADOWS;
+    heroTree.add(boughM);
+  }
+
   /* luminous canopy — glow shells + golden core */
   const shellMat = (op)=> new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
@@ -2008,7 +2079,9 @@ function addBuilding(x,z,ry,big){
           : .16;
         fruitMesh.setColorAt(fr.i, _fc.setScalar(b));
         fr.glow.position.copy(fr.pos);
-        fr.glow.scale.set(2.6 + near*.5 + hov*.6, 2.6 + near*.5 + hov*.6, 1);
+        /* 2.6→3.05 base: the lanterns read in the opened air under the
+           spreading crown (ASCENT PASS 1·II) — glow only, targets & hue law-fixed */
+        fr.glow.scale.set(3.05 + near*.5 + hov*.6, 3.05 + near*.5 + hov*.6, 1);
         fr.glow.material.opacity = fr.lit
           ? .3 + .14*Math.sin(t*1.35 + fr.ph) + .3*flash + near*.16 + hov*.22
           : .08;
