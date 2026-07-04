@@ -380,6 +380,9 @@ function applyTier(t){
   /* fog reach + light shafts */
   scene.fog.far = (t===0 && emergency) ? 360 : (t===0 ? 480 : 780);
   for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * (t===0 ? .45 : 1);
+  /* sky dome quality: octaves + the high veil follow the tier
+     (first applyTier call is at init, well after skyUni exists) */
+  skyUni.uQual.value = t;
   /* particle populations: full / halved / 40% (buffers stay full-size) */
   const frac = t===2 ? 1 : (t===1 ? .5 : .4);
   for (const p of particleMeshes){
@@ -526,7 +529,23 @@ function mkGlow(x,y,z,s,color,op){
 /* ================================================================
    4. SKY · SUN · GOD-RAYS · CLOUDS · DISTANT SPIRES · MOTES
 ================================================================ */
-const skyUni = { uSunDir: { value: new THREE.Vector3(-.6,.28,.75).normalize() } };
+/* THE PROCEDURAL HEAVEN — the sky of the boards, forged in one draw call.
+   A BackSide dome carries the whole upper atmosphere: warm zenith blue
+   falling to white-gold at a low sun, two decks of fbm cumulus lit on the
+   sun side and shaded warm-grey on the far side, silver linings, and slow
+   crepuscular rays breathing around the sun. kiara_1_dawn stays the IBL
+   (section 6.6) — this dome is only what the eye sees. uQual (= tier)
+   trims octaves and the high veil so the phone pays less than the desktop.
+   Drawn last among opaques so early-z culls every fragment the city hides. */
+/* the sun's TRUE mean bearing — animate() breathes az 232±9°, el 16±5°
+   around exactly this vector; everything aimed at the sun aims here */
+const MEAN_SUN = new THREE.Vector3(
+  Math.sin(232*D2R)*Math.cos(16*D2R), Math.sin(16*D2R), Math.cos(232*D2R)*Math.cos(16*D2R));
+const skyUni = {
+  uSunDir: { value: MEAN_SUN.clone() },
+  uTime:   { value: 0 },
+  uQual:   { value: TIER },
+};
 {
   const skyMat = new THREE.ShaderMaterial({
     uniforms: skyUni, side: THREE.BackSide, depthWrite:false,
@@ -537,22 +556,105 @@ const skyUni = { uSunDir: { value: new THREE.Vector3(-.6,.28,.75).normalize() } 
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
       }`,
     fragmentShader: `
-      uniform vec3 uSunDir; varying vec3 vDir;
+      uniform vec3 uSunDir; uniform float uTime; uniform float uQual;
+      varying vec3 vDir;
+
+      float hash(vec2 p){
+        p = 50.0*fract(p*0.3183099 + vec2(0.71,0.113));
+        return -1.0 + 2.0*fract(p.x*p.y*(p.x+p.y));
+      }
+      float vnoise(vec2 p){
+        vec2 i = floor(p), f = fract(p);
+        vec2 u = f*f*(3.0-2.0*f);
+        return mix(mix(hash(i),              hash(i+vec2(1.,0.)), u.x),
+                   mix(hash(i+vec2(0.,1.)),  hash(i+vec2(1.,1.)), u.x), u.y);
+      }
+      float fbm(vec2 p, int oct){
+        mat2 m = mat2(0.8,0.6,-0.6,0.8);
+        float s = 0.0, a = 0.55;
+        for (int i=0;i<5;i++){
+          if (i>=oct) break;
+          s += a*vnoise(p); p = m*p*2.03 + 11.7; a *= 0.5;
+        }
+        return s;
+      }
+      /* raw shaped cloud field (pre-coverage): fbm core + billowed tops */
+      float field(vec2 p, float billow, int oct){
+        float f = fbm(p, oct);
+        if (billow > 0.0) f += billow*abs(fbm(p*2.6 + 4.7, oct)) - billow*0.30;
+        return f;
+      }
+      /* one projected cloud deck — rgb + coverage. Lighting is the cheap
+         truth: the raw field THINNING toward the sun means this face is
+         lit (raw, not post-coverage — dense cores must keep their form). */
+      vec4 deck(vec3 dir, float hc, float sc, vec2 wind, float cover,
+                float billow, int oct, float sd){
+        vec2 p  = dir.xz/(dir.y + hc)*sc + wind*uTime;
+        vec2 sp = uSunDir.xz/(max(uSunDir.y, 0.06) + hc)*sc + wind*uTime;
+        float f = field(p, billow, oct);
+        float d = smoothstep(cover, cover + 0.26, f*0.5 + 0.5);
+        vec2 toSun = sp - p;
+        toSun = dot(toSun,toSun) > 1e-6 ? normalize(toSun) : vec2(1.,0.);
+        float f2  = field(p + toSun*0.30, billow, oct);
+        float lit = clamp(0.60 + (f - f2)*3.0, 0.0, 1.0);
+        /* white cloud, grey underside — and the lit faces turn gold near the sun */
+        vec3 litC = mix(vec3(1.08,1.03,0.94), vec3(1.14,0.99,0.74), pow(sd,3.0)*0.65);
+        vec3 col = mix(vec3(0.58,0.54,0.52), litC, lit);
+        /* silver lining — only thin edges facing the sun cross into bloom */
+        col += vec3(1.0,0.92,0.74) * d*(1.0-d)*2.2 * pow(sd, 5.0);
+        /* the projection blows up at the rim — hand the deck to the glow */
+        d *= smoothstep(0.015, 0.10, dir.y);
+        return vec4(col, d);
+      }
       void main(){
-        float h = clamp(vDir.y, -0.08, 1.0);
-        vec3 zen = vec3(0.56, 0.73, 0.96);
-        vec3 hor = vec3(1.00, 0.82, 0.55);
-        vec3 col = mix(hor, zen, pow(max(h,0.0), 0.62));
-        float sd = max(dot(vDir, uSunDir), 0.0);
-        col += vec3(1.0, 0.87, 0.64) * pow(sd, 2.5) * 0.10;
-        col += vec3(1.0, 0.82, 0.52) * pow(sd, 7.0) * 0.30;
-        col += vec3(1.0, 0.92, 0.72) * pow(sd, 90.0) * 1.1;
-        col += vec3(1.0, 0.98, 0.90) * pow(sd, 1200.0) * 4.0;
-        col = mix(col, vec3(1.0,0.89,0.70), smoothstep(0.10,-0.08,vDir.y)*0.9);
+        vec3 dir = normalize(vDir);
+        float h  = max(dir.y, 0.0);
+        float sd = max(dot(dir, uSunDir), 0.0);
+        int oct  = uQual > 1.5 ? 5 : (uQual > 0.5 ? 4 : 3);
+
+        /* the gradient of the boards: deep warm blue falling to white-gold */
+        vec3 col = mix(vec3(0.86,0.87,0.92), vec3(0.25,0.41,0.73),
+                       smoothstep(0.10, 0.62, h));
+        col = mix(vec3(0.98,0.88,0.66), col, smoothstep(0.0, 0.20, h));
+
+        /* the low sun and its glory */
+        col += vec3(1.00,0.88,0.64) * pow(sd, 2.0)   * 0.12;
+        col += vec3(1.00,0.84,0.56) * pow(sd, 8.0)   * 0.30;
+        col += vec3(1.00,0.92,0.72) * pow(sd, 64.0)  * 0.90;
+        col += vec3(1.00,0.97,0.88) * pow(sd, 900.0) * 5.0;
+
+        /* two decks of living cloud, drifting slowly */
+        float cover = 0.0;
+        if (dir.y > 0.012){
+          vec4 c1 = deck(dir, 0.12, 0.95, vec2(0.0042,0.0015), 0.46, 0.60, oct, sd);
+          col = mix(col, c1.rgb, c1.a*0.96);
+          cover = c1.a;
+          if (uQual > 0.5){
+            vec4 c2 = deck(dir, 0.34, 3.10, vec2(-0.0028,0.0022), 0.55, 0.0, oct, sd);
+            col = mix(col, c2.rgb, c2.a*0.30*(1.0-cover));
+            cover = max(cover, c2.a*0.5);
+          }
+        }
+
+        /* crepuscular rays — slow warm shafts breathing around the sun
+           (integer harmonics of the azimuth keep the wrap seamless) */
+        vec3 rt = normalize(cross(vec3(0.,1.,0.), uSunDir));
+        vec3 up = cross(uSunDir, rt);
+        float ang = atan(dot(dir,up), dot(dir,rt) + 1e-5);
+        float ray = 0.5 + 0.5*sin(ang*7.0 + uTime*0.07);
+        ray *= 0.5 + 0.5*sin(ang*13.0 - uTime*0.045);
+        float rad = acos(clamp(sd, 0.0, 1.0));
+        col += vec3(1.0,0.90,0.68) * ray * exp(-rad*2.4) * 0.22 * (1.0 - cover*0.55);
+
+        /* below the rim the heaven stays warm, never dark */
+        col = mix(col, vec3(1.0,0.90,0.72), smoothstep(0.10,-0.08,dir.y)*0.92);
         gl_FragColor = vec4(col, 1.0);
       }`
   });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(900, 32, 20), skyMat));
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(900, 48, 28), skyMat);
+  dome.renderOrder = 4;      /* after the city's opaques: early-z culls hidden sky */
+  dome.frustumCulled = false;
+  scene.add(dome);
 }
 const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
   map:glowTex, color:0xfff2cc, transparent:true, opacity:.95, fog:false,
@@ -560,7 +662,11 @@ const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
 sunSprite.scale.set(230,230,1);
 scene.add(sunSprite);
 
-/* god-ray planes fanned along the sun direction — soft, slowly breathing */
+/* god-ray planes fanned along the sun direction — each shaft now carries a
+   bundle of soft sub-rays sliding slowly (the glory of board 02), and all
+   eight planes merge into ONE mesh: 8 draw calls become 1. The rng draws
+   (w, off per plane) are consumed in the exact original order so every
+   later layout roll lands where the boards already judged it. */
 {
   const grMat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
@@ -569,20 +675,33 @@ scene.add(sunSprite);
       gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader:`uniform float uOp; uniform float uTime; varying vec2 vUv;
       void main(){
-        float a = uOp * (1.0-abs(vUv.x*2.0-1.0)) * smoothstep(0.0,0.25,vUv.y) * smoothstep(1.0,0.55,vUv.y);
+        float core = 1.0 - abs(vUv.x*2.0 - 1.0);
+        /* sub-rays inside each shaft, drifting like light through cloud */
+        float b = 0.68 + 0.32*sin(vUv.x*38.0 + uTime*0.20)
+                       * sin(vUv.x*21.0 - uTime*0.12);
+        float a = uOp * core * b * smoothstep(0.0,0.25,vUv.y) * smoothstep(1.0,0.55,vUv.y);
         a *= 0.72 + 0.28*sin(uTime*0.35 + vUv.y*4.0 + vUv.x*2.0);
         gl_FragColor = vec4(1.0, 0.90, 0.66, a);
       }`
   });
+  const grParts = [];
+  const carrier = new THREE.Mesh();     /* transform-only, never added */
   for (let i=0;i<8;i++){
     const w = rr(26,64);
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, 520, 1, 8), grMat);
+    const g = new THREE.PlaneGeometry(w, 520, 1, 8);
     const off = rr(-140,140);
-    p.position.set(-120+off*.6, 180, 60+off*.4);
-    p.lookAt(p.position.clone().add(skyUni.uSunDir.value));
-    p.rotateX(PI/2);
-    scene.add(p);
+    /* hang the fan between the city and the TRUE sun (az 232°) — the old
+       cluster sat on the init-value bearing, ~85° from the rendered sun */
+    carrier.position.set(-126+off*.43, 180, -98-off*.55);
+    carrier.rotation.set(0,0,0);
+    carrier.lookAt(carrier.position.clone().add(MEAN_SUN));
+    carrier.rotateX(PI/2);
+    carrier.updateMatrix();
+    grParts.push(g.applyMatrix4(carrier.matrix));
   }
+  const rays = new THREE.Mesh(mergeGeometries(grParts), grMat);
+  rays.frustumCulled = false;           /* spans the sky; one cheap call */
+  scene.add(rays);
   tickers.push(t => { grMat.uniforms.uTime.value = t; });
   grMat.userData.baseOp = .07; TR.shafts.push(grMat);
 }
@@ -3236,6 +3355,7 @@ function animate(){
   const az = (232 + 9*Math.sin(cyc*.7)) * D2R;
   _sd.set(Math.sin(az)*Math.cos(el), Math.sin(el), Math.cos(az)*Math.cos(el));
   skyUni.uSunDir.value.copy(_sd);
+  skyUni.uTime.value = t;
   sun.position.copy(_sd).multiplyScalar(320);
   sun.color.setHSL(.09 + .015*Math.sin(cyc), .52, .78);
   sunSprite.position.copy(_sd).multiplyScalar(780);
