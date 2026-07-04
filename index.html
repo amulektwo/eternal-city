@@ -924,6 +924,63 @@ const seaMeshes = [];
   scene.add(rimFalls);
 }
 
+/* ========== ASCENT ROUND 3 · HALF 1 — THE LIGHTING RIG ==========
+   (a) Board 04 — the light DESCENDS into the Fountain Court: the Tree's
+       god-column recipe, smaller and fainter, over the fountain (+1 draw).
+   (b) Board 05 — THE TWELVE THRESHOLDS: every portal mouth holds a
+       luminous sheet, warm light standing in the passage — ONE merged
+       mesh, ONE shader, TR.shafts-registered (+1 draw). REUBEN's 2·II
+       terminal-glory sprite is folded in, not duplicated.
+   Near-zero tris: column ~288, sheets 12×2. */
+{
+  const colMat2 = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    uniforms:{ uOp:{value:.055}, uTime:{value:0} },
+    vertexShader:`varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      void main(){ vUv=uv; vN=normalMatrix*normal;
+        vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz;
+        gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`uniform float uOp,uTime; varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+      void main(){
+        float f = abs(dot(normalize(vN),normalize(vV)));
+        float a = pow(f,1.6)*uOp*(0.86+0.14*sin(uTime*0.45));
+        a *= smoothstep(0.0,0.18,vUv.y)*smoothstep(1.0,0.7,vUv.y);
+        gl_FragColor = vec4(1.0,0.92,0.74,a);
+      }`
+  });
+  colMat2.userData.baseOp = .055; TR.shafts.push(colMat2);
+  const fCol = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 8.2, 30, 24, 5, true), colMat2);
+  fCol.position.set(-52, 15, 8);
+  scene.add(fCol);
+  tickers.push(t=>{ colMat2.uniforms.uTime.value = t; });
+
+  const thMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+    uniforms:{ uOp:{value:.11}, uTime:{value:0} },
+    vertexShader:`varying vec2 vUv;
+      void main(){ vUv=uv;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uOp,uTime; varying vec2 vUv;
+      void main(){
+        float ax = smoothstep(0.0,0.28,vUv.x)*smoothstep(1.0,0.72,vUv.x);
+        float ay = smoothstep(0.0,0.10,vUv.y)*smoothstep(1.0,0.55,vUv.y);
+        float a = ax*ay*uOp*(0.88+0.12*sin(uTime*0.6 + vUv.y*2.2));
+        gl_FragColor = vec4(1.0,0.90,0.70,a);
+      }`
+  });
+  thMat.userData.baseOp = .11; TR.shafts.push(thMat);
+  const thParts = [];
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6;
+    const g = new THREE.PlaneGeometry(3.8, 12.5);
+    thParts.push(xf(g, Math.sin(a)*WALL_R, 6.4, Math.cos(a)*WALL_R, a));
+  }
+  const thresholds = new THREE.Mesh(mergeGeometries(thParts), thMat);
+  thresholds.frustumCulled = false;
+  scene.add(thresholds);
+  tickers.push(t=>{ thMat.uniforms.uTime.value = t; });
+}
+
 /* distant sister-spires on the horizon */
 {
   const parts = [];
@@ -1072,19 +1129,38 @@ async function initSlots(){
     let status = 'PROCEDURAL';
     if (hero && entry && loader){
       try {
-        const gltf = await loader.loadAsync(entry.file);
-        const src = gltf.scene;
-        src.traverse(o=>{
+        /* ASCENT ROUND 3 · HALF 2 — THE SECOND QUARRY (manifest-driven):
+           entry.castShadow:false frees a hero from the shadow pass
+           (casters count double in the in-view figure); entry.far +
+           entry.farDist give a slot a shared far-LOD — distant anchors
+           render the lean silhouette instead of the full mesh. */
+        const casts = SHADOWS && entry.castShadow !== false;
+        const dress = (root)=> root.traverse(o=>{
           if (o.isMesh){
-            o.castShadow = SHADOWS; o.receiveShadow = SHADOWS;
+            o.castShadow = casts; o.receiveShadow = SHADOWS;
             const ms = Array.isArray(o.material) ? o.material : [o.material];
             for (const m of ms) if (m && m.envMapIntensity !== undefined) m.envMapIntensity = 1.0;
           }
         });
+        const gltf = await loader.loadAsync(entry.file);
+        const src = gltf.scene;
+        dress(src);
+        let farSrc = null;
+        if (entry.far){
+          try { farSrc = (await loader.loadAsync(entry.far)).scene; dress(farSrc); }
+          catch(e){ console.warn(`SLOT ${slot}: far-LOD failed (${entry.far}) — near mesh everywhere.`, e); }
+        }
         const sc = (typeof entry.scale === 'number') ? entry.scale : 1;
         const yo = (typeof entry.yOffset === 'number') ? entry.yOffset : 0;
         for (const anc of hero.anchors){
-          const inst = cloneRig(src);
+          let inst;
+          if (farSrc){
+            inst = new THREE.LOD();
+            inst.addLevel(cloneRig(src), 0);
+            inst.addLevel(cloneRig(farSrc), entry.farDist || 90);
+          } else {
+            inst = cloneRig(src);
+          }
           inst.position.set(anc.x, (anc.y||0) + yo, anc.z);
           inst.rotation.y = anc.ry || 0;
           inst.scale.setScalar(sc);
@@ -1585,10 +1661,9 @@ function addBuilding(x,z,ry,big){
   postI.frustumCulled = orbI.frustumCulled = false;
   scene.add(postI, orbI);
 
-  /* ASCENT PASS 2·II — terminal glory: the avenue's whole axis aims at
-     the REUBEN portal; the procession's eye is rewarded with a warm
-     radiance in the gate's mouth instead of haze (+1 glow sprite) */
-  glows.push(mkGlow(0, 11.5, 116.5, 22, 0xffe3ac, .22));
+  /* ASCENT PASS 2·II terminal glory — FOLDED into ROUND 3's twelve
+     luminous thresholds (one merged sheet at every portal mouth);
+     the single REUBEN sprite retired so the gate is not doubled */
   if (TIER>0){
     for (const z of [52,70]){
       const pl = new THREE.PointLight(0xffc978, 26, 16, 2);
