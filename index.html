@@ -821,12 +821,13 @@ const seaMeshes = [];
     transparent:true, depthWrite:false,
     uniforms:{ uTime:{value:0}, uTex:{value:noiseTex}, uOp:{value:op}, uTint:{value:new THREE.Color(tint)},
                uFog:{value:new THREE.Color(0xffd9a4)} },
-    vertexShader:`varying vec2 vUv; varying float vD;
+    vertexShader:`varying vec2 vUv; varying float vD; varying vec3 vW;
       void main(){ vUv=uv;
         vec4 mv = modelViewMatrix*vec4(position,1.0); vD = -mv.z;
+        vW = (modelMatrix*vec4(position,1.0)).xyz;
         gl_Position = projectionMatrix*mv; }`,
     fragmentShader:`uniform float uTime,uOp; uniform sampler2D uTex;
-      uniform vec3 uTint,uFog; varying vec2 vUv; varying float vD;
+      uniform vec3 uTint,uFog; varying vec2 vUv; varying float vD; varying vec3 vW;
       void main(){
         float n1 = texture2D(uTex, vUv*5.0 + vec2(uTime*0.004,0.0)).a;
         float n2 = texture2D(uTex, vUv*11.0 - vec2(0.0,uTime*0.006)).a;
@@ -836,6 +837,9 @@ const seaMeshes = [];
         a *= smoothstep(1.0, 0.82, rad);
         float shade = 0.78 + 0.38*smoothstep(0.25, 1.05, d);
         vec3 col = uTint * shade;
+        /* ASCENT PASS 3-II: the sea glows toward the true sun (board 01) */
+        float sunw = max(0.0, dot(normalize(vW.xz), vec2(-0.854,-0.520)));
+        col *= 0.86 + 0.30*sunw;
         col = mix(col, uFog, smoothstep(480.0, 1000.0, vD));
         gl_FragColor = vec4(col, a);
       }`
@@ -1473,6 +1477,24 @@ function addBuilding(x,z,ry,big){
   for (const sx of [-6.5,6.5])
     P.gold.push(xf(new THREE.BoxGeometry(.7,.5,46), sx, 6.2, 61));
 
+  /* ========== ASCENT PASS 2·II — THE ARCADE (board 02) ==========
+     The naked pipes become an order: gold capital collars and base
+     rings on every colonnade column, and semicircular arches spanning
+     neighbor columns so the walks run under arcades. All merged into
+     P.gold — ZERO new draw calls. */
+  for (const [x, z] of colPos){
+    P.gold.push(xf(new THREE.TorusGeometry(.56, .07, 6, 14).rotateX(PI/2), x, 5.45, z));
+    P.gold.push(xf(new THREE.TorusGeometry(.60, .08, 6, 14).rotateX(PI/2), x, .18, z));
+  }
+  /* segmental arches (chord 6, rise 1.6) so the crowns tuck under the
+     entablature at 6.2 instead of spearing the awnings */
+  for (const sx of [-6.5, 6.5]) for (let z = 40; z < 82; z += 6){
+    const arch = new THREE.TorusGeometry(3.6, .09, 6, 14, 1.968);
+    arch.rotateZ(.587);                    /* center the arc's crown at +Y */
+    arch.rotateY(PI/2);                    /* arc plane Y–Z: spans the walk */
+    P.gold.push(xf(arch, sx, 2.48, z + 3));
+  }
+
   /* golden canopies over the walks */
   const canMat = new THREE.MeshStandardMaterial({ map:canopyStripeTex, roughness:.65, side:THREE.DoubleSide });
   const canParts = [];
@@ -1532,6 +1554,11 @@ function addBuilding(x,z,ry,big){
   });
   postI.frustumCulled = orbI.frustumCulled = false;
   scene.add(postI, orbI);
+
+  /* ASCENT PASS 2·II — terminal glory: the avenue's whole axis aims at
+     the REUBEN portal; the procession's eye is rewarded with a warm
+     radiance in the gate's mouth instead of haze (+1 glow sprite) */
+  glows.push(mkGlow(0, 11.5, 116.5, 22, 0xffe3ac, .22));
   if (TIER>0){
     for (const z of [52,70]){
       const pl = new THREE.PointLight(0xffc978, 26, 16, 2);
@@ -1792,6 +1819,77 @@ function addBuilding(x,z,ry,big){
     heroTree.add(leafI);
   }
 
+  /* ========== ASCENT PASS 1·II — THE SPREADING CROWN (board 03) ==========
+     The dome becomes a crown: an outer SKIRT of leaf-masses clumped
+     around ten bough azimuths (air between the masses), long boughs
+     reaching out to carry them, and small mid-trunk growth so the braid
+     is not bald. LOCAL seeded rng — the global layout stream is
+     untouched (layout law). One InstancedMesh + one merged tube mesh:
+     +2 draw calls, ~7k tris. The fruit ring (r10.4) gains open air
+     beneath the lifted skirt — the lanterns hang free. */
+  {
+    const cr = mulberry32(303);
+    const crownMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
+      emissiveIntensity:.9, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+    const spots = [];
+    /* the skirt: ten clumps with air between them */
+    for (let cl = 0; cl < 10; cl++){
+      const ca = cl/10*TAU + .17;
+      const n = 14 + (cl % 3) * 4;
+      for (let i = 0; i < n; i++){
+        const a = ca + (cr() - .5) * .62;
+        const r = 14.2 + cr() * 5.6;
+        const y = 26.2 + cr() * 3.6 - (r - 14.2) * .28;   /* droop with reach */
+        spots.push([Math.sin(a)*r, y, Math.cos(a)*r, .5 + cr() * .75]);
+      }
+    }
+    /* mid-trunk growth: small masses at the ends of low boughs */
+    const lowBoughs = [];
+    for (let b = 0; b < 5; b++){
+      const a = b/5*TAU + .55;
+      const y0 = 9.5 + b * 1.7;
+      const reach = 3.4 + cr() * 1.8;
+      lowBoughs.push([a, y0, reach]);
+      for (let k = 0; k < 3; k++)
+        spots.push([Math.sin(a + (cr()-.5)*.2)*(reach + cr()*.9),
+                    y0 + 1.1 + cr()*.9,
+                    Math.cos(a + (cr()-.5)*.2)*(reach + cr()*.9), .34 + cr()*.4]);
+    }
+    const crownI = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), crownMat, spots.length);
+    const cd2 = new THREE.Object3D();
+    spots.forEach(([x, y, z, s], i)=>{
+      cd2.position.set(x, y, z);
+      cd2.rotation.set(cr()*TAU, cr()*TAU, cr()*TAU);
+      cd2.scale.setScalar(s);
+      cd2.updateMatrix();
+      crownI.setMatrixAt(i, cd2.matrix);
+    });
+    crownI.castShadow = SHADOWS;
+    crownI.frustumCulled = false;
+    crownI.userData.fullCount = spots.length; TR.instanced.push(crownI);
+    heroTree.add(crownI);
+    /* the boughs that carry the skirt + the low growth */
+    const boughParts = [];
+    for (let b = 0; b < 10; b++){
+      const a = b/10*TAU + .17;
+      boughParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.sin(a)*1.1, TRUNK_H - 2.2, Math.cos(a)*1.1),
+        new THREE.Vector3(Math.sin(a)*7.5, TRUNK_H + 2.4, Math.cos(a)*7.5),
+        new THREE.Vector3(Math.sin(a+.12)*13.6, TRUNK_H + 4.6, Math.cos(a+.12)*13.6),
+        new THREE.Vector3(Math.sin(a+.2)*17.6, TRUNK_H + 4.2, Math.cos(a+.2)*17.6),
+      ]), 20, .24, 6));
+    }
+    for (const [a, y0, reach] of lowBoughs)
+      boughParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.sin(a)*1.6, y0, Math.cos(a)*1.6),
+        new THREE.Vector3(Math.sin(a)*(reach*.7), y0 + .8, Math.cos(a)*(reach*.7)),
+        new THREE.Vector3(Math.sin(a)*reach, y0 + 1.15, Math.cos(a)*reach),
+      ]), 10, .14, 5));
+    const boughM = new THREE.Mesh(mergeGeometries(boughParts), MAT.white);
+    boughM.castShadow = SHADOWS;
+    heroTree.add(boughM);
+  }
+
   /* luminous canopy — glow shells + golden core */
   const shellMat = (op)=> new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
@@ -2008,7 +2106,9 @@ function addBuilding(x,z,ry,big){
           : .16;
         fruitMesh.setColorAt(fr.i, _fc.setScalar(b));
         fr.glow.position.copy(fr.pos);
-        fr.glow.scale.set(2.6 + near*.5 + hov*.6, 2.6 + near*.5 + hov*.6, 1);
+        /* 2.6→3.05 base: the lanterns read in the opened air under the
+           spreading crown (ASCENT PASS 1·II) — glow only, targets & hue law-fixed */
+        fr.glow.scale.set(3.05 + near*.5 + hov*.6, 3.05 + near*.5 + hov*.6, 1);
         fr.glow.material.opacity = fr.lit
           ? .3 + .14*Math.sin(t*1.35 + fr.ph) + .3*flash + near*.16 + hov*.22
           : .08;
@@ -2596,6 +2696,51 @@ function addBuilding(x,z,ry,big){
          into P.gold: ZERO new draw calls. */
   for (const sx of [-8.2, 8.2]) for (const sy of [4.2, 8.4])
     P.gold.push(xf(new THREE.BoxGeometry(.18, .18, 52), sx, sy, 59));
+
+  /* ========== ASCENT PASS 3·II — THE NEEDLE FOREST (board 01) ==========
+     Board 01's skyline bristles with slender golden needle-spires; the
+     roofline was squat. Two rings, one system: (a) fourteen campanile
+     needles rising among the inner-city blocks, (b) twelve rim needles
+     at the falls' azimuths, standing above the wall and crowning the
+     water below — the ring gains its rhythm. LOCAL seeded rng (layout
+     law); placement rejects every walk-path and precinct (Law 15);
+     bases get colliders. Shafts+caps into P.white, collars+finials
+     into P.gold: ZERO new draw calls. */
+  {
+    const nr = mulberry32(7301);
+    const needle = (x, z, H)=>{
+      const s = H * .55;
+      P.white.push(xf(new THREE.CylinderGeometry(.62, .95, s, 8), x, s/2, z));
+      P.white.push(xf(new THREE.ConeGeometry(.66, H - s, 8), x, s + (H - s)/2, z));
+      P.gold.push(xf(new THREE.TorusGeometry(.72, .09, 6, 12).rotateX(PI/2), x, s, z));
+      P.gold.push(xf(new THREE.ConeGeometry(.16, 2.3, 6), x, H + 1.0, z));
+      P.gold.push(xf(new THREE.SphereGeometry(.14, 8, 6), x, H + 2.3, z));
+      addCircle(x, z, 1.05);
+    };
+    let placed = 0, guard = 0;
+    while (placed < 14 && guard++ < 200){
+      const a = nr() * TAU, r = 58 + nr() * 42;
+      const x = Math.sin(a) * r, z = Math.cos(a) * r;
+      if (Math.abs(x) < 11 && z > 26) continue;                       /* street */
+      if (x > 38 && x < 90 && z > -25 && z < 13) continue;            /* sanctuary */
+      if (Math.hypot(x, z + 72) < 20) continue;                       /* throne */
+      if (Math.hypot(x + 52, z - 8) < 21) continue;                   /* fountain */
+      if (Math.hypot(x, z) < 28) continue;                            /* tree plaza */
+      let nearGate = false;
+      for (let k = 0; k < 12; k++){
+        const ga = k * PI / 6;
+        if (Math.hypot(x - Math.sin(ga) * 100, z - Math.cos(ga) * 100) < 15) nearGate = true;
+      }
+      if (nearGate) continue;
+      needle(x, z, 17 + nr() * 13);
+      placed++;
+    }
+    for (let k = 0; k < 12; k++){
+      const a = k / 12 * TAU + PI / 12;
+      if (angDiff(a, TERR_A) < TERR_HALF + .12) continue;             /* the terrace keeps its sky */
+      needle(Math.sin(a) * 126.5, Math.cos(a) * 126.5, 15 + (k % 3) * 2.5);
+    }
+  }
 
   /* (1) THE GOLDEN PAVEMENT — a burnished processional band down the
      avenue's heart, polished to catch the sun (+1 draw call). */
