@@ -568,6 +568,102 @@ function bake(){
 }
 
 /* ================================================================
+   6.5  HERO SLOTS — GLB drop-in system
+   assets/models/manifest.json (optional), one entry per slot:
+     { "slot": "treeOfLife" | "throne" | "fountain" | "gateArch" | "angelStatue",
+       "file": "assets/models/<name>.glb", "scale": 1.0, "yOffset": 0 }
+   A present entry loads its GLB at every anchor of that slot and hides
+   the procedural hero. Missing manifest / missing file / bad JSON →
+   silent fallback; a present-but-unloadable file falls back too, with
+   a console.warn. Exactly one status line per slot, always.
+   Draco / KTX2-compressed GLBs are supported (decoders load lazily).
+   AUTHORING FRAMES — each anchor equals the procedural hero's local
+   origin, so author the model in that frame:
+     treeOfLife  ground centre of the plaza; canopy centre ≈ y30.
+                 NOTE: the 12 red fruit are persistent gameplay
+                 entities on a fixed ring (r≈10.4, y≈24-27) that stay
+                 visible — author the canopy to embrace them.
+     throne      dais top under each seat (placed twice, ±1.5 apart).
+     fountain    court ground at the basin centre.
+     gateArch    the SPRING LINE of the arch (y=8.4 world). Model the
+                 floating arch band only — the flanking pylons are
+                 baked city fabric and remain.
+     angelStatue plinth base (placed at all 8 portal positions).
+================================================================ */
+const SLOT_NAMES = ['treeOfLife','throne','fountain','gateArch','angelStatue'];
+const HEROES = {}, SLOT_STATUS = {};
+function registerHero(slot, group, anchors){ HEROES[slot] = { group, anchors }; }
+async function initSlots(){
+  const entries = {};
+  try {
+    const res = await fetch('assets/models/manifest.json', { cache:'no-store' });
+    if (res.ok){
+      const list = await res.json();
+      if (Array.isArray(list))
+        for (const e of list) if (e && e.slot && e.file) entries[e.slot] = e;
+    }
+  } catch(err){ /* no manifest — the city stands procedural */ }
+
+  /* loaders are fetched only when a manifest entry actually asks for a GLB */
+  let loader = null, cloneRig = null;
+  if (SLOT_NAMES.some(s => entries[s] && HEROES[s])){
+    try {
+      const [gltfM, dracoM, ktx2M, skelM] = await Promise.all([
+        import('three/addons/loaders/GLTFLoader.js'),
+        import('three/addons/loaders/DRACOLoader.js'),
+        import('three/addons/loaders/KTX2Loader.js'),
+        import('three/addons/utils/SkeletonUtils.js'),
+      ]);
+      loader = new gltfM.GLTFLoader();
+      const draco = new dracoM.DRACOLoader();
+      draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+      loader.setDRACOLoader(draco);
+      loader.setKTX2Loader(new ktx2M.KTX2Loader()
+        .setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/basis/')
+        .detectSupport(renderer));
+      cloneRig = skelM.clone;   /* rig-safe clone — plain Object3D.clone breaks skinned meshes */
+    } catch(err){
+      console.warn('SLOT loaders unavailable — all slots stay procedural:', err);
+      loader = null;
+    }
+  }
+
+  for (const slot of SLOT_NAMES){
+    const hero = HEROES[slot], entry = entries[slot];
+    let status = 'PROCEDURAL';
+    if (hero && entry && loader){
+      try {
+        const gltf = await loader.loadAsync(entry.file);
+        const src = gltf.scene;
+        src.traverse(o=>{
+          if (o.isMesh){
+            o.castShadow = HIGH; o.receiveShadow = HIGH;
+            const ms = Array.isArray(o.material) ? o.material : [o.material];
+            for (const m of ms) if (m && m.envMapIntensity !== undefined) m.envMapIntensity = 1.0;
+          }
+        });
+        const sc = (typeof entry.scale === 'number') ? entry.scale : 1;
+        const yo = (typeof entry.yOffset === 'number') ? entry.yOffset : 0;
+        for (const anc of hero.anchors){
+          const inst = cloneRig(src);
+          inst.position.set(anc.x, (anc.y||0) + yo, anc.z);
+          inst.rotation.y = anc.ry || 0;
+          inst.scale.setScalar(sc);
+          scene.add(inst);
+        }
+        hero.group.visible = false;
+        status = 'GLB';
+      } catch(err){
+        console.warn(`SLOT ${slot}: GLB failed to load (${entry.file}) — falling back to procedural.`, err);
+        status = 'PROCEDURAL';
+      }
+    }
+    SLOT_STATUS[slot] = status;
+    console.log(`SLOT ${slot}: ${status}`);
+  }
+}
+
+/* ================================================================
    7. FOUNDATION · GROUND · WATERFALLS
 ================================================================ */
 {
@@ -680,8 +776,6 @@ function bake(){
       P.gold.push(xf(new THREE.ConeGeometry(1.5,3,4), px, 17, pz, a+PI/4));
       addCircle(px, pz, 2.3);
     }
-    pushArch(P.gold, 6.4, .6, 2.2, gx, 9.5, gz, a);
-    P.pearl.push(xf(new THREE.SphereGeometry(1.5, 24, 18), gx, 16.6, gz));
     P.gold.push(xf(new THREE.BoxGeometry(9.6,.25,3.2), gx, .13, gz, a));
 
     const tex = canvasTex(128, (g,w,h)=>{
@@ -694,11 +788,67 @@ function bake(){
       g.fillRect(w/2-150, h-22, 300, 2.5);
     }, 512);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
-    sp.position.set(sx*(WALL_R-2.5), 20.5, cz*(WALL_R-2.5));
+    sp.position.set(sx*(WALL_R-2.5), 21.7, cz*(WALL_R-2.5));
     sp.scale.set(13, 3.25, 1);
-    sp.userData.baseY = 20.5;
+    sp.userData.baseY = 21.7;
     scene.add(sp);
     nameplates.push(sp);
+  }
+
+  /* ---- HERO: the twelve gate arches  (slot: gateArch) ----
+     one extruded gothic profile, instanced twelve times */
+  const heroGate = new THREE.Group(); scene.add(heroGate);
+  {
+    const SPRING = 8.4, C = 2.6, RO = 8.6, RI = 7.0, NSEG = 22;
+    /* two-centre pointed-arch band as a flat Shape (apex up +Y, spring line y=0) */
+    const bandShape = (Ro, Ri)=>{
+      const aO = Math.acos(C/Ro), aI = Math.acos(C/Ri);
+      const s = new THREE.Shape();
+      s.moveTo(Ro-C, 0);
+      for (let i=1;i<=NSEG;i++){ const a=aO*i/NSEG; s.lineTo(-C+Ro*Math.cos(a), Ro*Math.sin(a)); }
+      for (let i=NSEG;i>=1;i--){ const a=aO*i/NSEG; s.lineTo(C-Ro*Math.cos(a), Ro*Math.sin(a)); }
+      s.lineTo(-(Ro-C), 0);
+      s.lineTo(-(Ri-C), 0);
+      for (let i=1;i<=NSEG;i++){ const a=aI*i/NSEG; s.lineTo(C-Ri*Math.cos(a), Ri*Math.sin(a)); }
+      for (let i=NSEG;i>=1;i--){ const a=aI*i/NSEG; s.lineTo(-C+Ri*Math.cos(a), Ri*Math.sin(a)); }
+      s.lineTo(Ri-C, 0);
+      s.closePath();
+      return s;
+    };
+    /* pearl arch body */
+    const bodyG = new THREE.ExtrudeGeometry(bandShape(RO, RI), {
+      depth:2.4, bevelEnabled:true, bevelThickness:.10, bevelSize:.10, bevelSegments:2 });
+    bodyG.translate(0, 0, -1.2);
+    /* gold rims tracing the outer + inner edges */
+    const rimOut = new THREE.ExtrudeGeometry(bandShape(RO+.30, RO-.02), { depth:2.66, bevelEnabled:false });
+    rimOut.translate(0, 0, -1.33);
+    const rimIn = new THREE.ExtrudeGeometry(bandShape(RI+.02, RI-.30), { depth:2.66, bevelEnabled:false });
+    rimIn.translate(0, 0, -1.33);
+    /* small gold finial at the crown */
+    const yFin = (RO+.30)*Math.sin(Math.acos(C/(RO+.30)));
+    const finG = new THREE.ConeGeometry(.55, 2.0, 8);
+    finG.translate(0, yFin+.85, 0);
+    const knobG = new THREE.SphereGeometry(.22, 10, 8);
+    knobG.translate(0, yFin+1.95, 0);
+    const rimG = mergeGeometries([rimOut, rimIn, finG.toNonIndexed(), knobG.toNonIndexed()]);
+    const archBody = new THREE.InstancedMesh(bodyG, MAT.pearl, 12);
+    const archRim  = new THREE.InstancedMesh(rimG, MAT.gold, 12);
+    const gd = new THREE.Object3D();
+    const gateAnchors = [];
+    for (let k=0;k<12;k++){
+      const a = k*PI/6;
+      gd.position.set(Math.sin(a)*WALL_R, SPRING, Math.cos(a)*WALL_R);
+      gd.rotation.set(0, a, 0); gd.updateMatrix();
+      archBody.setMatrixAt(k, gd.matrix);
+      archRim.setMatrixAt(k, gd.matrix);
+      /* anchor = the procedural band's frame: the spring line, y=SPRING */
+      gateAnchors.push({ x:Math.sin(a)*WALL_R, y:SPRING, z:Math.cos(a)*WALL_R, ry:a });
+    }
+    archBody.castShadow = HIGH; archBody.receiveShadow = HIGH;
+    archRim.castShadow = HIGH;  archRim.receiveShadow = HIGH;
+    archBody.frustumCulled = archRim.frustumCulled = false;
+    heroGate.add(archBody, archRim);
+    registerHero('gateArch', heroGate, gateAnchors);
   }
 }
 
@@ -917,23 +1067,86 @@ function addBuilding(x,z,ry,big){
   P.white.push(cPave);
   P.goldSt.push(xf(new THREE.RingGeometry(15.6,17,48).rotateX(-PI/2), FX,.05,FZ));
 
-  P.gold.push(xf(new THREE.CylinderGeometry(5.4,5.8,1.1,32,1,true), FX,.55,FZ));
-  P.gold.push(xf(new THREE.TorusGeometry(5.55,.28,8,40).rotateX(PI/2), FX,1.15,FZ));
-  P.gold.push(xf(new THREE.CylinderGeometry(.6,.85,2.6,12), FX,2.0,FZ));
-  P.gold.push(xf(new THREE.LatheGeometry([
-    new THREE.Vector2(.2,0), new THREE.Vector2(2.7,.25), new THREE.Vector2(2.9,.75), new THREE.Vector2(2.5,.85)
-  ],28), FX,3.1,FZ));
-  P.gold.push(xf(new THREE.CylinderGeometry(.35,.5,1.5,10), FX,4.6,FZ));
-  P.gold.push(xf(new THREE.LatheGeometry([
-    new THREE.Vector2(.15,0), new THREE.Vector2(1.5,.2), new THREE.Vector2(1.65,.6), new THREE.Vector2(1.35,.7)
-  ],24), FX,5.3,FZ));
-  P.gold.push(xf(new THREE.SphereGeometry(.42,12,10), FX,6.4,FZ));
+  /* ---- HERO: stacked marble basins with gold rims  (slot: fountain) ---- */
+  const heroFountain = new THREE.Group(); scene.add(heroFountain);
+  const fWhite = [], fGold = [];
+  /* lower basin — white marble lathe */
+  fWhite.push(xf(new THREE.LatheGeometry([
+    new THREE.Vector2(.25,0), new THREE.Vector2(5.55,.10), new THREE.Vector2(5.90,.45),
+    new THREE.Vector2(5.80,1.02), new THREE.Vector2(5.30,1.10), new THREE.Vector2(5.15,.60),
+    new THREE.Vector2(4.60,.42)
+  ], 36), FX,.02,FZ));
+  fGold.push(xf(new THREE.TorusGeometry(5.55,.14,8,44).rotateX(PI/2), FX,1.12,FZ));
+  /* stem + gold collars */
+  fWhite.push(xf(new THREE.CylinderGeometry(.58,.86,2.6,14), FX,2.0,FZ));
+  fGold.push(xf(new THREE.TorusGeometry(.80,.09,6,18).rotateX(PI/2), FX,1.02,FZ));
+  fGold.push(xf(new THREE.TorusGeometry(.66,.08,6,18).rotateX(PI/2), FX,3.14,FZ));
+  /* middle basin */
+  fWhite.push(xf(new THREE.LatheGeometry([
+    new THREE.Vector2(.18,0), new THREE.Vector2(2.62,.22), new THREE.Vector2(2.92,.62),
+    new THREE.Vector2(2.72,.84), new THREE.Vector2(2.50,.50)
+  ], 30), FX,3.08,FZ));
+  fGold.push(xf(new THREE.TorusGeometry(2.78,.10,7,36).rotateX(PI/2), FX,3.92,FZ));
+  /* upper stem + top basin */
+  fWhite.push(xf(new THREE.CylinderGeometry(.34,.5,1.5,12), FX,4.6,FZ));
+  fWhite.push(xf(new THREE.LatheGeometry([
+    new THREE.Vector2(.12,0), new THREE.Vector2(1.46,.16), new THREE.Vector2(1.68,.52),
+    new THREE.Vector2(1.50,.70), new THREE.Vector2(1.34,.42)
+  ], 26), FX,5.28,FZ));
+  fGold.push(xf(new THREE.TorusGeometry(1.56,.08,7,30).rotateX(PI/2), FX,5.98,FZ));
+  /* gold crown */
+  fGold.push(xf(new THREE.SphereGeometry(.40,14,10), FX,6.42,FZ));
+  fGold.push(xf(new THREE.ConeGeometry(.16,.6,10), FX,6.95,FZ));
+  const fWhiteM = new THREE.Mesh(mergeGeometries(fWhite.map(g=> g.index ? g.toNonIndexed() : g)), MAT.white);
+  fWhiteM.castShadow = HIGH; fWhiteM.receiveShadow = HIGH;
+  const fGoldM = new THREE.Mesh(mergeGeometries(fGold.map(g=> g.index ? g.toNonIndexed() : g)), MAT.gold);
+  fGoldM.castShadow = HIGH; fGoldM.receiveShadow = HIGH;
+  heroFountain.add(fWhiteM, fGoldM);
+
+  /* flowing water — UV-scrolled shader streams falling basin to basin */
+  const streamMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{ uTime:{value:0} },
+    vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+      gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uTime; varying vec2 vUv;
+      void main(){
+        float fall = fract(vUv.y*3.0 + uTime*0.9);
+        float streak = 0.5 + 0.3*sin(vUv.x*80.0) + 0.3*sin(fall*6.28318 + vUv.x*34.0);
+        float a = clamp(streak,0.0,1.0)*0.55;
+        a *= smoothstep(1.0,0.85,vUv.y)*smoothstep(0.0,0.15,vUv.y);
+        gl_FragColor = vec4(0.88,0.95,1.0,a);
+      }`
+  });
+  tickers.push(t=>{ streamMat.uniforms.uTime.value = t; });
+  const st1 = new THREE.Mesh(new THREE.CylinderGeometry(1.50, 2.20, 2.05, 24, 4, true), streamMat);
+  st1.position.set(FX, 4.93, FZ);
+  const st2 = new THREE.Mesh(new THREE.CylinderGeometry(2.62, 4.50, 2.90, 28, 4, true), streamMat);
+  st2.position.set(FX, 2.42, FZ);
+  heroFountain.add(st1, st2);
+
+  /* one faint rainbow shimmer in the spray */
+  const rainbowTex = canvasTex(128,(g,w,h)=>{
+    g.clearRect(0,0,w,h);
+    const bands = ['rgba(255,90,90,','rgba(255,170,60,','rgba(255,235,90,',
+                   'rgba(110,220,120,','rgba(90,150,255,','rgba(170,110,255,'];
+    for (let i=0;i<bands.length;i++){
+      g.strokeStyle = bands[i]+'0.45)'; g.lineWidth = 5;
+      g.beginPath(); g.arc(w/2, h*0.95, h*0.62 - i*6, PI, TAU); g.stroke();
+    }
+  });
+  const rainbow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map:rainbowTex, transparent:true, opacity:.20, depthWrite:false }));
+  rainbow.position.set(FX+1.6, 5.4, FZ+1.2);
+  rainbow.scale.set(5.2, 3.0, 1);
+  heroFountain.add(rainbow);
+  tickers.push(t=>{ rainbow.material.opacity = .15 + .07*Math.sin(t*1.7); });
 
   const wMat = new THREE.MeshStandardMaterial({ color:0xcfeaff, transparent:true, opacity:.8,
     roughness:.08, metalness:.15, envMapIntensity:1.6 });
-  for (const [r,y] of [[5.2,.95],[2.55,3.9],[1.4,5.95]]){
+  for (const [r,y] of [[5.10,.95],[2.50,3.9],[1.38,5.95]]){
     const w = new THREE.Mesh(new THREE.CircleGeometry(r,28).rotateX(-PI/2), wMat);
-    w.position.set(FX,y,FZ); scene.add(w); waterDiscs.push(w);
+    w.position.set(FX,y,FZ); heroFountain.add(w); waterDiscs.push(w);
   }
 
   /* rainbow-shimmer spray */
@@ -948,7 +1161,7 @@ function addBuilding(x,z,ry,big){
     base[i*3+2] = FZ + (up?0:Math.cos(a)*2.6);
     const sp = up ? rr(.5,1.1) : rr(.9,1.6);
     vel[i*3] = Math.sin(a)*sp; vel[i*3+1] = up?rr(3.2,4.6):rr(2.0,3.0); vel[i*3+2] = Math.cos(a)*sp;
-    cTmp.setHSL((a/TAU + rng()*.1)%1, .45, .82);
+    cTmp.setHSL(.552 + rng()*.05, .30, .90);
     col[i*3]=cTmp.r; col[i*3+1]=cTmp.g; col[i*3+2]=cTmp.b;
     t0[i] = rng()*1.9;
   }
@@ -968,8 +1181,8 @@ function addBuilding(x,z,ry,big){
         vec3 p = position + aVel*t;
         p.y -= 0.5*4.2*t*t;
         vec4 mv = modelViewMatrix*vec4(p,1.0);
-        gl_PointSize = (14.0+10.0*t) * (10.0/max(-mv.z,1.0));
-        vA = smoothstep(0.0,0.15,t)*smoothstep(life,life*0.5,t)*0.7;
+        gl_PointSize = (8.0+6.0*t) * (10.0/max(-mv.z,1.0));
+        vA = smoothstep(0.0,0.15,t)*smoothstep(life,life*0.5,t)*0.55;
         vC = aCol;
         gl_Position = projectionMatrix*mv;
       }`,
@@ -980,8 +1193,9 @@ function addBuilding(x,z,ry,big){
       }`
   });
   const spray = new THREE.Points(sg, sprayMat);
-  spray.frustumCulled = false; scene.add(spray);
+  spray.frustumCulled = false; heroFountain.add(spray);
   particleMeshes.push(spray);
+  registerHero('fountain', heroFountain, [{ x:FX, y:0, z:FZ, ry:0 }]);
 
   if (TIER>0){
     const pl = new THREE.PointLight(0xffe0a0, 46, 26, 2);
@@ -1014,40 +1228,80 @@ function addBuilding(x,z,ry,big){
   P.gold.push(xf(new THREE.TorusGeometry(12,.14,6,64).rotateX(PI/2), 0,.06,0));
   P.gold.push(xf(new THREE.TorusGeometry(20,.18,6,72).rotateX(PI/2), 0,.06,0));
 
-  /* spiral trunk — interwoven helices of marble and living gold */
+  /* ---- HERO: the Tree of Life  (slot: treeOfLife) ----
+     braided trunk — 8 marble strands woven with 6 gold veins, all riding
+     twisted CatmullRom curves; the braid term makes strands cross over */
+  const heroTree = new THREE.Group(); scene.add(heroTree);
   const trunkParts = [], goldParts = [];
-  for (let s=0;s<5;s++){
-    const pts = [];
-    for (let i=0;i<=30;i++){
-      const t = i/30;
-      const r = 2.9*(1-t*.72), a = s/5*TAU + t*3.9;
-      pts.push(new THREE.Vector3(Math.sin(a)*r, t*22, Math.cos(a)*r));
+  const TRUNK_H = 22, TWIST = 4.4;
+  for (let s=0;s<8;s++){
+    const phi = s/8*TAU, pts = [];
+    for (let i=0;i<=34;i++){
+      const t = i/34;
+      const braid = .42*Math.sin(t*TAU*2.6 + phi*4.0);
+      const r = (2.55 + braid)*(1-t*.60);
+      const a = phi + t*TWIST;
+      pts.push(new THREE.Vector3(Math.sin(a)*r, t*TRUNK_H, Math.cos(a)*r));
     }
-    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 44, .58, 7));
+    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, .52, 9));
   }
-  for (let s=0;s<5;s++){
-    const pts = [];
-    for (let i=0;i<=30;i++){
-      const t = i/30;
-      const r = 3.15*(1-t*.7), a = s/5*TAU + TAU/10 + t*3.9;
-      pts.push(new THREE.Vector3(Math.sin(a)*r, t*22.4, Math.cos(a)*r));
+  for (let s=0;s<6;s++){
+    const phi = s/6*TAU + TAU/16, pts = [];
+    for (let i=0;i<=34;i++){
+      const t = i/34;
+      const braid = .42*Math.sin(t*TAU*2.6 + phi*4.0 + PI);
+      const r = (2.85 + braid)*(1-t*.58);
+      const a = phi + t*TWIST;
+      pts.push(new THREE.Vector3(Math.sin(a)*r, t*(TRUNK_H+.5), Math.cos(a)*r));
     }
-    goldParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 44, .17, 6));
+    goldParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 72, .17, 7));
   }
+  /* root flare */
+  for (let b=0;b<8;b++){
+    const a = b/8*TAU;
+    const pts = [
+      new THREE.Vector3(Math.sin(a)*3.6, 0, Math.cos(a)*3.6),
+      new THREE.Vector3(Math.sin(a)*2.4, 1.4, Math.cos(a)*2.4),
+    ];
+    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 6, .34, 6));
+  }
+  /* boughs reaching into the canopy */
   for (let b=0;b<8;b++){
     const a = b/8*TAU + .3;
     const pts = [
-      new THREE.Vector3(Math.sin(a)*1.0, 20.5, Math.cos(a)*1.0),
-      new THREE.Vector3(Math.sin(a)*5.5, 25.5, Math.cos(a)*5.5),
-      new THREE.Vector3(Math.sin(a)*10.2, 29.5, Math.cos(a)*10.2),
+      new THREE.Vector3(Math.sin(a)*0.9, TRUNK_H-1.6, Math.cos(a)*0.9),
+      new THREE.Vector3(Math.sin(a)*5.6, TRUNK_H+3.4, Math.cos(a)*5.6),
+      new THREE.Vector3(Math.sin(a+.18)*10.4, TRUNK_H+7.6, Math.cos(a+.18)*10.4),
     ];
-    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, .3, 6));
+    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .30, 6));
   }
   const trunkM = new THREE.Mesh(mergeGeometries(trunkParts), MAT.white);
   trunkM.castShadow = HIGH;
   const goldM = new THREE.Mesh(mergeGeometries(goldParts), MAT.gold);
-  scene.add(trunkM, goldM);
+  heroTree.add(trunkM, goldM);
   addCircle(0,0,3.4);
+
+  /* luminous canopy — instanced emissive-gold leaf clusters forming a dome */
+  {
+    const leafN = TIER===0 ? 260 : 620;
+    const leafMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
+      emissiveIntensity:.9, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+    const leafI = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), leafMat, leafN);
+    const ld = new THREE.Object3D();
+    for (let i=0;i<leafN;i++){
+      const a = rng()*TAU;
+      const b = Math.acos(rr(.05,1));            /* upper-dome bias */
+      const r = rr(8.6,14.6);
+      ld.position.set(Math.sin(b)*Math.sin(a)*r, 28.8 + Math.cos(b)*r*.82, Math.sin(b)*Math.cos(a)*r);
+      ld.rotation.set(rng()*TAU, rng()*TAU, rng()*TAU);
+      ld.scale.setScalar(rr(.55,1.6));
+      ld.updateMatrix();
+      leafI.setMatrixAt(i, ld.matrix);
+    }
+    leafI.castShadow = HIGH;
+    leafI.frustumCulled = false;
+    heroTree.add(leafI);
+  }
 
   /* luminous canopy — glow shells + golden core */
   const shellMat = (op)=> new THREE.ShaderMaterial({
@@ -1069,13 +1323,13 @@ function addBuilding(x,z,ry,big){
       }`
   });
   canopyShells = [];
-  for (const [r,op] of [[9.5,.28],[12.2,.15],[15,.07]]){
+  for (const [r,op] of [[9.5,.20],[12.6,.10]]){
     const sh = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 22), shellMat(op));
-    sh.position.y = 30; scene.add(sh); canopyShells.push(sh);
+    sh.position.y = 30; heroTree.add(sh); canopyShells.push(sh);
   }
   const core = new THREE.Mesh(new THREE.SphereGeometry(4.4, 20, 14),
     new THREE.MeshBasicMaterial({ color:0xffdf92, toneMapped:false, transparent:true, opacity:.72 }));
-  core.position.y = 30; scene.add(core);
+  core.position.y = 30; heroTree.add(core);
 
   /* canopy star-particles */
   const N = TIER===0 ? 220 : 520;
@@ -1108,8 +1362,9 @@ function addBuilding(x,z,ry,big){
         gl_FragColor = vec4(1.0,0.88,0.55, s.a*vA*0.85);
       }`
   }));
-  canopyPts.frustumCulled = false; scene.add(canopyPts);
+  canopyPts.frustumCulled = false; heroTree.add(canopyPts);
   particleMeshes.push(canopyPts);
+  registerHero('treeOfLife', heroTree, [{ x:0, y:0, z:0, ry:0 }]);
 
   if (TIER>0){
     const pl = new THREE.PointLight(0xffd27a, 90, 70, 2);
@@ -1359,20 +1614,70 @@ function addBuilding(x,z,ry,big){
     if (dd > 6.9) return -Infinity;
     return 1.8 * Math.min(1, Math.max(0, (6.9-dd)/2.9));
   });
-  /* the two thrones */
-  for (const s of [-1,1]){
-    const tx = DX + s*1.5, tz = DZ - 1.2;
-    P.gold.push(xf(new THREE.BoxGeometry(1.15,.5,1.0), tx, 2.35, tz));
-    P.crimson.push(xf(new THREE.BoxGeometry(1.0,.14,.85), tx, 2.62, tz));
-    P.gold.push(xf(new THREE.BoxGeometry(1.15,2.7,.22), tx, 3.6, tz-.5));
-    P.gold.push(xf(new THREE.CylinderGeometry(.6,.6,.22,16,1,false,0,PI).rotateX(PI/2), tx, 4.95, tz-.5));
-    P.gold.push(xf(new THREE.SphereGeometry(.14,8,6), tx, 5.6, tz-.5));
-    for (const as of [-1,1]){
-      P.gold.push(xf(new THREE.BoxGeometry(.14,.5,.9), tx+as*.58, 2.75, tz));
-      P.gold.push(xf(new THREE.SphereGeometry(.1,8,6), tx+as*.58, 3.05, tz+.4));
-    }
-    addBox(tx-.7, tx+.7, tz-.8, tz+.6);
+  /* gold inlay ring pattern on the dais floor */
+  P.goldSt.push(xf(new THREE.RingGeometry(2.55,2.72,48).rotateX(-PI/2), DX,1.815,DZ));
+  P.goldSt.push(xf(new THREE.RingGeometry(3.55,3.72,56).rotateX(-PI/2), DX,1.815,DZ));
+  P.goldSt.push(xf(new THREE.CircleGeometry(.6,24).rotateX(-PI/2), DX,1.815,DZ));
+  for (let i=0;i<12;i++){
+    const ia = i*PI/6;
+    P.goldSt.push(xf(new THREE.BoxGeometry(.14,.02,.86), DX+Math.sin(ia)*3.14, 1.815, DZ+Math.cos(ia)*3.14, ia));
   }
+  /* ---- HERO: the two thrones  (slot: throne) ----
+     lathe pedestals + cushions, extruded arched backs — full gold, deep-red seats */
+  const heroThrone = new THREE.Group(); scene.add(heroThrone);
+  const thGold = [], thRed = [];
+  function buildThrone(tx, ty, tz){
+    const L = (g,x=0,y=0,z=0,ry=0)=> xf(g, tx+x, ty+y, tz+z, ry);
+    /* pedestal — full gold lathe profile */
+    thGold.push(L(new THREE.LatheGeometry([
+      new THREE.Vector2(.04,0), new THREE.Vector2(.94,.02), new THREE.Vector2(1.00,.16),
+      new THREE.Vector2(.82,.30), new THREE.Vector2(.74,.52), new THREE.Vector2(.88,.66),
+      new THREE.Vector2(.84,.78)
+    ], 22)));
+    /* seat slab + deep-red cushion (lathe) */
+    thGold.push(L(new THREE.CylinderGeometry(.80,.88,.16,18), 0,.86,0));
+    thRed.push(L(new THREE.LatheGeometry([
+      new THREE.Vector2(.06,0), new THREE.Vector2(.64,.04), new THREE.Vector2(.70,.14),
+      new THREE.Vector2(.56,.24), new THREE.Vector2(.16,.28), new THREE.Vector2(.03,.29)
+    ], 18), 0,.94,0));
+    /* tall back — extruded, arched crown */
+    const bs = new THREE.Shape();
+    bs.moveTo(-.66,0); bs.lineTo(-.66,2.30); bs.absarc(0,2.30,.66,PI,0,true);
+    bs.lineTo(.66,0); bs.closePath();
+    thGold.push(L(new THREE.ExtrudeGeometry(bs, { depth:.22, bevelEnabled:true,
+      bevelThickness:.05, bevelSize:.05, bevelSegments:2, curveSegments:14 }), 0,.74,-.66));
+    /* deep-red inset panel on the back's inner face */
+    const ps = new THREE.Shape();
+    ps.moveTo(-.46,0); ps.lineTo(-.46,2.06); ps.absarc(0,2.06,.46,PI,0,true);
+    ps.lineTo(.46,0); ps.closePath();
+    thRed.push(L(new THREE.ExtrudeGeometry(ps, { depth:.05, bevelEnabled:false,
+      curveSegments:12 }), 0,1.02,-.42));
+    /* crown finial */
+    thGold.push(L(new THREE.ConeGeometry(.15,.5,10), 0,3.95,-.55));
+    thGold.push(L(new THREE.SphereGeometry(.10,10,8), 0,4.28,-.55));
+    /* arm balusters + rails */
+    for (const as of [-1,1]){
+      thGold.push(L(new THREE.LatheGeometry([
+        new THREE.Vector2(.03,0), new THREE.Vector2(.11,.06), new THREE.Vector2(.07,.28),
+        new THREE.Vector2(.12,.46), new THREE.Vector2(.09,.52)
+      ], 12), as*.62,.94,.30));
+      thGold.push(L(new THREE.BoxGeometry(.15,.09,1.05), as*.62,1.52,-.10));
+      thGold.push(L(new THREE.SphereGeometry(.10,10,8), as*.62,1.60,.40));
+    }
+  }
+  for (const s of [-1,1]){
+    buildThrone(DX + s*1.5, 1.8, DZ - 1.2);
+    addBox(DX+s*1.5-.7, DX+s*1.5+.7, DZ-1.2-.8, DZ-1.2+.6);
+  }
+  const thGoldM = new THREE.Mesh(mergeGeometries(thGold.map(g=> g.index ? g.toNonIndexed() : g)), MAT.gold);
+  thGoldM.castShadow = HIGH; thGoldM.receiveShadow = HIGH;
+  const thRedM = new THREE.Mesh(mergeGeometries(thRed.map(g=> g.index ? g.toNonIndexed() : g)), MAT.crimson);
+  thRedM.receiveShadow = HIGH;
+  heroThrone.add(thGoldM, thRedM);
+  registerHero('throne', heroThrone, [
+    { x:DX-1.5, y:1.8, z:DZ-1.2, ry:0 },
+    { x:DX+1.5, y:1.8, z:DZ-1.2, ry:0 },
+  ]);
   /* column of descending light */
   const beam = new THREE.Mesh(
     new THREE.CylinderGeometry(1.6, 2.9, 12.5, 24, 6, true),
@@ -1522,21 +1827,32 @@ function addBuilding(x,z,ry,big){
   for (let z=40; z<=80; z+=8)
     P.pearl.push(xf(new THREE.BoxGeometry(1.5,.03,1.5), 0, .085, z, PI/4));
 
-  /* robed marble statues with gold halos, flanking the holy portals */
+  /* ---- HERO: robed angel statues with gold halos  (slot: angelStatue) ---- */
+  const heroAngel = new THREE.Group(); scene.add(heroAngel);
+  const anW = [], anG = [], anP = [], angelAnchors = [];
   function addStatue(x,z,ry){
-    P.white.push(xf(new THREE.BoxGeometry(1.0,.9,1.0), x,.45,z, ry));
-    P.gold.push(xf(new THREE.BoxGeometry(1.08,.12,1.08), x,.96,z, ry));
-    P.pearl.push(xf(new THREE.CylinderGeometry(.14,.52,1.8,10), x,1.92,z, ry));
-    P.pearl.push(xf(new THREE.SphereGeometry(.30,10,8), x,2.72,z, ry, 1,.7,1));
-    P.pearl.push(xf(new THREE.SphereGeometry(.17,10,8), x,3.02,z, ry));
-    P.gold.push(xf(new THREE.TorusGeometry(.23,.025,6,18),
+    anW.push(xf(new THREE.BoxGeometry(1.0,.9,1.0), x,.45,z, ry));
+    anG.push(xf(new THREE.BoxGeometry(1.08,.12,1.08), x,.96,z, ry));
+    anP.push(xf(new THREE.CylinderGeometry(.14,.52,1.8,10), x,1.92,z, ry));
+    anP.push(xf(new THREE.SphereGeometry(.30,10,8), x,2.72,z, ry, 1,.7,1));
+    anP.push(xf(new THREE.SphereGeometry(.17,10,8), x,3.02,z, ry));
+    anG.push(xf(new THREE.TorusGeometry(.23,.025,6,18),
       x - Math.sin(ry)*.14, 3.06, z - Math.cos(ry)*.14, ry));
     addCircle(x,z,.75);
+    angelAnchors.push({ x, y:0, z, ry });
   }
   addStatue(39.9,-10.8,-PI/2); addStatue(39.9,-1.2,-PI/2);   // sanctuary portal
   addStatue(-8.4,-53.2,0);     addStatue(8.4,-53.2,0);       // throne hall portal
   addStatue(-8,111,PI);        addStatue(8,111,PI);          // inside the south gate
   addStatue(-39,2.5,-PI/2);    addStatue(-39,13.5,-PI/2);    // fountain court approach
+  const anWM = new THREE.Mesh(mergeGeometries(anW), MAT.white);
+  anWM.castShadow = HIGH; anWM.receiveShadow = HIGH;
+  const anGM = new THREE.Mesh(mergeGeometries(anG), MAT.gold);
+  anGM.castShadow = HIGH; anGM.receiveShadow = HIGH;
+  const anPM = new THREE.Mesh(mergeGeometries(anP), MAT.pearl);
+  anPM.receiveShadow = HIGH;
+  heroAngel.add(anWM, anGM, anPM);
+  registerHero('angelStatue', heroAngel, angelAnchors);
 
   /* doves circling the spires */
   const birdGeo = new THREE.BufferGeometry();
@@ -1670,6 +1986,7 @@ function addBuilding(x,z,ry,big){
 }
 
 bake();
+initSlots();
 
 /* ================================================================
    17. NAMED AREAS
@@ -2088,6 +2405,7 @@ window.__CITY = {
   get degradeStep(){ return degradeStep; },
   begin,
   colliders: { circles:colCircles.length, boxes:colBoxes.length, segs:colSegs.length },
+  slots: SLOT_STATUS,
 };
 
 } catch(err){
