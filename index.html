@@ -2713,6 +2713,85 @@ function addBuilding(x,z,ry,big){
 }
 
 /* ================================================================
+   16.65  ASCENT PASS 6 — THE PROCESSIONS (life beyond the Tree)
+   Reverent souls at the city's empty stations: a witness ring at
+   the Fountain Court, pilgrim clusters at all twelve gate plazas
+   (every face turned toward the Tree), and a congregation flanking
+   the Sanctuary nave. TWO InstancedMesh draws carry all of them,
+   tier-scaled, station-interleaved so the MEDIUM trim keeps
+   presence everywhere. Placement is law-checked in code (Law 15):
+   the fountain ring sits outside the walkers' circuits (11.2/12.4)
+   and the garden ring (15.4); gate clusters reject any spot within
+   13.2 of a plaza-circuit centre; nave rows clear the aisle and
+   the column lines. Local seeded rng — the global stream and every
+   later layout roll are untouched (layout law).
+================================================================ */
+{
+  const pr = mulberry32(8144);
+  const stations = [[], [], []];            /* fountain · gates · nave */
+  for (const [ring, n, aOff] of [[17.8, 16, .21], [19.4, 12, .47]]){
+    for (let i = 0; i < n; i++){
+      const a = i/n*TAU + aOff;
+      let aisle = false;
+      for (let k = 0; k < 4; k++) if (angDiff(a, k*PI/2) < .19) aisle = true;
+      if (aisle) continue;
+      const x = -52 + Math.sin(a)*ring, z = 8 + Math.cos(a)*ring;
+      stations[0].push([x, .02, z, Math.atan2(-52-x, 8-z), .05 + pr()*.10, .93 + pr()*.13]);
+    }
+  }
+  for (let g = 0; g < 12; g++){
+    const ga = g/12*TAU, rx = Math.sin(ga), rz = Math.cos(ga);
+    let placed = 0, guard = 0;
+    while (placed < 5 && guard++ < 40){
+      const rad = 104 + pr()*11;
+      const tan = (4.5 + pr()*6.5) * (pr() < .5 ? 1 : -1);
+      const x = rx*rad + rz*tan, z = rz*rad - rx*tan;
+      if (Math.hypot(x - rx*100, z - rz*100) < 13.2) continue;
+      stations[1].push([x, .02, z, Math.atan2(-x, -z), .04 + pr()*.09, .92 + pr()*.14]);
+      placed++;
+    }
+  }
+  for (const rz of [-10.6, -1.4]){
+    for (let bx = 52; bx <= 74; bx += 4.6){
+      const jx = bx + (pr()-.5)*1.4, jz = rz + (pr()-.5)*.8;
+      stations[2].push([jx, .42, jz, Math.atan2(81.5-jx, -6-jz), .08 + pr()*.10, .93 + pr()*.12]);
+    }
+  }
+  /* interleave stations so the tier trim keeps presence everywhere */
+  const order = [];
+  const idx = [0, 0, 0];
+  while (order.length < stations[0].length + stations[1].length + stations[2].length)
+    for (let s = 0; s < 3; s++)
+      if (idx[s] < stations[s].length) order.push(stations[s][idx[s]++]);
+  const bodyG = mergeGeometries([
+    xf(new THREE.CylinderGeometry(.13,.44,1.55,8), 0,.78,0),
+    xf(new THREE.SphereGeometry(.24,8,6), 0,1.62,0, 0, 1,.7,1),
+    xf(new THREE.SphereGeometry(.145,8,6), 0,1.86,0),
+  ]);
+  const sashG = xf(new THREE.TorusGeometry(.30,.035,5,12).rotateX(PI/2), 0,1.02,0);
+  const bodyI = new THREE.InstancedMesh(bodyG, MAT.pearl, order.length);
+  const sashI = new THREE.InstancedMesh(sashG, MAT.gold, order.length);
+  const o3 = new THREE.Object3D();
+  order.forEach(([x, y, z, face, bow, s], i)=>{
+    o3.position.set(x, y, z);
+    o3.rotation.set(bow, face, 0);          /* the witnesses' own order */
+    o3.scale.setScalar(s);
+    o3.updateMatrix();
+    bodyI.setMatrixAt(i, o3.matrix);
+    sashI.setMatrixAt(i, o3.matrix);
+  });
+  bodyI.castShadow = SHADOWS; bodyI.receiveShadow = SHADOWS;
+  bodyI.frustumCulled = sashI.frustumCulled = false;
+  bodyI.userData.fullCount = order.length;
+  sashI.userData.fullCount = order.length;
+  TR.instanced.push(bodyI, sashI);
+  /* self-initialize the tier trim — applyTier may already have run */
+  const frac0 = TIER===2 ? 1 : (TIER===1 ? .5 : .4);
+  bodyI.count = sashI.count = Math.floor(order.length * frac0);
+  scene.add(bodyI, sashI);
+}
+
+/* ================================================================
    16.7  THE LACE — gothic ornament density without geometry cost
    The silhouette stays procedural; the SURFACE becomes carved.
    Budget: +5 draw calls total (2 trim, 2 tracery, 1 pinnacle forest),
