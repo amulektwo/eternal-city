@@ -46,6 +46,12 @@
   #area.on { opacity:1; }
   #area::after { content:""; display:block; margin:7px auto 0; width:120px; height:1px;
     background:linear-gradient(90deg,transparent,#ffe9ad,transparent); }
+  #toast { position:fixed; top:74px; left:0; right:0; z-index:10; text-align:center;
+    color:#ffe9ad; letter-spacing:.26em; text-indent:.26em; pointer-events:none;
+    font-size:clamp(.72rem,2.1vw,1rem);
+    text-shadow:0 1px 3px rgba(90,60,0,.55), 0 0 14px rgba(255,214,120,.75);
+    opacity:0; transition:opacity .7s ease; }
+  #toast.on { opacity:1; }
   #dot { position:fixed; top:50%; left:50%; width:4px; height:4px; margin:-2px;
     border-radius:50%; background:rgba(255,244,214,.85); z-index:10; pointer-events:none;
     box-shadow:0 0 6px rgba(255,220,130,.9); display:none; }
@@ -66,6 +72,7 @@
 <body>
 <div id="vig"></div>
 <div id="hud"><span id="area"></span></div>
+<div id="toast"></div>
 <div id="dot"></div>
 <div id="fps"></div>
 <div id="stick"><div id="knob"></div></div>
@@ -104,6 +111,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 try {
@@ -164,11 +172,16 @@ function pushArch(list, R, tube, c, px, py, pz, ry){
    1. TIER DETECTION  (?q=low|high overrides, ?hud=fps shows meter)
 ================================================================ */
 const qs = new URLSearchParams(location.search);
-const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-let TIER = IS_TOUCH ? 1 : 2;                    // 2=high 1=mid 0=low
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window
+              || qs.get('touch') === '1';
+/* initial tier by detection: touch or a small screen → MEDIUM; else HIGH.
+   LOW is reached only by explicit ?q=low or by the fps watchdog. */
+let TIER = (IS_TOUCH || Math.min(screen.width, screen.height) < 700) ? 1 : 2;
 if (qs.get('q') === 'low') TIER = 0;
+if (qs.get('q') === 'med') TIER = 1;
 if (qs.get('q') === 'high') TIER = 2;
-const HIGH = TIER >= 2;
+const HIGH = TIER >= 2;          // build-time snapshot: HDRI res, extra lights
+const SHADOWS = TIER >= 1;       // build-time snapshot: shadow-casting flags
 
 /* ================================================================
    2. RENDERER · SCENE · CAMERA · LIGHT
@@ -178,11 +191,12 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, TIER===2?2:(TIER===1?1.5:1)));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
-if (HIGH){ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = SHADOWS;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xffd9a4, 150, TIER===0 ? 480 : 780);
+scene.fog = new THREE.Fog(0xffd9a4, 150, 780);   /* far is tier-managed in applyTier */
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.1, 2000);
 camera.position.set(0, 1.7, 108);
@@ -191,9 +205,9 @@ const hemi = new THREE.HemisphereLight(0xfff0d4, 0xd8ba8c, 0.45);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffd9a0, 3.3);
 sun.position.set(-180, 90, 150);
-if (HIGH){
+if (SHADOWS){
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(TIER===2 ? 2048 : 1024, TIER===2 ? 2048 : 1024);
   const sc = sun.shadow.camera;
   sc.left = -150; sc.right = 150; sc.top = 150; sc.bottom = -150;
   sc.near = 20; sc.far = 600;
@@ -219,14 +233,82 @@ scene.add(sun); scene.add(sun.target);
   pm.dispose();
 }
 
-/* post-processing */
-let composer = null, bloomPass = null;
-if (TIER > 0){
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.5, 1.0);
-  composer.addPass(bloomPass);
-  composer.addPass(new OutputPass());
+/* post-processing — a composer at every tier (LOW keeps bloom only) */
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
+let ssaoPass = null;
+/* SSAO — EXPERIMENTAL OPT-IN ONLY (?ssao=1). SSAOPass's internal scene
+   render produces a black frame against this scene/pipeline (verified on
+   three r160: even OUTPUT.Beauty is black), so it must not ship enabled.
+   The tier plumbing keeps the slot so a future fix is a one-line change. */
+if (TIER === 2 && qs.get('ssao') === '1'){
+  ssaoPass = new SSAOPass(scene, camera, innerWidth, innerHeight);
+  /* min/maxDistance are linearized [0,1] depth over near..far (0.1..2000):
+     0.0001 ≈ 0.2 world units, 0.001 ≈ 2 — contact-shadow scale */
+  ssaoPass.kernelRadius = 0.8;
+  ssaoPass.minDistance = 0.0001;
+  ssaoPass.maxDistance = 0.001;
+  composer.addPass(ssaoPass);
+}
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.5, 1.0);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+/* ================================================================
+   2.5  THE GUARD — quality tiers, applied live
+   HIGH  (2): SSAO on, full-res bloom, 2048 shadows, pixelRatio ≤ 2
+   MEDIUM(1): SSAO off, half-res bloom, 1024 shadows, pixelRatio ≤ 1.5,
+              particle counts halved
+   LOW   (0): shadows off, bloom only, pixelRatio 1, light shafts
+              reduced, particles at 40%, fog pulled in
+================================================================ */
+const TR = { instanced: [], shafts: [] };   /* tier-scalable registries */
+let emergency = false;
+function applyPostSizes(){
+  const f = TIER===2 ? 1 : (TIER===1 ? .5 : .25);
+  bloomPass.setSize(innerWidth*f, innerHeight*f);
+}
+function applyTier(t){
+  TIER = t;
+  /* pixel ratio */
+  renderer.setPixelRatio(t===2 ? Math.min(devicePixelRatio, 2)
+                       : t===1 ? Math.min(devicePixelRatio, 1.5) : 1);
+  composer.setPixelRatio(renderer.getPixelRatio());
+  composer.setSize(innerWidth, innerHeight);
+  applyPostSizes();
+  /* SSAO ↔ plain render pass (SSAOPass renders the scene itself) */
+  if (ssaoPass){
+    ssaoPass.enabled = (t === 2);
+    renderPass.enabled = !ssaoPass.enabled;
+  }
+  /* shadows — never above what the build flags allow */
+  const wantShadows = t >= 1 && SHADOWS;
+  if (renderer.shadowMap.enabled !== wantShadows){
+    renderer.shadowMap.enabled = wantShadows;
+    sun.castShadow = wantShadows;
+    scene.traverse(o=>{ if (o.material && o.material.needsUpdate !== undefined) o.material.needsUpdate = true; });
+  }
+  if (wantShadows){
+    const sz = t===2 ? 2048 : 1024;
+    if (sun.shadow.mapSize.x !== sz){
+      sun.shadow.mapSize.set(sz, sz);
+      if (sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; }
+    }
+  }
+  /* raising out of LOW ends any emergency dressing cut */
+  if (t > 0) emergency = false;
+  /* fog reach + light shafts */
+  scene.fog.far = (t===0 && emergency) ? 360 : (t===0 ? 480 : 780);
+  for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * (t===0 ? .45 : 1);
+  /* particle populations: full / halved / 40% (buffers stay full-size) */
+  const frac = t===2 ? 1 : (t===1 ? .5 : .4);
+  for (const p of particleMeshes){
+    p.visible = !emergency;
+    p.geometry.setDrawRange(0, Math.floor(p.geometry.attributes.position.count * frac));
+  }
+  for (const im of TR.instanced)
+    im.count = Math.floor(im.userData.fullCount * frac);
 }
 
 /* ================================================================
@@ -421,6 +503,7 @@ scene.add(sunSprite);
     scene.add(p);
   }
   tickers.push(t => { grMat.uniforms.uTime.value = t; });
+  grMat.userData.baseOp = .07; TR.shafts.push(grMat);
 }
 
 /* drifting cloud sprites above + below */
@@ -506,7 +589,7 @@ const seaMeshes = [];
 /* floating light motes */
 let motesMat, motes;
 {
-  const N = TIER===0 ? 260 : 620;
+  const N = 620;   /* full buffer — the tier trims via drawRange */
   const pos = new Float32Array(N*3), seed = new Float32Array(N);
   for (let i=0;i<N;i++){
     const a = rng()*TAU, r = Math.sqrt(rng())*118;
@@ -561,8 +644,8 @@ function bake(){
   for (const k in P){
     if (!P[k].length) continue;
     const m = new THREE.Mesh(mergeGeometries(P[k]), MAT[k]);
-    m.castShadow = HIGH && (k==='white'||k==='ivory'||k==='gold');
-    m.receiveShadow = HIGH;
+    m.castShadow = SHADOWS && (k==='white'||k==='ivory'||k==='gold');
+    m.receiveShadow = SHADOWS;
     scene.add(m);
   }
 }
@@ -637,7 +720,7 @@ async function initSlots(){
         const src = gltf.scene;
         src.traverse(o=>{
           if (o.isMesh){
-            o.castShadow = HIGH; o.receiveShadow = HIGH;
+            o.castShadow = SHADOWS; o.receiveShadow = SHADOWS;
             const ms = Array.isArray(o.material) ? o.material : [o.material];
             for (const m of ms) if (m && m.envMapIntensity !== undefined) m.envMapIntensity = 1.0;
           }
@@ -744,7 +827,7 @@ async function initTransfiguration(){
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(CITY_R, 96).rotateX(-PI/2),
     new THREE.MeshStandardMaterial({ color:0xf4ecdb, map:pavingTex, roughness:.6, metalness:.05, envMapIntensity:.4 }));
-  ground.receiveShadow = HIGH;
+  ground.receiveShadow = SHADOWS;
   scene.add(ground);
 
   P.white.push(xf(new THREE.CylinderGeometry(CITY_R, CITY_R, 9, 96, 1, true), 0, -4.5, 0));
@@ -825,7 +908,7 @@ async function initTransfiguration(){
     d.position.y = 8.25; d.updateMatrix();
     trim.setMatrixAt(i, d.matrix);
   });
-  wall.castShadow = HIGH; wall.receiveShadow = HIGH;
+  wall.castShadow = SHADOWS; wall.receiveShadow = SHADOWS;
   wall.frustumCulled = trim.frustumCulled = false;
   scene.add(wall, trim);
 
@@ -918,8 +1001,8 @@ async function initTransfiguration(){
       /* anchor = the procedural band's frame: the spring line, y=SPRING */
       gateAnchors.push({ x:Math.sin(a)*WALL_R, y:SPRING, z:Math.cos(a)*WALL_R, ry:a });
     }
-    archBody.castShadow = HIGH; archBody.receiveShadow = HIGH;
-    archRim.castShadow = HIGH;  archRim.receiveShadow = HIGH;
+    archBody.castShadow = SHADOWS; archBody.receiveShadow = SHADOWS;
+    archRim.castShadow = SHADOWS;  archRim.receiveShadow = SHADOWS;
     archBody.frustumCulled = archRim.frustumCulled = false;
     heroGate.add(archBody, archRim);
     registerHero('gateArch', heroGate, gateAnchors);
@@ -1028,7 +1111,7 @@ function addBuilding(x,z,ry,big){
       d.position.y = 3.4*s+1.1; d.updateMatrix();
       ci.setMatrixAt(i,d.matrix);
     });
-    ti.castShadow = ci.castShadow = HIGH;
+    ti.castShadow = ci.castShadow = SHADOWS;
     ti.frustumCulled = ci.frustumCulled = false;
     scene.add(ti,ci);
   }
@@ -1059,7 +1142,7 @@ function addBuilding(x,z,ry,big){
     d.position.y = 5.8; d.updateMatrix(); capI.setMatrixAt(i,d.matrix);
     addCircle(x,z,.6);
   });
-  colI.castShadow = HIGH; colI.frustumCulled = capI.frustumCulled = false;
+  colI.castShadow = SHADOWS; colI.frustumCulled = capI.frustumCulled = false;
   scene.add(colI,capI);
   for (const sx of [-6.5,6.5])
     P.gold.push(xf(new THREE.BoxGeometry(.7,.5,46), sx, 6.2, 61));
@@ -1073,7 +1156,7 @@ function addBuilding(x,z,ry,big){
     canParts.push(g);
   }
   const canM = new THREE.Mesh(mergeGeometries(canParts), canMat);
-  canM.castShadow = HIGH; scene.add(canM);
+  canM.castShadow = SHADOWS; scene.add(canM);
 
   /* market stalls */
   const goodsCols = [0xe2b74e, 0xc8502e, 0xf3ecd8, 0x9ec78a, 0xe88a6a];
@@ -1085,7 +1168,7 @@ function addBuilding(x,z,ry,big){
       P.gold.push(xf(new THREE.CylinderGeometry(.06,.06,2.4,5), sx+px, 2.2, z+pz));
     const cg = new THREE.PlaneGeometry(3.6,2);
     xf(cg, sx, 3.5, z, 0, 1,1,1, .28, 0);
-    const cm = new THREE.Mesh(cg, canMat); cm.castShadow = HIGH; scene.add(cm);
+    const cm = new THREE.Mesh(cg, canMat); cm.castShadow = SHADOWS; scene.add(cm);
     for (let gI=0;gI<5;gI++){
       const gm = new THREE.MeshStandardMaterial({ color:goodsCols[(i+gI)%5], roughness:.5 });
       const gS = new THREE.Mesh(new THREE.SphereGeometry(.16,8,6), gm);
@@ -1172,9 +1255,9 @@ function addBuilding(x,z,ry,big){
   fGold.push(xf(new THREE.SphereGeometry(.40,14,10), FX,6.42,FZ));
   fGold.push(xf(new THREE.ConeGeometry(.16,.6,10), FX,6.95,FZ));
   const fWhiteM = new THREE.Mesh(mergeGeometries(fWhite.map(g=> g.index ? g.toNonIndexed() : g)), MAT.white);
-  fWhiteM.castShadow = HIGH; fWhiteM.receiveShadow = HIGH;
+  fWhiteM.castShadow = SHADOWS; fWhiteM.receiveShadow = SHADOWS;
   const fGoldM = new THREE.Mesh(mergeGeometries(fGold.map(g=> g.index ? g.toNonIndexed() : g)), MAT.gold);
-  fGoldM.castShadow = HIGH; fGoldM.receiveShadow = HIGH;
+  fGoldM.castShadow = SHADOWS; fGoldM.receiveShadow = SHADOWS;
   heroFountain.add(fWhiteM, fGoldM);
 
   /* flowing water — UV-scrolled shader streams falling basin to basin */
@@ -1223,13 +1306,15 @@ function addBuilding(x,z,ry,big){
     w.position.set(FX,y,FZ); heroFountain.add(w); waterDiscs.push(w);
   }
 
-  /* rainbow-shimmer spray */
-  const N = TIER===0 ? 220 : 520;
+  /* fine spray burst */
+  const N = 520;   /* full buffer — the tier trims via drawRange */
   const base = new Float32Array(N*3), vel = new Float32Array(N*3),
         col = new Float32Array(N*3), t0 = new Float32Array(N);
   const cTmp = new THREE.Color();
   for (let i=0;i<N;i++){
-    const a = rng()*TAU, up = i < N*.55;
+    /* jet and ring strata are INTERLEAVED (not blocked) so the tier
+       drawRange trim keeps a proportional mix of both */
+    const a = rng()*TAU, up = (i % 20) < 11;
     base[i*3] = FX + (up?0:Math.sin(a)*2.6);
     base[i*3+1] = up ? 6.5 : 3.6;
     base[i*3+2] = FZ + (up?0:Math.cos(a)*2.6);
@@ -1350,14 +1435,14 @@ function addBuilding(x,z,ry,big){
     trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .30, 6));
   }
   const trunkM = new THREE.Mesh(mergeGeometries(trunkParts), MAT.white);
-  trunkM.castShadow = HIGH;
+  trunkM.castShadow = SHADOWS;
   const goldM = new THREE.Mesh(mergeGeometries(goldParts), MAT.gold);
   heroTree.add(trunkM, goldM);
   addCircle(0,0,3.4);
 
   /* luminous canopy — instanced emissive-gold leaf clusters forming a dome */
   {
-    const leafN = TIER===0 ? 260 : 620;
+    const leafN = 620;   /* full buffer — the tier trims via InstancedMesh.count */
     const leafMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
       emissiveIntensity:.9, roughness:.42, metalness:.35, envMapIntensity:1.0 });
     const leafI = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), leafMat, leafN);
@@ -1372,8 +1457,9 @@ function addBuilding(x,z,ry,big){
       ld.updateMatrix();
       leafI.setMatrixAt(i, ld.matrix);
     }
-    leafI.castShadow = HIGH;
+    leafI.castShadow = SHADOWS;
     leafI.frustumCulled = false;
+    leafI.userData.fullCount = leafN; TR.instanced.push(leafI);
     heroTree.add(leafI);
   }
 
@@ -1406,7 +1492,7 @@ function addBuilding(x,z,ry,big){
   core.position.y = 30; heroTree.add(core);
 
   /* canopy star-particles */
-  const N = TIER===0 ? 220 : 520;
+  const N = 520;   /* full buffer — the tier trims via drawRange */
   const pos = new Float32Array(N*3), seed = new Float32Array(N);
   for (let i=0;i<N;i++){
     const a = rng()*TAU, b = Math.acos(rr(-1,1)), r = rr(5.5,14);
@@ -1463,7 +1549,7 @@ function addBuilding(x,z,ry,big){
       blending:THREE.AdditiveBlending, depthWrite:false }));
     g.scale.set(2.6,2.6,1); g.position.y = -2.35;
     pivot.add(stem, fruit, g);
-    pivot.userData = { ph:i*1.31, mat:fMat, glow:g };
+    pivot.userData = { ph:i*1.31, mat:fMat, glow:g, tribe:TRIBES[i], scrollIndex:i, flashT:-9 };
     scene.add(pivot);
     fruits.push(pivot);
   }
@@ -1524,7 +1610,7 @@ function addBuilding(x,z,ry,big){
     g.rotateY(PI/2);
     xf(g, gx-.5, H, CZ);
     const gm = new THREE.Mesh(g, MAT.white);   // extrude is non-indexed — keep out of the merge
-    gm.castShadow = HIGH; scene.add(gm);
+    gm.castShadow = SHADOWS; scene.add(gm);
   }
   /* flying buttresses — piers + slanted struts */
   for (const s of [-1,1]) for (let bx=50; bx<=80; bx+=7.5){
@@ -1571,7 +1657,7 @@ function addBuilding(x,z,ry,big){
     d.position.y = 14.0; d.updateMatrix(); capI.setMatrixAt(i,d.matrix);
     addCircle(x,z,1.25);
   });
-  colI.castShadow = HIGH;
+  colI.castShadow = SHADOWS;
   colI.frustumCulled = capI.frustumCulled = false;
   scene.add(colI, capI);
   for (const cz of [CZ-7.5, CZ+7.5]) for (let cx=53.5; cx<=74.5; cx+=7){
@@ -1624,6 +1710,7 @@ function addBuilding(x,z,ry,big){
       }`
   });
   scene.add(new THREE.Mesh(mergeGeometries(shaftParts), shaftMat));
+  shaftMat.userData.baseOp = .12; TR.shafts.push(shaftMat);
 }
 
 /* ================================================================
@@ -1640,7 +1727,7 @@ function addBuilding(x,z,ry,big){
     const arc = new THREE.CylinderGeometry(R, R, H, 64, 1, true, GAP, TAU-2*GAP);
     xf(arc, CX, H/2, CZ);
     const wallM = new THREE.Mesh(arc, whiteDS);
-    wallM.castShadow = HIGH; wallM.receiveShadow = HIGH;
+    wallM.castShadow = SHADOWS; wallM.receiveShadow = SHADOWS;
     scene.add(wallM);
     const arc2 = new THREE.CylinderGeometry(R+.35, R+.35, .6, 64, 1, true, GAP, TAU-2*GAP);
     xf(arc2, CX, H+.2, CZ);
@@ -1651,7 +1738,7 @@ function addBuilding(x,z,ry,big){
     const dome = new THREE.SphereGeometry(R+.5, 40, 20, 0, TAU, .30, PI/2-.30);
     xf(dome, CX, H-2.5, CZ);
     const domeM = new THREE.Mesh(dome, ivoryDS);
-    domeM.castShadow = HIGH;
+    domeM.castShadow = SHADOWS;
     scene.add(domeM);
     P.gold.push(xf(new THREE.TorusGeometry((R+.5)*Math.sin(.30), .4, 8, 32).rotateX(PI/2),
       CX, H-2.5+(R+.5)*Math.cos(.30), CZ));
@@ -1744,9 +1831,9 @@ function addBuilding(x,z,ry,big){
     addBox(DX+s*1.5-.7, DX+s*1.5+.7, DZ-1.2-.8, DZ-1.2+.6);
   }
   const thGoldM = new THREE.Mesh(mergeGeometries(thGold.map(g=> g.index ? g.toNonIndexed() : g)), MAT.gold);
-  thGoldM.castShadow = HIGH; thGoldM.receiveShadow = HIGH;
+  thGoldM.castShadow = SHADOWS; thGoldM.receiveShadow = SHADOWS;
   const thRedM = new THREE.Mesh(mergeGeometries(thRed.map(g=> g.index ? g.toNonIndexed() : g)), MAT.crimson);
-  thRedM.receiveShadow = HIGH;
+  thRedM.receiveShadow = SHADOWS;
   heroThrone.add(thGoldM, thRedM);
   registerHero('throne', heroThrone, [
     { x:DX-1.5, y:1.8, z:DZ-1.2, ry:0 },
@@ -1803,7 +1890,7 @@ function addBuilding(x,z,ry,big){
   fg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2));
   fg.setIndex(idx); fg.computeVertexNormals();
   const floor = new THREE.Mesh(fg, MAT.white);
-  floor.receiveShadow = HIGH;
+  floor.receiveShadow = SHADOWS;
   scene.add(floor);
   const sl = fg.clone(); sl.translate(0,-1.3,0);
   scene.add(new THREE.Mesh(sl, MAT.ivory));
@@ -1920,11 +2007,11 @@ function addBuilding(x,z,ry,big){
   addStatue(-8,111,PI);        addStatue(8,111,PI);          // inside the south gate
   addStatue(-39,2.5,-PI/2);    addStatue(-39,13.5,-PI/2);    // fountain court approach
   const anWM = new THREE.Mesh(mergeGeometries(anW), MAT.white);
-  anWM.castShadow = HIGH; anWM.receiveShadow = HIGH;
+  anWM.castShadow = SHADOWS; anWM.receiveShadow = SHADOWS;
   const anGM = new THREE.Mesh(mergeGeometries(anG), MAT.gold);
-  anGM.castShadow = HIGH; anGM.receiveShadow = HIGH;
+  anGM.castShadow = SHADOWS; anGM.receiveShadow = SHADOWS;
   const anPM = new THREE.Mesh(mergeGeometries(anP), MAT.pearl);
-  anPM.receiveShadow = HIGH;
+  anPM.receiveShadow = SHADOWS;
   heroAngel.add(anWM, anGM, anPM);
   registerHero('angelStatue', heroAngel, angelAnchors);
 
@@ -1971,7 +2058,7 @@ function addBuilding(x,z,ry,big){
     g.fillStyle = gr;
     g.beginPath(); g.ellipse(0,0,w*.38,h*.2,0,0,TAU); g.fill();
   });
-  const NP = TIER===0 ? 90 : 220;
+  const NP = 220;   /* full buffer — the tier trims via drawRange */
   const ppos = new Float32Array(NP*3), pseed = new Float32Array(NP);
   for (let i=0;i<NP;i++){
     const a = rng()*TAU, r = 3+Math.sqrt(rng())*20;
@@ -2032,7 +2119,7 @@ function addBuilding(x,z,ry,big){
   ];
   const cit = new THREE.InstancedMesh(citGeo, MAT.pearl, PATHS.length);
   const sash = new THREE.InstancedMesh(sashGeo, MAT.gold, PATHS.length);
-  cit.castShadow = HIGH;
+  cit.castShadow = SHADOWS;
   cit.frustumCulled = sash.frustumCulled = false;
   scene.add(cit, sash);
   const cd = new THREE.Object3D();
@@ -2060,6 +2147,7 @@ function addBuilding(x,z,ry,big){
 }
 
 bake();
+applyTier(TIER);
 initSlots();
 initTransfiguration();
 
@@ -2098,7 +2186,7 @@ function groundAt(x,z){
   return h;
 }
 
-function resolveCollisions(px, pz, prevR){
+function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z){
   const PR = .55;
   for (const b of colBoxes){
     const nx = Math.max(b.x0, Math.min(px, b.x1));
@@ -2170,7 +2258,7 @@ function resolveCollisions(px, pz, prevR){
     if (r > 17-1.1-PR && r < 17+1.1+PR){
       const a = Math.atan2(hx,hz);
       if (Math.abs(a) > 24*D2R){
-        const target = (Math.hypot(player.pos.x, player.pos.z+72) < 17) ? 17-1.1-PR : 17+1.1+PR;
+        const target = (Math.hypot(pvx, pvz+72) < 17) ? 17-1.1-PR : 17+1.1+PR;
         const sc = target / (r||1e-6);
         px = hx*sc; pz = hz*sc - 72;
       }
@@ -2222,10 +2310,54 @@ canvasEl.addEventListener('mousedown', e=>{
 });
 addEventListener('mouseup', ()=> dragLook=false);
 
+/* ---- fruit tap targets — desktop click + touch tap (TOUCH PARITY) ---- */
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> toastEl.classList.remove('on'), 2600);
+}
+const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2(), _fp = new THREE.Vector3();
+function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvasEl)){
+  if (!started || paused) return false;
+  if (useCenter) _ndc.set(0, 0);   /* crosshair */
+  else _ndc.set(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
+  _ray.setFromCamera(_ndc, camera);
+  let best = null, bestDist = Infinity;
+  for (const f of fruits){
+    f.getWorldPosition(_fp); _fp.y -= 2.35;          /* the fruit hangs below its pivot */
+    const dist = _fp.distanceTo(camera.position);
+    if (dist > 70) continue;
+    const off = _ray.ray.distanceToPoint(_fp);
+    /* generous tap radius that grows with distance — phone-thumb friendly */
+    if (off < Math.max(1.0, dist*.045) && dist < bestDist){ best = f; bestDist = dist; }
+  }
+  if (!best) return false;
+  best.userData.flashT = clock.elapsedTime;
+  showToast(`THE FRUIT OF ${best.userData.tribe} · ITS SCROLL IS YET SEALED`);
+  return true;
+}
+let mDownT = 0, mMoveAcc = 0, mDownLocked = false;
+canvasEl.addEventListener('mousedown', e=>{
+  if (e.button !== 0) return;
+  mDownT = performance.now(); mMoveAcc = 0;
+  /* capture lock state NOW — the same click may re-acquire pointer lock
+     before mouseup, which must not retarget the tap to screen centre */
+  mDownLocked = (document.pointerLockElement === canvasEl);
+});
+addEventListener('mousemove', e=>{ mMoveAcc += Math.abs(e.movementX||0) + Math.abs(e.movementY||0); });
+addEventListener('mouseup', e=>{
+  if (e.button === 0 && performance.now() - mDownT < 400 && mMoveAcc < 12)
+    tryFruitTap(e.clientX, e.clientY, mDownLocked);
+});
+
 /* touch controls */
 const stick = document.getElementById('stick'), knob = document.getElementById('knob');
 const touchMove = {x:0, y:0};
-let moveTouchId = null, lookTouchId = null, lookLX=0, lookLY=0, stickCX=0, stickCY=0;
+let moveTouchId = null, lookTouchId = null, lookLX=0, lookLY=0, stickCX=0, stickCY=0,
+    lookT0=0, lookMoved=0, moveT0=0, moveMoved=0;
 if (IS_TOUCH){
   addEventListener('touchstart', e=>{
     if (!started) return;
@@ -2235,8 +2367,10 @@ if (IS_TOUCH){
         stickCX = t.clientX; stickCY = t.clientY;
         stick.style.left = (stickCX-60)+'px'; stick.style.top = (stickCY-60)+'px';
         stick.style.bottom = 'auto';
+        moveT0 = performance.now(); moveMoved = 0;
       } else if (lookTouchId===null){
         lookTouchId = t.identifier; lookLX = t.clientX; lookLY = t.clientY;
+        lookT0 = performance.now(); lookMoved = 0;
       }
     }
     e.preventDefault();
@@ -2244,12 +2378,14 @@ if (IS_TOUCH){
   addEventListener('touchmove', e=>{
     for (const t of e.changedTouches){
       if (t.identifier === moveTouchId){
+        moveMoved += Math.abs(t.clientX-stickCX) + Math.abs(t.clientY-stickCY);
         let dx = (t.clientX-stickCX)/48, dy = (t.clientY-stickCY)/48;
         const m = Math.hypot(dx,dy);
         if (m>1){ dx/=m; dy/=m; }
         touchMove.x = dx; touchMove.y = dy;
         knob.style.transform = `translate(${dx*34}px,${dy*34}px)`;
       } else if (t.identifier === lookTouchId){
+        lookMoved += Math.abs(t.clientX-lookLX) + Math.abs(t.clientY-lookLY);
         player.yaw   -= (t.clientX-lookLX)*.005;
         player.pitch -= (t.clientY-lookLY)*.005;
         player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch));
@@ -2258,15 +2394,26 @@ if (IS_TOUCH){
     }
     e.preventDefault();
   }, {passive:false});
-  const endTouches = e=>{
+  const endTouches = (e, canceled)=>{
     for (const t of e.changedTouches){
-      if (t.identifier === moveTouchId){ moveTouchId=null; touchMove.x=touchMove.y=0;
-        knob.style.transform='translate(0,0)'; }
-      if (t.identifier === lookTouchId) lookTouchId=null;
+      if (t.identifier === moveTouchId){
+        moveTouchId=null; touchMove.x=touchMove.y=0;
+        knob.style.transform='translate(0,0)';
+        /* a short, still first-finger touch on the LEFT side is a TAP too —
+           without this, fruits in the left 45% of the screen are unreachable */
+        if (!canceled && performance.now() - moveT0 < 350 && moveMoved < 14)
+          tryFruitTap(t.clientX, t.clientY, false);
+      }
+      if (t.identifier === lookTouchId){
+        lookTouchId = null;
+        /* a short, still touch is a TAP — try the fruit targets */
+        if (!canceled && performance.now() - lookT0 < 350 && lookMoved < 14)
+          tryFruitTap(t.clientX, t.clientY, false);
+      }
     }
   };
-  addEventListener('touchend', endTouches);
-  addEventListener('touchcancel', endTouches);  // OS gestures end touches with cancel, not end
+  addEventListener('touchend', e=> endTouches(e, false));
+  addEventListener('touchcancel', e=> endTouches(e, true));  // OS gestures cancel — never a tap
 }
 
 function stepPlayer(dt){
@@ -2356,6 +2503,19 @@ function begin(){
 document.getElementById('enter').addEventListener('click', e=>{ e.stopPropagation(); begin(); });
 ovEl.addEventListener('click', ()=>{ if (started) begin(); });
 
+/* deep-link spawn — share a viewpoint or test a vantage:
+   ?pos=x,z[&yaw=deg][&pitch=rad][&autostart=1] */
+{
+  const ps = qs.get('pos');
+  if (ps){
+    const [px, pz] = ps.split(',').map(Number);
+    if (isFinite(px) && isFinite(pz)) player.pos.set(px, groundAt(px, pz) + 1.7, pz);
+    const yw = parseFloat(qs.get('yaw'));   if (isFinite(yw)) player.yaw = yw * D2R;
+    const pt = parseFloat(qs.get('pitch')); if (isFinite(pt)) player.pitch = Math.max(-1.45, Math.min(1.45, pt));
+  }
+  if (qs.get('autostart') === '1') begin();
+}
+
 /* ================================================================
    20. AUDIO — intentionally silent for now.
    The Seer will bring the true sound of the city in a later phase.
@@ -2365,28 +2525,31 @@ ovEl.addEventListener('click', ()=>{ if (started) begin(); });
    21. DAY CYCLE · ANIMATE · ADAPTIVE QUALITY
 ================================================================ */
 const clock = new THREE.Clock();
-let fpsAcc=0, fpsN=0, fpsAvg=60, lastDegrade=0, degradeStep=0;
+let fpsAcc=0, fpsN=0, fpsAvg=60;
 const fpsEl = document.getElementById('fps');
 if (qs.get('hud')==='fps') fpsEl.style.display='block';
 
-function degrade(now){
-  /* advance until a step actually applies on this tier — no-op steps must not burn cooldowns */
-  while (degradeStep < 3){
-    degradeStep++;
-    if (degradeStep===1 && bloomPass){ bloomPass.enabled = false; break; }
-    if (degradeStep===2 && renderer.shadowMap.enabled){
-      renderer.shadowMap.enabled = false; sun.castShadow = false;
-      scene.traverse(o=>{ if (o.material && o.material.needsUpdate !== undefined) o.material.needsUpdate = true; });
-      break;
-    }
-    if (degradeStep===3){
-      renderer.setPixelRatio(1);
-      for (const p of particleMeshes) p.visible = false;
-      scene.fog.far = 360;
-      break;
-    }
+/* THE GUARD's fps watchdog — rolling 4-second average; below the floor
+   it drops ONE tier live and logs it. It never raises a tier back. */
+const FPS_FLOOR = IS_TOUCH ? 25 : 50;
+let wdAcc = 0, wdFrames = 0, wdCooldownUntil = 0;
+function watchdog(t, dt){
+  if (!started || paused) return;
+  wdAcc += dt; wdFrames++;
+  if (wdAcc < 4) return;
+  const avg = wdFrames / wdAcc;
+  wdAcc = 0; wdFrames = 0;
+  if (t < wdCooldownUntil || avg >= FPS_FLOOR) return;
+  if (TIER > 0){
+    applyTier(TIER - 1);
+    console.log(`WATCHDOG: ${avg.toFixed(1)} fps < floor ${FPS_FLOOR} — tier dropped to ${TIER} (${['LOW','MEDIUM','HIGH'][TIER]})`);
+  } else if (!emergency){
+    emergency = true;
+    for (const p of particleMeshes) p.visible = false;
+    scene.fog.far = 360;
+    console.log(`WATCHDOG: ${avg.toFixed(1)} fps at LOW — emergency dressing cut`);
   }
-  lastDegrade = now;
+  wdCooldownUntil = t + 6;
 }
 
 const _sd = new THREE.Vector3();
@@ -2419,8 +2582,9 @@ function animate(){
   for (const f of fruits){
     f.rotation.x = Math.sin(t*.7 + f.userData.ph)*.055;
     f.rotation.z = Math.cos(t*.55 + f.userData.ph)*.055;
-    f.userData.mat.emissiveIntensity = 1.7 + .8*Math.sin(t*1.35 + f.userData.ph);
-    f.userData.glow.material.opacity = .3 + .18*Math.sin(t*1.35 + f.userData.ph);
+    const flash = Math.max(0, 1 - (t - f.userData.flashT)/1.1);   /* tap acknowledgement */
+    f.userData.mat.emissiveIntensity = 1.7 + .8*Math.sin(t*1.35 + f.userData.ph) + 2.4*flash;
+    f.userData.glow.material.opacity = .3 + .18*Math.sin(t*1.35 + f.userData.ph) + .3*flash;
   }
   for (const b of banners){
     b.rotation.z = Math.sin(t*1.1 + b.userData.ph)*.09;
@@ -2447,19 +2611,19 @@ function animate(){
   fpsAcc += dt; fpsN++;
   if (fpsAcc >= 1){
     fpsAvg = fpsN/fpsAcc; fpsAcc=0; fpsN=0;
-    fpsEl.textContent = fpsAvg.toFixed(0)+' fps · tier '+TIER+' · deg '+degradeStep;
-    if (started && fpsAvg < 27 && t-lastDegrade > 6 && degradeStep < 3) degrade(t);
+    fpsEl.textContent = fpsAvg.toFixed(0)+' fps · tier '+TIER+(emergency?' · emg':'');
   }
+  watchdog(t, dt);
 
-  if (composer && (!bloomPass || bloomPass.enabled)) composer.render();
-  else renderer.render(scene, camera);
+  composer.render();
 }
 
 addEventListener('resize', ()=>{
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  if (composer) composer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  applyPostSizes();
 });
 
 renderer.setAnimationLoop(animate);
@@ -2477,7 +2641,15 @@ window.__CITY = {
   get area(){ return curArea; },
   get fps(){ return fpsAvg; },
   get tier(){ return TIER; },
-  get degradeStep(){ return degradeStep; },
+  get watchdog(){ return { floor: FPS_FLOOR, emergency }; },
+  setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
+  /* collision probe for tests: attempt to stand at (x,z) coming from
+     prevR / (prevX,prevZ) — pure in its arguments, never the live avatar */
+  probe(x, z, prevR = Math.hypot(x, z), prevX = x, prevZ = z){
+    const [rx, rz] = resolveCollisions(x, z, prevR, prevX, prevZ);
+    return { x: rx, z: rz, ground: groundAt(rx, rz), moved: Math.hypot(rx - x, rz - z) };
+  },
+  areaAt(x, z){ for (const a of AREAS) if (a.t(x, z)) return a.n; return ''; },
   begin,
   colliders: { circles:colCircles.length, boxes:colBoxes.length, segs:colSegs.length },
   slots: SLOT_STATUS,
