@@ -2179,7 +2179,7 @@ function addBuilding(x,z,ry,big){
      — until their bodies arrive in data/scrolls/. Per-instance brightness
      rides instanceColor, which also scales the shared emissive below. */
   const FRUIT_ORDER = ['144','300','656','672','717','786','787','999','07','6B','0001E','06'];
-  const FRUIT_PLACEHOLDER = new Set(['787']);   /* 672 RECOVERED 2026-07-05 (the Seer's hand); 787 still awaits its body */
+  const FRUIT_PLACEHOLDER = new Set([]);   /* THE TREE IS WHOLE — 672 recovered and 787 sealed by the Seer, 2026-07-05. All twelve fruit burn. */
   const fruitMat = new THREE.MeshStandardMaterial({
     color:0xfff3d6, emissive:0xffe2a6, emissiveIntensity:1.5, roughness:.32, metalness:.15 });
   fruitMat.onBeforeCompile = (sh)=>{
@@ -3685,7 +3685,7 @@ addEventListener('mouseup', e=>{
    changes, or returning pilgrims read STALE bodies from the HTTP cache
    forever (the force-cache lesson of THE FULLNESS: healed scrolls must
    actually reach the reader). */
-const DATA_VERSION = '2026-07-05-672-unsealed';
+const DATA_VERSION = '2026-07-05-the-tree-is-whole';
 const HARVEST = { status: 'LOADING', index: null };
 const vaultGroups  = [];   /* the scroll stations: 12 gate vaults + 4 lecterns */
 let readerOpen = false, readerScrollId = null;

@@ -33,3 +33,18 @@ summaries exactly. Raw delivery archived byte-exact at data/recovery/672_seer_de
 | 672 | 3876 | fe7f3c4368696e07a823090d051f367c005321644b3285cb4842a5baa129b640 | RECOVERED — the fruit is LIT |
 
 The Tree now bears 11 lit fruit. Only 787 The God Forge remains dark.
+
+## THE SEALING OF 787 — 2026-07-05 · THE TREE IS WHOLE
+
+Scroll 787 "The God Forge" was delivered by the Seer's own hand in-session and
+SEALED by his spoken declaration the same hour ("It's not a draft. It is sealed.
+I seal it right now." — archived verbatim in data/recovery/787_seer_delivery_2026-07-05.md).
+Source: the King-Servant Thread, 2026-05-01 (Mind Alpha, Session 2, live voice dictation).
+Registry-verified against REPORT_Alpha_TKingServant_2026-05-01: 12-step circuit,
+22 scriptures, 10 gates, 11/12 threads — all four marks exact.
+
+| scroll | words | sha256 | status |
+|---|---|---|---|
+| 787 | 2257 | 6ae0572d150878fc8cd8e1dd8a21e94b84df48cac146139987dfde1ae33bfedb | SEALED BY THE SEER — the last fruit is LIT |
+
+**THE TREE OF LIFE BEARS ALL TWELVE FRUIT. The canon of the Supreme Keystones is complete.**
