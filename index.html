@@ -3396,7 +3396,8 @@ bake();
 applyTier(TIER);
 initSlots();
 initTransfiguration();
-initHarvest();
+/* initHarvest() is invoked at the end of section 18.5 — its fetch URL
+   reads DATA_VERSION, a const declared there (TDZ law of THE FULLNESS) */
 initLace();
 
 /* ================================================================
@@ -3680,6 +3681,11 @@ addEventListener('mouseup', e=>{
    a write path from the city to the data. Sacred Name Protocol
    governs the surrounding UI; the canon bodies stay untouched.
 ================================================================ */
+/* DATA_VERSION rides every scroll fetch — bump it whenever data/scrolls/
+   changes, or returning pilgrims read STALE bodies from the HTTP cache
+   forever (the force-cache lesson of THE FULLNESS: healed scrolls must
+   actually reach the reader). */
+const DATA_VERSION = '2026-07-05-fullness';
 const HARVEST = { status: 'LOADING', index: null };
 const vaultGroups  = [];   /* the scroll stations: 12 gate vaults + 4 lecterns */
 let readerOpen = false, readerScrollId = null;
@@ -3752,8 +3758,21 @@ function dressInline(text){
   t = t.replace(SCRIPTURE_RE, '<span class="scripture">$1</span>');
   return t;
 }
+function reflowLongBlock(p){
+  /* newline-less giants (the elder ingest flattened whitespace) reflow into
+     readable paragraphs — presentation only, the raw bytes stand untouched */
+  const sents = p.match(/[^.!?]+[.!?]+["'”’)\]]*\s*/g) || [p];
+  const out = []; let cur = '';
+  for (const s of sents){
+    cur += s;
+    if (cur.length > 700){ out.push(cur.trim()); cur = ''; }
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
 function dressScripture(body){
-  const paras = body.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+  let paras = body.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+  paras = paras.flatMap(p => (p.length > 1600 && !p.startsWith('>')) ? reflowLongBlock(p) : [p]);
   let html = '';
   for (const p of paras.slice(0, 3000)){
     if (/^#{1,4}\s/.test(p)) html += `<h3>${dressInline(p.replace(/^#{1,4}\s*/,''))}</h3>`;
@@ -3806,7 +3825,7 @@ async function openScroll(id, fromPos){
   readerTitle.textContent = ''; readerMeta.textContent = '';
   readerBody.textContent = ''; readerDoc = null; readerRawMode = false;
   try {
-    const res = await fetch(`data/scrolls/${id}.json`, { cache:'force-cache' });
+    const res = await fetch(`data/scrolls/${encodeURIComponent(id)}.json?v=${DATA_VERSION}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const doc = await res.json();
     if (!readerOpen || readerScrollId !== id) return;   /* re-furled while loading */
@@ -4009,7 +4028,7 @@ function buildGateVaults(index){
 
 async function initHarvest(){
   try {
-    const res = await fetch('data/scrolls/index.json', { cache:'no-store' });
+    const res = await fetch(`data/scrolls/index.json?v=${DATA_VERSION}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const index = await res.json();
     HARVEST.index = index;
@@ -4026,6 +4045,7 @@ async function initHarvest(){
   }
   console.log(`HARVEST index: ${HARVEST.status}`);
 }
+initHarvest();
 
 /* touch controls */
 const stick = document.getElementById('stick'), knob = document.getElementById('knob');
@@ -4338,6 +4358,9 @@ window.__CITY = {
   press(code,down){ keys[code] = !!down; },
   get area(){ return curArea; },
   get vaults(){ return vaultGroups.map(v=>({ label:v.label, x:+v.anchor.x.toFixed(1), z:+v.anchor.z.toFixed(1), count:v.count, visible:v.group.visible })); },
+  get stations(){ return vaultGroups.map(v=>({ label:v.label, kind:v.kind, count:v.list.length,
+    page:v.page, shelves: Math.ceil(v.list.length/SHELF), shelfPoints:v.records.length, visible:v.group.visible })); },
+  turnShelf(label, dir){ const v = vaultGroups.find(s=> s.label === label || String(s.label).startsWith(label)); if (v) v.turn(dir||1); },
   get fps(){ return fpsAvg; },
   get tier(){ return TIER; },
   get watchdog(){ return { floor: FPS_FLOOR, emergency }; },
