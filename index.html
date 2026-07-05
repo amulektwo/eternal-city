@@ -74,20 +74,48 @@
   #readerMeta { font-family:'Cinzel', serif; color:#8a6d2f; letter-spacing:.18em;
     font-size:.62rem; text-align:center; margin-bottom:1rem; }
   #readerBody { font-family:'EB Garamond', Georgia, serif; color:#2A1F14;
-    font-size:1.2rem; line-height:1.8; white-space:pre-wrap; word-wrap:break-word;
+    font-size:1.2rem; line-height:1.8; word-wrap:break-word;
     overflow-y:auto; flex:1; margin:0; padding-right:.6rem; }
   #readerBody::-webkit-scrollbar { width:6px; }
   #readerBody::-webkit-scrollbar-thumb { background:rgba(138,109,47,.4); border-radius:3px; }
-  #readerClose { margin:1.1rem auto 0; padding:.55rem 2.2rem; font-family:'Cinzel', serif;
+  /* THE READER REFORGED (Seer's Ruling R1) — plate above, scripture below.
+     The DATA is never altered: raw verbatim is one toggle away. */
+  #readerBody .plate { margin:.2rem auto 1rem; max-width:560px;
+    border:1px solid rgba(138,109,47,.35); border-radius:3px;
+    background:rgba(233,222,193,.55); padding:.7rem 1rem;
+    font-size:.86rem; line-height:1.45; }
+  #readerBody .prow { display:flex; gap:.8rem; padding:.14rem 0;
+    border-bottom:1px dotted rgba(138,109,47,.22); }
+  #readerBody .prow:last-child { border-bottom:none; }
+  #readerBody .pk { min-width:9.5em; font-family:'Cinzel', serif; font-size:.58rem;
+    letter-spacing:.14em; color:#8a6d2f; padding-top:.28em; text-transform:uppercase; }
+  #readerBody .pv { flex:1; word-break:break-word; }
+  #readerBody .rdiv { display:flex; align-items:center; gap:.9rem; margin:1.1rem 0 1rem; }
+  #readerBody .rdiv:before, #readerBody .rdiv:after { content:""; flex:1; height:1px;
+    background:rgba(138,109,47,.35); }
+  #readerBody .rdiv span { font-family:'Cinzel', serif; font-size:.58rem;
+    letter-spacing:.3em; color:#8a6d2f; }
+  #readerBody .sx p { margin:0 0 1.05em; }
+  #readerBody .sx h3 { font-family:'Cinzel', serif; font-size:1.05rem; letter-spacing:.05em;
+    color:#2A1F14; margin:1.5em 0 .6em; line-height:1.35; }
+  #readerBody .sx blockquote { border-left:2px solid rgba(138,109,47,.5);
+    padding-left:.9rem; font-style:italic; margin:0 0 1.05em; color:#4a3826; }
+  #readerBody .scripture { color:#8a6d2f; font-weight:600; }
+  #readerBody pre.rawpre { white-space:pre-wrap; word-wrap:break-word; margin:0;
+    font-family:'EB Garamond', Georgia, serif; font-size:1.05rem; line-height:1.7; }
+  #readerFoot { display:flex; gap:.8rem; justify-content:center; align-items:center;
+    margin-top:1.1rem; }
+  #readerClose, #readerRaw { padding:.55rem 2.2rem; font-family:'Cinzel', serif;
     font-size:.72rem; letter-spacing:.3em; text-indent:.3em; color:#5a4718;
     background:transparent; border:1px solid #b8912f; cursor:pointer; transition:all .3s; }
-  #readerClose:hover { background:#b8912f; color:#fff; }
+  #readerRaw { padding:.55rem 1.3rem; font-size:.6rem; opacity:.85; }
+  #readerClose:hover, #readerRaw:hover { background:#b8912f; color:#fff; }
   #readerSeal { position:absolute; top:-26px; left:50%; margin-left:-26px; width:52px;
     height:52px; pointer-events:none; }
   #readerLoading { font-family:'Cinzel', serif; color:#8a6d2f; letter-spacing:.3em;
     text-align:center; padding:2rem 0; display:none; }
   #reader.loading #readerLoading { display:block; animation:veil-pulse 2.4s ease-in-out infinite; }
-  #reader.loading #readerBody, #reader.loading #readerClose { display:none; }
+  #reader.loading #readerBody, #reader.loading #readerFoot { display:none; }
   @keyframes unfurl {
     0%   { transform:rotateX(90deg); opacity:0; }
     60%  { transform:rotateX(45deg); opacity:.5; }
@@ -169,8 +197,11 @@
     <h1 id="readerTitle"></h1>
     <div id="readerMeta"></div>
     <div id="readerLoading">THE SEAL BREAKS…</div>
-    <pre id="readerBody"></pre>
-    <button id="readerClose">SEAL THE SCROLL</button>
+    <div id="readerBody"></div>
+    <div id="readerFoot">
+      <button id="readerRaw">RAW VERBATIM</button>
+      <button id="readerClose">SEAL THE SCROLL</button>
+    </div>
   </div>
 </div>
 <div id="dot"></div>
@@ -3559,14 +3590,26 @@ function scanScrollTarget(ndcX, ndcY){
       best = { kind:'fruit', id: fr.id, rec: fr, pos: fr.pos }; bestDist = dist;
     }
   }
-  /* revealed gate-vault points of light */
-  for (const vp of vaultRecords){
-    if (!vp.group.visible) continue;
-    const dist = vp.pos.distanceTo(camera.position);
-    if (dist > 26) continue;
-    const off = _ray.ray.distanceToPoint(vp.pos);
+  /* revealed station points of light — only the visible shelf exists */
+  for (const st of vaultGroups){
+    if (!st.group.visible) continue;
+    for (const vp of st.records){
+      const dist = vp.pos.distanceTo(camera.position);
+      if (dist > 26) continue;
+      const off = _ray.ray.distanceToPoint(vp.pos);
+      if (off < Math.max(.9, dist*.07) && dist < bestDist){
+        best = { kind:'vault', id: vp.id, title: vp.title, pos: vp.pos }; bestDist = dist;
+      }
+    }
+  }
+  /* shelf-turn markers — the same scan, the same law (Law 22) */
+  for (const pg of vaultPagers){
+    if (!pg.station.group.visible) continue;
+    const dist = pg.pos.distanceTo(camera.position);
+    if (dist > 18) continue;
+    const off = _ray.ray.distanceToPoint(pg.pos);
     if (off < Math.max(.9, dist*.07) && dist < bestDist){
-      best = { kind:'vault', id: vp.id, title: vp.title, pos: vp.pos }; bestDist = dist;
+      best = { kind:'shelf', station: pg.station, dir: pg.dir, pos: pg.pos }; bestDist = dist;
     }
   }
   return best;
@@ -3576,6 +3619,7 @@ function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvas
   const best = useCenter ? scanScrollTarget(0, 0)
     : scanScrollTarget(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
   if (!best) return false;
+  if (best.kind === 'shelf'){ best.station.turn(best.dir); return true; }
   if (best.kind === 'fruit') best.rec.flashT = clock.elapsedTime;
   openScroll(best.id, best.pos.clone());
   return true;
@@ -3598,6 +3642,10 @@ tickers.push((t)=>{
     if (aimTarget.kind === 'fruit'){
       aimTarget.rec.hoverT = t;
       showInvite(IS_TOUCH ? 'Touch the fruit' : 'Click to open the scroll', '', .3);
+    } else if (aimTarget.kind === 'shelf'){
+      const st = aimTarget.station;
+      showInvite(IS_TOUCH ? 'Touch to turn the shelf' : 'Click to turn the shelf',
+        `Shelf ${st.page+1} of ${Math.ceil(st.list.length/SHELF)}`, .3);
     } else {
       showInvite(IS_TOUCH ? 'Touch the scroll to read' : 'Click to read the scroll',
         aimTarget.title || '', .3);
@@ -3633,8 +3681,7 @@ addEventListener('mouseup', e=>{
    governs the surrounding UI; the canon bodies stay untouched.
 ================================================================ */
 const HARVEST = { status: 'LOADING', index: null };
-const vaultRecords = [];   /* selectable points of light: {id, title, pos, group} */
-const vaultGroups  = [];   /* one per city gate: {group, anchor, label, count} */
+const vaultGroups  = [];   /* the scroll stations: 12 gate vaults + 4 lecterns */
 let readerOpen = false, readerScrollId = null;
 const PREFERS_STATIC = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -3678,6 +3725,72 @@ function applyGlide(t){
   }
 }
 
+/* THE READER REFORGED (Seer's Ruling R1, 2026-07-05) — plate above,
+   scripture below. The canon DATA is never altered: doc.body stays the
+   exact source string (exposed at __CITY.reader.body for sha proofs),
+   and the RAW VERBATIM toggle renders those exact bytes via textContent.
+   The dressed view is presentation only. */
+let readerDoc = null, readerRawMode = false;
+const readerRawBtn = document.getElementById('readerRaw');
+const escHTML = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const SCRIPTURE_RE = /\b((?:[1-4]\s)?(?:Nephi|Mosiah|Alma|Helaman|Moroni|Ether|Jacob|Enos|Omni|Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Isaiah|Jeremiah|Ezekiel|Daniel|Hosea|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Hebrews|James|Peter|Jude|Revelation|Moses|Abraham|Psalms?|Proverbs|Ecclesiastes|D&amp;C)\s\d+:\d+(?:[-–]\d+)?)/g;
+function splitFrontmatter(body){
+  const m = body.match(/^\s*---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!m) return { fm:null, rest:body };
+  const fm = [];
+  for (const line of m[1].split(/\r?\n/)){
+    const kv = line.match(/^([\w .\-]+):\s*(.*)$/);
+    if (kv) fm.push([kv[1].trim(), kv[2].trim().replace(/^["']|["']$/g,'')]);
+  }
+  return { fm, rest: body.slice(m[0].length) };
+}
+function dressInline(text){
+  let t = escHTML(text);
+  t = t.replace(/\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g, '$1');
+  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+  t = t.replace(SCRIPTURE_RE, '<span class="scripture">$1</span>');
+  return t;
+}
+function dressScripture(body){
+  const paras = body.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+  let html = '';
+  for (const p of paras.slice(0, 3000)){
+    if (/^#{1,4}\s/.test(p)) html += `<h3>${dressInline(p.replace(/^#{1,4}\s*/,''))}</h3>`;
+    else if (p.startsWith('>')) html += `<blockquote>${p.split('\n').map(l=>dressInline(l.replace(/^>\s?/,''))).join('<br>')}</blockquote>`;
+    else if (/^([=\-_*]){4,}$/.test(p.replace(/\s/g,''))) html += `<div class="rdiv"><span>✦</span></div>`;
+    else html += `<p>${p.split('\n').map(dressInline).join('<br>')}</p>`;
+  }
+  return html;
+}
+function renderReaderBody(){
+  if (!readerDoc) return;
+  readerBody.scrollTop = 0;
+  if (readerRawMode){
+    readerBody.innerHTML = '';
+    const pre = document.createElement('pre');
+    pre.className = 'rawpre';
+    pre.textContent = readerDoc.body;   /* VERBATIM — the exact bytes */
+    readerBody.appendChild(pre);
+    readerRawBtn.textContent = 'THE DRESSED SCROLL';
+    return;
+  }
+  const { fm, rest } = splitFrontmatter(readerDoc.body);
+  let html = '';
+  if (fm && fm.length){
+    html += `<div class="plate">${fm.map(([k,v]) =>
+      `<div class="prow"><span class="pk">${escHTML(k)}</span><span class="pv">${escHTML(v)}</span></div>`).join('')}</div>`;
+    html += `<div class="rdiv"><span>THE SCRIPTURE</span></div>`;
+  }
+  html += `<div class="sx">${dressScripture(rest)}</div>`;
+  readerBody.innerHTML = html;
+  readerRawBtn.textContent = 'RAW VERBATIM';
+}
+readerRawBtn.addEventListener('click', ()=>{
+  readerRawMode = !readerRawMode;
+  renderReaderBody();
+});
+
 async function openScroll(id, fromPos){
   if (readerOpen) return;
   readerOpen = true; readerScrollId = id;
@@ -3690,7 +3803,8 @@ async function openScroll(id, fromPos){
   readerSeal.classList.remove('seal-break');
   readerSeal.style.opacity = '1';
   readerLabel.textContent = 'SCROLL ' + id;
-  readerTitle.textContent = ''; readerMeta.textContent = ''; readerBody.textContent = '';
+  readerTitle.textContent = ''; readerMeta.textContent = '';
+  readerBody.textContent = ''; readerDoc = null; readerRawMode = false;
   try {
     const res = await fetch(`data/scrolls/${id}.json`, { cache:'force-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -3698,7 +3812,8 @@ async function openScroll(id, fromPos){
     if (!readerOpen || readerScrollId !== id) return;   /* re-furled while loading */
     readerTitle.textContent = doc.title;
     readerMeta.textContent = `${doc.gate} · ${doc.author}${doc.sealed ? ' · SEALED' : ''}`;
-    readerBody.textContent = doc.body;   /* VERBATIM — textContent never alters a character */
+    readerDoc = doc;
+    renderReaderBody();
     readerEl.classList.remove('loading');
     if (!PREFERS_STATIC){
       void readerPanel.offsetWidth;
@@ -3716,7 +3831,7 @@ async function openScroll(id, fromPos){
 }
 function closeReader(){
   if (!readerOpen) return;
-  readerOpen = false; readerScrollId = null;
+  readerOpen = false; readerScrollId = null; readerDoc = null; readerRawMode = false;
   const finish = ()=>{ readerEl.hidden = true; readerPanel.classList.remove('animate-refurl'); };
   if (!PREFERS_STATIC){
     readerPanel.classList.remove('animate-unfurl');
@@ -3732,7 +3847,14 @@ function closeReader(){
 document.getElementById('readerClose').addEventListener('click', closeReader);
 document.getElementById('readerVeil').addEventListener('click', closeReader);
 
-/* ---- the gate-vaults: each city gate holds its gate's scrolls ---- */
+/* ---- THE SCROLL STATIONS (THE FULLNESS, Seer's Ruling R3) ----
+   Every gate vault serves its house's FULL roster through paged shelves
+   of 24 lights; four lecterns bring the reading into the city's heart.
+   One recipe, one law: the aim scan serves exactly what a touch opens
+   (Law 22), and the city's weight never grows with the canon — only the
+   visible shelf is built. */
+const SHELF = 24;
+const vaultPagers = [];   /* {station, dir, pos} — shelf-turn targets */
 function gateSortKey(label){
   const m = String(label).match(/Gate\s+(\S+)/);
   if (!m) return 99;
@@ -3748,61 +3870,124 @@ function buildGateVaults(index){
   const pointGeo = new THREE.SphereGeometry(.14, 10, 8);
   const pointMat = new THREE.MeshStandardMaterial({
     color:0xfff6e0, emissive:0xffe9b8, emissiveIntensity:2.6, roughness:.35 });
-  for (let k=0; k<12; k++){
-    const a = k*PI/6;
-    /* beside the gate corridor, just inside the wall */
-    const px = Math.sin(a)*(WALL_R-8) + Math.cos(a)*6.2;
-    const pz = Math.cos(a)*(WALL_R-8) - Math.sin(a)*6.2;
-    const label = labels[k] || null;
-    const list = label ? groups.get(label) : [];
+  const pagerGeo = new THREE.ConeGeometry(.13, .34, 8);
+
+  function mkPlaqueTex(text){
+    const tex = canvasTex(96, (cg,w,h)=>{
+      cg.clearRect(0,0,w,h);
+      let size = 40;
+      cg.textAlign='center'; cg.textBaseline='middle';
+      do { cg.font = `600 ${size}px Georgia, serif`; size -= 2; }
+      while (size > 18 && cg.measureText(text).width > w - 60);
+      cg.shadowColor = 'rgba(120,84,0,.6)'; cg.shadowBlur = 10;
+      cg.fillStyle = '#ffe6a0'; cg.fillText(text, w/2, h/2);
+    }, 1536);
+    tex.anisotropy = 8;
+    return tex;
+  }
+  function renderShelf(st){
+    if (st.pts){ st.group.remove(st.pts); st.pts.dispose(); st.pts = null; }
+    st.records.length = 0;
+    const pages = Math.max(1, Math.ceil(st.list.length / SHELF));
+    st.page = ((st.page % pages) + pages) % pages;
+    const slice = st.list.slice(st.page*SHELF, st.page*SHELF + SHELF);
+    if (slice.length){
+      const pts = new THREE.InstancedMesh(pointGeo, pointMat, slice.length);
+      pts.frustumCulled = false;
+      const d = new THREE.Object3D();
+      slice.forEach((e, i)=>{
+        const ring_i = Math.floor(i/12);
+        const aa = (i%12)/12*TAU + ring_i*.26;
+        const rr2 = 1.05 + ring_i*.42;
+        const wx = st.px + Math.sin(aa)*rr2, wy = 1.7 + (i%12)*.24 + ring_i*.1, wz = st.pz + Math.cos(aa)*rr2;
+        d.position.set(wx, wy, wz); d.updateMatrix();
+        pts.setMatrixAt(i, d.matrix);
+        st.records.push({ id: e.id, title: e.title, pos: new THREE.Vector3(wx, wy, wz), group: st.group });
+      });
+      st.pts = pts; st.group.add(pts);
+    }
+    const base = st.label
+      ? `${st.label.toUpperCase()} · ${st.list.length} SCROLL${st.list.length===1?'':'S'}`
+      : 'THE VAULT AWAITS ITS SCROLLS';
+    const text = pages > 1 ? `${base} · SHELF ${st.page+1}/${pages}` : base;
+    const old = st.plaque.material.map;
+    st.plaque.material.map = mkPlaqueTex(text);
+    st.plaque.material.needsUpdate = true;
+    if (old) old.dispose();
+  }
+  function turnShelf(st, dir){
+    st.page += dir;
+    renderShelf(st);
+    st.revealPulse();
+    showInvite(`Shelf ${st.page+1} of ${Math.ceil(st.list.length/SHELF)}`, st.label || '', 2.2);
+  }
+  let revealT = -9;
+  function buildStation(px, pz, label, list, kind){
     const g = new THREE.Group();
     g.visible = false;
-    /* plinth — marble base, gold ring */
     const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.8,.95,1.1,14), MAT.white);
     plinth.position.set(px, .55, pz);
     plinth.castShadow = SHADOWS; plinth.receiveShadow = SHADOWS;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(.86,.05,6,20).rotateX(PI/2), MAT.gold);
     ring.position.set(px, 1.12, pz);
     g.add(plinth, ring);
-    /* plaque */
-    const plaqueText = label
-      ? `${label.toUpperCase()} · ${list.length} SCROLL${list.length===1?'':'S'}`
-      : 'THE VAULT AWAITS ITS SCROLLS';
-    const tex = canvasTex(96, (cg,w,h)=>{
-      cg.clearRect(0,0,w,h);
-      cg.font = '600 40px Georgia, serif'; cg.textAlign='center'; cg.textBaseline='middle';
-      cg.shadowColor = 'rgba(120,84,0,.6)'; cg.shadowBlur = 10;
-      cg.fillStyle = '#ffe6a0'; cg.fillText(plaqueText, w/2, h/2);
-    }, 1536);
-    tex.anisotropy = 8;
-    const plaque = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
+    if (kind === 'lectern'){
+      /* the open book of gold — the lectern's reading slab */
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(.72,.06,.5), MAT.gold);
+      slab.position.set(px, 1.3, pz);
+      slab.rotation.x = -.48;
+      slab.castShadow = SHADOWS;
+      g.add(slab);
+    }
+    const plaque = new THREE.Sprite(new THREE.SpriteMaterial({ map:null, transparent:true, depthWrite:false }));
     plaque.position.set(px, 4.6, pz);
     plaque.scale.set(10, .62, 1);
     g.add(plaque);
-    /* the scrolls — selectable points of light in a rising helix */
-    if (list.length){
-      const pts = new THREE.InstancedMesh(pointGeo, pointMat, list.length);
-      pts.frustumCulled = false;
-      const d = new THREE.Object3D();
-      list.forEach((e, i)=>{
-        const ring_i = Math.floor(i/12);
-        const aa = (i%12)/12*TAU + ring_i*.26;
-        const rr2 = 1.05 + ring_i*.42;
-        const wx = px + Math.sin(aa)*rr2, wy = 1.7 + (i%12)*.24 + ring_i*.1, wz = pz + Math.cos(aa)*rr2;
-        d.position.set(wx, wy, wz); d.updateMatrix();
-        pts.setMatrixAt(i, d.matrix);
-        vaultRecords.push({ id: e.id, title: e.title, pos: new THREE.Vector3(wx, wy, wz), group: g });
-      });
-      g.add(pts);
-    }
     addCircle(px, pz, 1.0);
     scene.add(g);
-    vaultGroups.push({ group: g, anchor: new THREE.Vector3(px, 0, pz), label: label || '(awaiting)', count: list.length });
+    const st = { group:g, anchor:new THREE.Vector3(px,0,pz), label: label || '(awaiting)',
+      list, page:0, pts:null, records:[], px, pz, kind, plaque,
+      get count(){ return this.list.length; },
+      turn(dir){ turnShelf(this, dir); },
+      revealPulse(){ revealT = clock.elapsedTime; } };
+    if (list.length > SHELF){
+      /* shelf-turn markers — two small gold flames beside the ring */
+      const pgL = new THREE.Mesh(pagerGeo, pointMat);
+      pgL.position.set(px-.95, 1.36, pz);
+      const pgR = new THREE.Mesh(pagerGeo, pointMat);
+      pgR.position.set(px+.95, 1.36, pz);
+      g.add(pgL, pgR);
+      vaultPagers.push({ station:st, dir:-1, pos:new THREE.Vector3(px-.95,1.36,pz) },
+                       { station:st, dir:+1, pos:new THREE.Vector3(px+.95,1.36,pz) });
+    }
+    renderShelf(st);
+    vaultGroups.push(st);
+    return st;
   }
-  /* reveal on approach — the vault shows itself at ~15m; at the moment of
-     revealing, its points of light pulse once and the invitation names the
-     vault (THE SEEKER'S HAND) */
-  let revealT = -9;
+  /* the 12 gate vaults — beside each gate corridor, just inside the wall */
+  for (let k=0; k<12; k++){
+    const a = k*PI/6;
+    const px = Math.sin(a)*(WALL_R-8) + Math.cos(a)*6.2;
+    const pz = Math.cos(a)*(WALL_R-8) - Math.sin(a)*6.2;
+    const label = labels[k] || null;
+    buildStation(px, pz, label, label ? groups.get(label) : [], 'vault');
+  }
+  /* the four lecterns — the reading enters the city's heart */
+  const LECTERNS = [
+    { x:  6.8, z: 47, house:'Gate 1 — First Story & Eternal Identity',
+      name:'The Street Lectern · First Story' },
+    { x: -6.8, z: 76, house:'Gate 2 — Chain of Saviors & Maternal Codex',
+      name:'The Street Lectern · Chain of Saviors' },
+    { x: -31,  z:  8, house:'Gate 3 — Creation, Intelligences & Elemental Law',
+      name:'The Fountain Lectern · Creation' },
+    { x:  44,  z:-11, house:'Gate 6 — Temple of the Word',
+      name:'The Sanctuary Lectern · Temple of the Word' },
+  ];
+  for (const L of LECTERNS)
+    buildStation(L.x, L.z, L.name, groups.get(L.house) || [], 'lectern');
+  /* reveal on approach — the station shows itself at ~15m; at the moment of
+     revealing, its points of light pulse once and the invitation names it
+     (THE SEEKER'S HAND) */
   tickers.push((t)=>{
     for (const v of vaultGroups){
       const dx = player.pos.x - v.anchor.x, dz = player.pos.z - v.anchor.z;
@@ -3810,7 +3995,7 @@ function buildGateVaults(index){
       if (vis && !v.group.visible){
         revealT = t;
         if (v.label && v.label !== '(awaiting)')
-          showInvite(`Enter the vault of ${v.label}`,
+          showInvite(v.kind === 'lectern' ? `Read at the lectern — ${v.label}` : `Enter the vault of ${v.label}`,
             IS_TOUCH ? 'touch a scroll to read' : 'click a scroll to read', 4.5);
         else
           showInvite('The vault awaits its scrolls', '', 3.5);
@@ -4176,9 +4361,10 @@ window.__CITY = {
     fruitLit: fruits.filter(f=>f.lit).map(f=>f.id),
     fruitSealed: fruits.filter(f=>f.placeholder).map(f=>f.id),
     vaults: vaultGroups.map(v=>({ label: v.label, count: v.count })),
-    vaultPoints: vaultRecords.length,
+    vaultPoints: vaultGroups.reduce((n,v)=> n + v.records.length, 0),
   }; },
-  get reader(){ return { open: readerOpen, id: readerScrollId }; },
+  get reader(){ return { open: readerOpen, id: readerScrollId,
+    body: readerDoc ? readerDoc.body : null, raw: readerRawMode }; },
   openScroll, closeReader,
 };
 
