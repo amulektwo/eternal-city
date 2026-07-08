@@ -688,7 +688,7 @@ const roseTex = canvasTex(512, (g,w,h)=>{
 });
 
 const MAT = {
-  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.48, metalness:.04, envMapIntensity:.62 }),
+  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.66 }),
   ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.4 }),
   gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.30, metalness:1.0, envMapIntensity:.95 }),
   goldSt: new THREE.MeshStandardMaterial({ color:0xf5c569, roughness:.34, metalness:.95, envMapIntensity:1.0,
@@ -859,7 +859,7 @@ const skyUni = {
         float ray = 0.5 + 0.5*sin(ang*7.0 + uTime*0.07);
         ray *= 0.5 + 0.5*sin(ang*13.0 - uTime*0.045);
         float rad = acos(clamp(sd, 0.0, 1.0));
-        col += vec3(1.0,0.90,0.68) * ray * exp(-rad*2.4) * 0.22 * (1.0 - cover*0.55);
+        col += vec3(1.0,0.90,0.68) * ray * exp(-rad*2.4) * 0.18 * (1.0 - cover*0.55);
 
         /* below the rim the heaven stays warm, never dark */
         col = mix(col, vec3(1.0,0.90,0.72), smoothstep(0.10,-0.08,dir.y)*0.92);
@@ -1169,6 +1169,15 @@ function addSeg(ax,az,bx,bz,r){ colSegs.push({ax,az,bx,bz,r}); }
    6. MERGED-GEOMETRY ACCUMULATORS
 ================================================================ */
 const P = { white:[], ivory:[], gold:[], glow:[], pearl:[], goldSt:[], crimson:[] };
+function addFloorMedallion(x, z, r, y = .075, spokes = 12, phase = 0){
+  P.goldSt.push(xf(new THREE.RingGeometry(r*.72, r*.78, 48).rotateX(-PI/2), x, y, z));
+  P.goldSt.push(xf(new THREE.RingGeometry(r*.30, r*.34, 36).rotateX(-PI/2), x, y+.004, z));
+  for (let i = 0; i < spokes; i++){
+    const a = i/spokes*TAU + phase;
+    P.goldSt.push(xf(new THREE.BoxGeometry(.10, .035, r*.82),
+      x + Math.sin(a)*r*.39, y+.006, z + Math.cos(a)*r*.39, a));
+  }
+}
 function bake(){
   for (const k in P){
     if (!P[k].length) continue;
@@ -1482,6 +1491,16 @@ async function initTransfiguration(){
       addCircle(px, pz, 2.3);
     }
     P.gold.push(xf(new THREE.BoxGeometry(9.6,.25,3.2), gx, .13, gz, a));
+    addFloorMedallion(sx*(WALL_R-4.4), cz*(WALL_R-4.4), 3.0, .082, 12, a);
+    for (const off of [-2.15, 0, 2.15])
+      P.goldSt.push(xf(new THREE.BoxGeometry(12.6, .04, .13),
+        sx*(WALL_R-4.4) + Math.cos(a)*off, .09,
+        cz*(WALL_R-4.4) - Math.sin(a)*off, a));
+    for (const s of [-1, 1]){
+      const px = gx + Math.cos(a)*s*4.05, pz = gz - Math.sin(a)*s*4.05;
+      P.gold.push(xf(new THREE.BoxGeometry(.16, 4.7, .18), px, 7.9, pz, a));
+      P.gold.push(xf(new THREE.TorusGeometry(.74, .055, 6, 18).rotateX(PI/2), px, 10.35, pz, a));
+    }
 
     const tex = canvasTex(128, (g,w,h)=>{
       g.clearRect(0,0,w,h);
@@ -1681,6 +1700,12 @@ function addBuilding(x,z,ry,big){
   mkStrip(13, 36, 0, -42);
   mkStrip(10, 20, 33, -6, PI/2);
   mkStrip(10, 22, -33, 8, PI/2);
+  for (const z of [42, 54, 66, 78]) addFloorMedallion(0, z, 2.25, .105, 16, PI/16);
+  for (const sx of [-2.25, 2.25])
+    P.goldSt.push(xf(new THREE.BoxGeometry(.14, .04, 53.5), sx, .102, 59));
+  for (let z = 37; z <= 82; z += 5)
+    for (const sx of [-1.05, 1.05])
+      P.goldSt.push(xf(new THREE.BoxGeometry(.12, .04, 1.55), sx, .108, z, sx < 0 ? .58 : -.58));
 
   /* colonnade */
   const colPos = [];
@@ -2897,7 +2922,7 @@ function addBuilding(x,z,ry,big){
     const treeShaftParts = [];
     for (let i=0;i<6;i++){
       const a = i/6*TAU + .26;
-      const g = new THREE.PlaneGeometry(5.5, 34, 1, 6);
+      const g = new THREE.PlaneGeometry(6.7, 36, 1, 6);
       xf(g, Math.sin(a)*7.5, 26, Math.cos(a)*7.5, a, 1,1,1, .18, 0);
       treeShaftParts.push(g);
     }
@@ -2912,8 +2937,8 @@ function addBuilding(x,z,ry,big){
           gl_FragColor = vec4(1.0,0.92,0.7,a);
         }`
     });
-    /* lifted .06 → .095 (ASCENT PASS 1 — board 02's visible god-light) */
-    treeShaftMat.userData.baseOp = .095; TR.shafts.push(treeShaftMat);
+    /* wider and gentler: the light reads as atmosphere instead of a hard blade */
+    treeShaftMat.userData.baseOp = .082; TR.shafts.push(treeShaftMat);
     scene.add(new THREE.Mesh(mergeGeometries(treeShaftParts), treeShaftMat));
   }
 
@@ -3037,6 +3062,12 @@ function addBuilding(x,z,ry,big){
     const heart = new THREE.CircleGeometry(.55, 18); heart.rotateY(-PI/2);
     P.gold.push(xf(heart, AX - .06, AY, AZ));
   }
+  for (const x of [54, 62, 70, 78]) addFloorMedallion(x, -6, 1.45, 1.47, 12, PI/12);
+  for (const z of [-11.6, -.4])
+    P.goldSt.push(xf(new THREE.BoxGeometry(28, .035, .10), 66, 1.475, z, PI/2));
+  addFloorMedallion(0, -79.5, 2.65, .083, 16, 0);
+  for (const x of [-2.4, 2.4])
+    P.goldSt.push(xf(new THREE.BoxGeometry(.13, .04, 20.5), x, .075, -68.5));
 
   /* (1) THE GOLDEN PAVEMENT — a burnished processional band down the
      avenue's heart, polished to catch the sun (+1 draw call). */
