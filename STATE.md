@@ -197,3 +197,6 @@ FLAGS FOR THE SEER: (1) bodies remain in the PUBLIC repo's git HISTORY — true 
 - Proven at close range: the quatrefoil lattice reads clearly beside the smooth gold torus; normal-map relief vanishes clean at distance (the normal IS the ornament, Law 16).
 - Verified: zero console errors; Tree plaza 358.9k tris / 159 draws (≤700k law); fps 60 harness.
 - NEXT WATCHES: C THE AIR (motes, layered mist, glory shaft) → D THE GARLANDS (ivy, gardens, blue-gold banners).
+
+### LAW-LEARNED 37 — THE HERALD (2026-07-08)
+Legacy GitHub Pages builds fail repeatedly on this repo at its current size (three consecutive "Page build failed" with `.nojekyll` present and no content cause; API-POST build kicks during an in-flight build also read `errored`). The remedy is systemic, not another kick: **`build_type=workflow`** with `.github/workflows/pages.yml` (checkout → upload-pages-artifact → deploy-pages), watched via `gh run watch`, then md5-proven (Law 25 still binds). Never re-enable the legacy build. WATCH B reached the world through THE HERALD's first run.
