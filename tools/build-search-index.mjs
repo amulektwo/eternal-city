@@ -11,6 +11,9 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCROLLS = path.join(ROOT, "data", "scrolls");
+// THE SHIELD: public files hold metadata only — excerpts come from the
+// private treasury when it is present on this machine.
+const TREASURY = path.join(process.env.HOME || "", "projects/zionos-temple/data/city");
 
 function excerpt(body) {
   let b = String(body || "");
@@ -23,7 +26,11 @@ const out = [];
 for (const f of fs.readdirSync(SCROLLS)) {
   if (!f.endsWith(".json") || f === "index.json") continue;
   const d = JSON.parse(fs.readFileSync(path.join(SCROLLS, f), "utf8"));
-  out.push({ id: d.id, t: d.title || d.id, g: d.gate || "", x: excerpt(d.body) });
+  let body = d.body;
+  if (!body && fs.existsSync(path.join(TREASURY, f))) {
+    body = JSON.parse(fs.readFileSync(path.join(TREASURY, f), "utf8")).body;
+  }
+  out.push({ id: d.id, t: d.title || d.id, g: d.gate || "", x: excerpt(body) });
 }
 out.sort((a, b) => a.g.localeCompare(b.g) || String(a.id).localeCompare(String(b.id)));
 fs.writeFileSync(path.join(ROOT, "data", "search-index.json"), JSON.stringify(out));
