@@ -3501,6 +3501,26 @@ const laceGold = new THREE.MeshStandardMaterial({
     const x = Math.sin(a)*r, z = Math.cos(a)*r, h = 34 + (deg%3)*5;
     LS.push(tileUV(xf(new THREE.CylinderGeometry(3.35, 3.35, 1.0, 16, 1, true), x, h-.6, z), 10));
   }
+  /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
+     Relief joins the LACE arrays BEFORE the merge — zero new draw calls.
+     (1) Portal jamb pilasters: coffered stone bands flanking all 12 gates.
+     (2) Quatrefoil floor annuli: chased-gold rings inlaid at the Tree
+         plaza and the Fountain Court. ~3k tris, 0 draws. */
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6;
+    for (const s of [-1, 1]){
+      const jx = Math.sin(a)*(WALL_R-.6) + Math.cos(a)*s*4.0;
+      const jz = Math.cos(a)*(WALL_R-.6) - Math.sin(a)*s*4.0;
+      LS.push(tileUV(xf(new THREE.BoxGeometry(.45, 9.2, .7), jx, 4.7, jz, a), 1, 5));
+    }
+  }
+  {
+    const ringT = new THREE.RingGeometry(11.2, 12.8, 64).rotateX(-PI/2);
+    LG2.push(tileUV(xf(ringT, 0, .075, 0), 10, 10));
+    const ringF = new THREE.RingGeometry(11.9, 13.3, 64).rotateX(-PI/2);
+    LG2.push(tileUV(xf(ringF, -52, .075, 8), 10, 10));
+  }
+
   const laceStoneMesh = new THREE.Mesh(mergeGeometries(LS.map(g=> g.index ? g.toNonIndexed() : g)), laceStone);
   const laceGoldMesh  = new THREE.Mesh(mergeGeometries(LG2.map(g=> g.index ? g.toNonIndexed() : g)), laceGold);
   laceStoneMesh.receiveShadow = SHADOWS; laceGoldMesh.receiveShadow = SHADOWS;

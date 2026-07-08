@@ -191,3 +191,9 @@ FLAGS FOR THE SEER: (1) bodies remain in the PUBLIC repo's git HISTORY — true 
 - Sheet strengthened once after first look (alpha .55→.72, bluer glass) — kept on second look.
 - Verified: zero console errors; Fountain vantage 327k tris / 134 draws (≤700k law); scroll 144 verbatim green earlier this session; fps 60 harness (true gate = the Seer's glass).
 - NEXT WATCHES: B THE CARVING (ornament normals) → C THE AIR (motes, layered mist, glory shaft) → D THE GARLANDS (ivy, gardens, blue-gold banners).
+
+## LAST PASS — 2026-07-08f · WATCH B — THE CARVING (Four Watches loop, board 04) — KEPT
+- Relief pushed into the LACE arrays BEFORE the merge — **zero new draw calls, ~3k tris**: 24 coffered jamb pilasters flanking all 12 gate portals (carvedstone relief, tileUV 1×5) + two chased-quatrefoil floor annuli inlaid at the Tree plaza (r11.2–12.8) and the Fountain Court (r11.9–13.3), tiled 10×10 on the laceGold filigree normal.
+- Proven at close range: the quatrefoil lattice reads clearly beside the smooth gold torus; normal-map relief vanishes clean at distance (the normal IS the ornament, Law 16).
+- Verified: zero console errors; Tree plaza 358.9k tris / 159 draws (≤700k law); fps 60 harness.
+- NEXT WATCHES: C THE AIR (motes, layered mist, glory shaft) → D THE GARLANDS (ivy, gardens, blue-gold banners).
