@@ -467,11 +467,12 @@ const gradePass = new ShaderPass({
   uniforms: {
     tDiffuse: { value: null },
     uAmt:     { value: qs.get('grade') === '0' ? 0 : 1 },
+    uWarm:    { value: 1.0 },   /* GOAL 5 — the hour scales the warm cast (inside the chroma gate, Law 30) */
   },
   vertexShader: `varying vec2 vUv;
     void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uAmt; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uAmt; uniform float uWarm; varying vec2 vUv;
     void main(){
       vec4 tex = texture2D(tDiffuse, vUv);
       vec3 c = tex.rgb;
@@ -491,8 +492,12 @@ const gradePass = new ShaderPass({
          (zero-red Law 3 + royal-accent Law 29, proven by pixel scan) */
       float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
       float sat = clamp((mx - mn) / max(mx, 1e-4) * 3.2, 0.0, 1.0);
-      /* warm gold cast on the near-neutral wash, blue gently pulled */
-      c *= mix(vec3(1.035, 1.000, 0.945), vec3(1.0), sat);
+      /* warm gold cast on the near-neutral wash, blue gently pulled.
+         GOAL 5: uWarm tracks the hour (dawn deeper, noon whiter) — the
+         cast is scaled BEFORE the chroma gate, so pigments stay their
+         own hue at every hour (Law 30 unchanged by construction) */
+      vec3 wCast = mix(vec3(1.0), vec3(1.035, 1.000, 0.945), uWarm);   /* 'cast' is GLSL-reserved */
+      c *= mix(wCast, vec3(1.0), sat);
       /* warm toe — shadows stay golden, not sooty */
       c += vec3(0.008, 0.006, 0.004) * (1.0 - c);
       /* a breath of saturation, fully held where pigment already sings */
@@ -505,6 +510,18 @@ const gradePass = new ShaderPass({
     }`
 });
 composer.addPass(gradePass);
+
+/* GOAL 5 — THE LIVING HOUR (boards 02+04): a slow 10-minute arc between
+   deep-gold dawn (h=0) and white-gold noon (h=1). One value drives the
+   sun's elevation (12°→24°), its color, the cloud cover, the god-rays'
+   length and strength, and the GRADE's warmth. ?hour=fixed freezes at
+   the mean for verification stills; ?hour=<0..1> freezes a chosen phase;
+   __CITY.setHour(x|null) live-tunes. */
+const HOUR = { fixed: null, h: .5, rayMat: null };
+{
+  const hq = qs.get('hour');
+  if (hq !== null) HOUR.fixed = hq === 'fixed' ? .5 : Math.max(0, Math.min(1, parseFloat(hq) || 0));
+}
 
 /* ================================================================
    2.5  THE GUARD — quality tiers, applied live
@@ -766,6 +783,7 @@ const skyUni = {
   uSunDir: { value: MEAN_SUN.clone() },
   uTime:   { value: 0 },
   uQual:   { value: TIER },
+  uCoverBias: { value: 0 },   /* GOAL 5 — the hour thins the cloud decks at the peak */
 };
 {
   const skyMat = new THREE.ShaderMaterial({
@@ -778,6 +796,7 @@ const skyUni = {
       }`,
     fragmentShader: `
       uniform vec3 uSunDir; uniform float uTime; uniform float uQual;
+      uniform float uCoverBias;
       varying vec3 vDir;
 
       float hash(vec2 p){
@@ -813,7 +832,10 @@ const skyUni = {
         vec2 p  = dir.xz/(dir.y + hc)*sc + wind*uTime;
         vec2 sp = uSunDir.xz/(max(uSunDir.y, 0.06) + hc)*sc + wind*uTime;
         float f = field(p, billow, oct);
-        float d = smoothstep(cover, cover + 0.26, f*0.5 + 0.5);
+        /* GOAL 5 — the hour raises the coverage threshold toward noon:
+           the decks thin at the peak, the dawn keeps its full cloud */
+        float cv = cover + uCoverBias;
+        float d = smoothstep(cv, cv + 0.26, f*0.5 + 0.5);
         vec2 toSun = sp - p;
         toSun = dot(toSun,toSun) > 1e-6 ? normalize(toSun) : vec2(1.,0.);
         float f2  = field(p + toSun*0.30, billow, oct);
@@ -917,16 +939,18 @@ scene.add(sunSprite);
 {
   const grMat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
-    uniforms:{ uOp:{value:.07}, uTime:{value:0} },
+    uniforms:{ uOp:{value:.07}, uTime:{value:0}, uLen:{value:.45} },
     vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
       gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader:`uniform float uOp; uniform float uTime; varying vec2 vUv;
+    fragmentShader:`uniform float uOp; uniform float uTime; uniform float uLen; varying vec2 vUv;
       void main(){
         float core = 1.0 - abs(vUv.x*2.0 - 1.0);
         /* sub-rays inside each shaft, drifting like light through cloud */
         float b = 0.68 + 0.32*sin(vUv.x*38.0 + uTime*0.20)
                        * sin(vUv.x*21.0 - uTime*0.12);
-        float a = uOp * core * b * smoothstep(0.0,0.25,vUv.y) * smoothstep(1.0,0.55,vUv.y);
+        /* GOAL 5 — uLen stretches the lit span: the low dawn sun throws
+           LONG shafts, the high noon sun draws them back in */
+        float a = uOp * core * b * smoothstep(0.0,0.25,vUv.y) * smoothstep(1.0, 1.0-uLen, vUv.y);
         a *= 0.72 + 0.28*sin(uTime*0.35 + vUv.y*4.0 + vUv.x*2.0);
         gl_FragColor = vec4(1.0, 0.90, 0.66, a);
       }`
@@ -951,6 +975,7 @@ scene.add(sunSprite);
   scene.add(rays);
   tickers.push(t => { grMat.uniforms.uTime.value = t; });
   grMat.userData.baseOp = .07; TR.shafts.push(grMat);
+  HOUR.rayMat = grMat;   /* GOAL 5 — the hour drives this fan's uLen */
 }
 
 /* drifting cloud sprites above + below */
@@ -4138,7 +4163,7 @@ async function initLace(){
    Street of Gold with the Tree straight down the axis — the compass
    name is lore; this is geometrically THE great portal.
 ================================================================ */
-const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:null, veilMesh:null, el:null };
+const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:null, veilMesh:null, el:null, f:1 };
 {
   const CW = 6.0, z0c = 127, z1c = 160, zc = (z0c+z1c)/2, len = z1c - z0c;
   /* deck — top at +.02 to clear the foundation disc at the seam */
@@ -4185,22 +4210,22 @@ const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:nu
   tickers.push(t => { veilMat.uniforms.uTime.value = t; });
 
   /* THE ORCHESTRATION — one ticker drives the whole moment from crossT:
-     veil parts (uOp→0), rays swell once (×2.4 up then back), then stillness. */
+     veil parts (uOp→0), rays swell once (×2.4 up then back), then stillness.
+     GOAL 5 refactor: the swell is now a FACTOR (APPROACH.f) — animate()'s
+     LIVING HOUR block is the single writer of shaft opacity, composing
+     tier × hour × this swell. */
   tickers.push(t => {
     if (!APPROACH.crossed || APPROACH.done) return;
     if (APPROACH.crossT < 0) APPROACH.crossT = t;
     const e = t - APPROACH.crossT;
-    const tierF = (TIER === 0 ? .45 : 1);
     if (PREFERS_STATIC){                       /* reduced motion: reveal at once, no swell */
       veilMat.uniforms.uOp.value = 0; veil.visible = false;
-      for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * tierF;
-      APPROACH.done = true; return;
+      APPROACH.f = 1; APPROACH.done = true; return;
     }
     veilMat.uniforms.uOp.value = Math.max(0, .9 * (1 - e / 2.2));
     if (e > 2.4) veil.visible = false;
-    const f = e < 4 ? 1 + 1.4 * Math.sin((e / 4) * PI) : 1;   /* up then back to rest */
-    for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * tierF * f;
-    if (e >= 4.2) APPROACH.done = true;        /* stillness — release the shafts at base */
+    APPROACH.f = e < 4 ? 1 + 1.4 * Math.sin((e / 4) * PI) : 1;   /* up then back to rest */
+    if (e >= 4.2){ APPROACH.done = true; APPROACH.f = 1; }       /* stillness */
   });
 }
 
@@ -5245,17 +5270,29 @@ function animate(){
   stepPlayer(dt);
   applyGlide(t);
 
-  /* a sun that never leaves golden hour */
+  /* GOAL 5 — THE LIVING HOUR: a sun that never leaves golden hour, but
+     the hour itself now LIVES — a slow 10-minute arc between deep-gold
+     dawn (h=0, el 12°, full cloud, long strong rays, warm grade) and
+     white-gold noon (h=1, el 24°, thinned cloud, drawn-in rays, whiter
+     grade). The old ±9° azimuth breath rides on top. ?hour freezes it. */
   const cyc = t/240*TAU;
-  const el = (16 + 5*Math.sin(cyc)) * D2R;
+  const h = HOUR.fixed !== null ? HOUR.fixed : (.5 - .5*Math.cos(t/600*TAU));
+  HOUR.h = h;
+  const el = (12 + 12*h + .6*Math.sin(cyc)) * D2R;
   const az = (232 + 9*Math.sin(cyc*.7)) * D2R;
   _sd.set(Math.sin(az)*Math.cos(el), Math.sin(el), Math.cos(az)*Math.cos(el));
   skyUni.uSunDir.value.copy(_sd);
   skyUni.uTime.value = t;
+  skyUni.uCoverBias.value = .11*h;                     /* the decks thin at the peak */
   sun.position.copy(_sd).multiplyScalar(320);
-  sun.color.setHSL(.09 + .015*Math.sin(cyc), .52, .78);
+  sun.color.setHSL(.075 + .035*h + .008*Math.sin(cyc), .62 - .24*h, .72 + .12*h);
   sunSprite.position.copy(_sd).multiplyScalar(780);
-  renderer.toneMappingExposure = 0.95 + .04*Math.sin(cyc*.5);
+  renderer.toneMappingExposure = 0.95 + .04*Math.sin(cyc*.5) + .03*h;
+  gradePass.uniforms.uWarm.value = 1.35 - .8*h;        /* warmth tracks the hour (Law 30 gate inside) */
+  if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h;   /* long dawn shafts, short noon */
+  /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
+  const shaftHourF = (TIER === 0 ? .45 : 1) * (1.35 - .62*h) * APPROACH.f;
+  for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * shaftHourF;
 
   /* living things */
   for (const fn of tickers) fn(t, dt);
@@ -5334,6 +5371,11 @@ window.__CITY = {
   get triangles(){ return renderer.info.render.triangles; },
   setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
   grade(x){ gradePass.uniforms.uAmt.value = Math.max(0, Math.min(1, +x)); },
+  get hour(){ return { h:+HOUR.h.toFixed(3), fixed:HOUR.fixed,
+    warm:+gradePass.uniforms.uWarm.value.toFixed(3),
+    coverBias:+skyUni.uCoverBias.value.toFixed(3),
+    rayLen: HOUR.rayMat ? +HOUR.rayMat.uniforms.uLen.value.toFixed(3) : null }; },
+  setHour(x){ HOUR.fixed = (x === null || x === undefined) ? null : Math.max(0, Math.min(1, +x)); },
   setBloom(threshold, strength, radius){
     if (isFinite(threshold)) bloomPass.threshold = threshold;
     if (isFinite(strength)) bloomPass.strength = strength;
