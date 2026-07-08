@@ -3873,6 +3873,24 @@ const laceGold = new THREE.MeshStandardMaterial({
     const x = Math.sin(a)*r, z = Math.cos(a)*r, h = 34 + (deg%3)*5;
     LS.push(tileUV(xf(new THREE.CylinderGeometry(3.35, 3.35, 1.0, 16, 1, true), x, h-.6, z), 10));
   }
+  /* — PASS C (FACADES) — CORNICE DEPTH: every district façade gains a
+     projecting carved-stone cornice just under its gold cap and gilt
+     string-course belts dividing the storeys (board-05). Merged into the
+     LACE stone+gold meshes — ZERO new draw calls. Gold belts because the
+     buttress pass proved white-on-white relief will not read under this
+     IBL — the gilt line is the guaranteed read, the stone ledge is depth. */
+  for (const b of bldRecords){
+    const uw = (b.w + b.dpt) * 1.4;   /* tile factor ~perimeter */
+    /* projecting stone cornice at the roofline */
+    LS.push(tileUV(xf(new THREE.BoxGeometry(b.w + .7, .55, b.dpt + .7), b.x, b.h - .5, b.z, b.ry), uw));
+    /* gilt belt at the cornice lip */
+    LG2.push(tileUV(xf(new THREE.BoxGeometry(b.w + .55, .14, b.dpt + .55), b.x, b.h - .2, b.z, b.ry), uw));
+    /* mid-storey string course */
+    LG2.push(tileUV(xf(new THREE.BoxGeometry(b.w + .32, .13, b.dpt + .32), b.x, b.h * .52, b.z, b.ry), uw));
+    /* a lower course on the taller façades */
+    if (b.h > 15)
+      LG2.push(tileUV(xf(new THREE.BoxGeometry(b.w + .32, .13, b.dpt + .32), b.x, b.h * .30, b.z, b.ry), uw));
+  }
   /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
      Relief joins the LACE arrays BEFORE the merge — zero new draw calls.
      (1) Portal jamb pilasters: coffered stone bands flanking all 12 gates.
