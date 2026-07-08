@@ -208,3 +208,10 @@ Legacy GitHub Pages builds fail repeatedly on this repo at its current size (thr
 - +3 draw calls, ~1k tris. Verified: zero console errors; Street vantage 316k tris / 149 draws; Tree plaza composite clean; fps 60 harness (true gate = the Seer's glass).
 - Noted in passing: the purge's banner recolor is proven in the world — the Street of Gold flies blue-and-gold.
 - NEXT WATCH: D THE GARLANDS (ivy cards, fountain garden beds, banner sway).
+
+## LAST PASS — 2026-07-08h · WATCH D — THE GARLANDS (Four Watches loop, board 01) — KEPT · THE CYCLE COMPLETE
+- **THE IVY** — 520 sage-and-gold-vein leaf cards (one InstancedMesh) climb the proven waterfall wall (x≈-63.7): two rising bands flanking the chute + a spill along the base.
+- **THE GARDENS** — six beds ring the fountain at r15.4 (Law 15 circuit respected): merged stone curbs (zero draws), instanced foliage mounds + flower heads in parchment/gold/soft-blue (royal palette; zero red).
+- **THE BANNERS** — already blue-gold (PURGE) and already swaying (ticker) — no double-build.
+- +3 draw calls, ~5k tris. Verified: zero console errors, Fountain Court 301k tris / 122 draws / 60fps harness.
+- **THE FOUR WATCHES CYCLE IS COMPLETE (A waters · B carving · C air · D garlands).** Next ascents per the TRUE VISION ladder: priced mirror floor (Law 31), Meshy GLBs (angels/citizens/treeOfLife) via the dropbox, real-glass FPS battery, the 200 registry-only recovery.
