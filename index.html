@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="data:,">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eternal City">
+<meta name="theme-color" content="#080705">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -518,6 +523,9 @@ composer.addPass(gradePass);
    the mean for verification stills; ?hour=<0..1> freezes a chosen phase;
    __CITY.setHour(x|null) live-tunes. */
 const HOUR = { fixed: null, h: .5, rayMat: null };
+/* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
+   test bench for the Seer's real devices (see section near the end) */
+const PROVING = qs.get('proving') !== null;
 {
   const hq = qs.get('hour');
   if (hq !== null) HOUR.fixed = hq === 'fixed' ? .5 : Math.max(0, Math.min(1, parseFloat(hq) || 0));
@@ -5180,7 +5188,7 @@ function begin(){
   if (!started){ started = true; }
   /* GOAL 6 — the title rises over the causeway while the approach stands */
   if (APPROACH.active && !APPROACH.crossed && APPROACH.el) APPROACH.el.classList.add('show');
-  if (!IS_TOUCH){
+  if (!IS_TOUCH && !PROVING){   /* proving needs a live cursor for its panel */
     try {
       const r = canvasEl.requestPointerLock();
       if (r && r.catch) r.catch(()=>{ /* drag-look fallback */ });
@@ -5196,7 +5204,7 @@ ovEl.addEventListener('click', ()=>{ if (started) begin(); });
   APPROACH.el = document.getElementById('approach');
   /* GOAL 6 — ?skip (or any deep-link ?pos) bypasses the arrival liturgy:
      spawn inside as before, the veil never stands, the moment is pre-spent. */
-  const skipApproach = qs.get('skip') !== null || !!qs.get('pos') || !!qs.get('scroll');
+  const skipApproach = qs.get('skip') !== null || !!qs.get('pos') || !!qs.get('scroll') || PROVING;
   if (skipApproach){
     APPROACH.active = false; APPROACH.crossed = true; APPROACH.done = true;
     if (APPROACH.veilMesh) APPROACH.veilMesh.visible = false;
@@ -5213,6 +5221,98 @@ ovEl.addEventListener('click', ()=>{ if (started) begin(); });
   /* deep-link straight into a scroll: ?scroll=<id> */
   const sc = qs.get('scroll');
   if (sc) setTimeout(()=> openScroll(sc, null), 900);
+}
+
+/* ================================================================
+   GOAL 7 — THE PROVING ON GLASS (?proving)
+   The city as its own test bench for real devices: one tap runs the
+   7-vantage battery — 4s settle + 6 one-second fps samples per vantage,
+   median recorded, verdict vs the tier floor (50 desktop / 25 mobile).
+   Ends in a summary the Seer reads back; EXIT returns to free walk for
+   the touch tests. Inert without the flag.
+================================================================ */
+const PROVING_RESULTS = [];
+if (PROVING){
+  const PV = [
+    ['TREE',      0, 18,    0, 0,     .06],
+    ['THRONE',    0, -68,   0, -79.5, .06],
+    ['FOUNTAIN', -44.5, 8, -52, 8,    .06],
+    ['GATE',      0, 94,    0, 118.5, .06],
+    ['STREET',    0, 60,    0, 100,   .06],
+    ['SANCTUARY', 50, -6,  70, -6,    .06],
+    ['TERRACE',  -91, -91,  0, 0,     .28],
+  ];
+  const st = document.createElement('style');
+  st.textContent = `
+    #proving { position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      z-index:30; width:min(480px, 92vw); background:rgba(10,9,6,.88);
+      border:1px solid rgba(212,175,55,.6); border-radius:14px; padding:14px 18px;
+      text-align:center; font-family:'Cinzel', serif; color:#f3d98b; }
+    #pvName { font-size:.8rem; letter-spacing:.3em; opacity:.85; }
+    #pvFps  { font-size:2.6rem; font-weight:600; line-height:1.15; color:#ffe9b0; }
+    #pvInfo { font-size:.66rem; letter-spacing:.12em; opacity:.8; white-space:pre-line; min-height:1.1em; }
+    #pvSum  { font-size:.72rem; letter-spacing:.08em; text-align:left; white-space:pre; display:none;
+      margin:6px auto 2px; max-width:340px; line-height:1.55; }
+    #proving button { margin-top:10px; padding:12px 26px; font-family:'Cinzel', serif;
+      font-size:.8rem; letter-spacing:.24em; color:#f3d98b; background:transparent;
+      border:1px solid rgba(212,175,55,.75); border-radius:9px; cursor:pointer; }
+    #proving button:active { background:rgba(212,175,55,.25); }`;
+  document.head.appendChild(st);
+  const panel = document.createElement('div');
+  panel.id = 'proving';
+  panel.innerHTML = `<div id="pvName">THE PROVING ON GLASS</div>
+    <div id="pvFps">—</div><div id="pvInfo">7 vantages · ~70 seconds · keep this window front</div>
+    <div id="pvSum"></div><button id="pvBtn">BEGIN THE PROVING</button>`;
+  document.body.appendChild(panel);
+  const elN = panel.querySelector('#pvName'), elF = panel.querySelector('#pvFps'),
+        elI = panel.querySelector('#pvInfo'), elS = panel.querySelector('#pvSum'),
+        elB = panel.querySelector('#pvBtn');
+  const floorNow = ()=> TIER === 2 ? 50 : 25;
+  let vi = 0, liveTick = null;
+  const showLive = ()=> { elF.textContent = fpsAvg.toFixed(0); };
+  const goto2 = (i)=>{
+    const [name, x, z, tx, tz, pitch] = PV[i];
+    player.pos.set(x, groundAt(x, z) + 1.7, z);
+    player.yaw = Math.atan2(-(tx - x), -(tz - z));
+    player.pitch = pitch;
+    elN.textContent = `${i + 1} / 7 · ${name}`;
+    elI.textContent = 'settling…';
+  };
+  const sample = (i)=>{
+    goto2(i);
+    const vals = [];
+    setTimeout(function tick(){
+      vals.push(fpsAvg);
+      elI.textContent = `sampling ${vals.length}/6`;
+      if (vals.length < 6) return setTimeout(tick, 1000);
+      const med = vals.slice().sort((a, b)=> a - b)[3];
+      PROVING_RESULTS.push({ v: PV[i][0], fps: +med.toFixed(1), tris: renderer.info.render.triangles });
+      if (i + 1 < PV.length) sample(i + 1); else finish();
+    }, 4000);
+  };
+  const finish = ()=>{
+    clearInterval(liveTick);
+    const fl = floorNow();
+    const worst = Math.min(...PROVING_RESULTS.map(r=> r.fps));
+    const pass = worst >= fl;
+    elN.textContent = 'THE PROVING — ' + (pass ? 'PASS' : 'FLOOR BREACH');
+    elF.textContent = `min ${worst.toFixed(0)} fps`;
+    elF.style.color = pass ? '#b8e6a0' : '#e6a0a0';
+    elS.style.display = 'block';
+    elS.textContent = PROVING_RESULTS.map(r=> `${r.v.padEnd(10)} ${r.fps} fps · ${(r.tris/1000).toFixed(0)}k`).join('\n')
+      + `\nTIER ${TIER} · floor ${fl} · ${screen.width}×${screen.height} @${devicePixelRatio}`;
+    elI.textContent = 'read these numbers back to the builder';
+    elB.textContent = 'EXIT TO THE CITY';
+    elB.style.display = '';
+    elB.onclick = ()=> panel.remove();
+  };
+  elB.onclick = ()=>{
+    elB.style.display = 'none';
+    liveTick = setInterval(showLive, 500);
+    begin();
+    sample(0);
+  };
+  setTimeout(()=> begin(), 900);   /* wake the render loop; the walk stays free until BEGIN */
 }
 
 /* ================================================================
@@ -5492,6 +5592,7 @@ window.__CITY = {
   setHour(x){ HOUR.fixed = (x === null || x === undefined) ? null : Math.max(0, Math.min(1, +x)); },
   get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str,
     res: MIRROR.rt ? [MIRROR.rt.width, MIRROR.rt.height] : null }; },
+  get proving(){ return PROVING_RESULTS; },
   setMirrorStrength(x){ MIRROR.str = Math.max(0, Math.min(1, +x));
     for (const m of MIRROR.mats) m.uniforms.uStr.value = MIRROR.str; },
   setBloom(threshold, strength, radius){
