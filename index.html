@@ -2196,6 +2196,77 @@ function addBuilding(x,z,ry,big){
     tickers.push(t=>{ cascSplashMat.uniforms.uTime.value = t; });
   }
 
+  /* ========== LOOP 4 · PASS B — THE STREAM (board 05) ==========
+     A narrow channel of living water runs from the Fountain Court's
+     western rim along the west-gate corridor (reserved ground — no
+     buildings) and dies under the great wall through a grate. Marble
+     curbs, royal-blue bed, gold spill lip — all P-merged; TWO bridges
+     of gold-railed marble steps (platforms + colliders split the water
+     into three uncrossable reaches). +1 draw (the water ribbon). */
+  {
+    /* centre z 2.5: the canal hugs the district walls (two buildings own
+       z≥3.9 along the reach — bldRecords-proven) and leaves the west-gate
+       walk clear at z −2..1. Bridges sit in the two collider gaps. */
+    const SX = -72.5, EX = -114, SZC = 2.5, SW = 2.2;
+    const LEN = SX - EX;
+    /* bed + curbs */
+    P.crimson.push(xf(new THREE.BoxGeometry(LEN, .06, SW + .3), (SX+EX)/2, .03, SZC));
+    for (const s of [-1, 1])
+      P.white.push(xf(new THREE.BoxGeometry(LEN, .35, .45), (SX+EX)/2, .17, SZC + s*(SW/2 + .35)));
+    /* the spill lip at the court end + the grate at the wall */
+    P.gold.push(xf(new THREE.BoxGeometry(.5, .22, SW + .9), SX + .2, .30, SZC));
+    P.white.push(xf(new THREE.BoxGeometry(1.0, 2.6, SW + 1.4), EX - .3, 1.3, SZC));
+    P.crimson.push(xf(new THREE.BoxGeometry(.2, 1.0, SW - .2), EX + .22, .5, SZC));
+    /* the living water — one shader ribbon flowing toward the wall */
+    const strMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false,
+      uniforms:{ uTime:{value:0} },
+      vertexShader:`varying vec2 vUv;
+        void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; varying vec2 vUv;
+        float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+        float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+          return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
+        void main(){
+          float x = vUv.x*18.0 + uTime*.50;      /* flow toward the wall */
+          float a = n2(vec2(x, vUv.y*3.0));
+          float b = n2(vec2(x*1.9 + 7.0, vUv.y*5.0 - uTime*.22));
+          float glint = smoothstep(.55, .95, a*.55 + b*.55);
+          float edge = smoothstep(0.0,.18,vUv.y)*smoothstep(1.0,.82,vUv.y);
+          vec3 col = mix(vec3(.42,.62,.86), vec3(.95,.99,1.0), glint);
+          gl_FragColor = vec4(col, (0.52 + glint*.4) * edge);
+        }`
+    });
+    const stream = new THREE.Mesh(new THREE.PlaneGeometry(LEN, SW).rotateX(-PI/2), strMat);
+    stream.position.set((SX+EX)/2, .14, SZC);
+    scene.add(stream);
+    tickers.push(t=>{ strMat.uniforms.uTime.value = t; });
+    /* the two bridges — marble slab, steps both banks, gold rails */
+    const BR = [-77, -110.5];
+    for (const bx of BR){
+      P.white.push(xf(new THREE.BoxGeometry(3.0, .2, 4.6), bx, .42, SZC));           /* deck */
+      for (const s of [-1, 1]){
+        P.white.push(xf(new THREE.BoxGeometry(3.0, .14, .8), bx, .07, SZC + s*2.9)); /* low step */
+        P.white.push(xf(new THREE.BoxGeometry(3.0, .28, .8), bx, .14, SZC + s*2.3)); /* high step */
+        P.gold.push(xf(new THREE.BoxGeometry(.14, .1, 4.6), bx + s*1.45, .98, SZC)); /* rail */
+        for (const rz of [-1.9, 0, 1.9])
+          P.gold.push(xf(new THREE.BoxGeometry(.09, .5, .09), bx + s*1.45, .72, SZC + rz));
+      }
+      platforms.push((x, z)=>{
+        if (Math.abs(x - bx) > 1.5) return -Infinity;
+        const dz = Math.abs(z - SZC);
+        if (dz <= 2.3) return .52;
+        if (dz <= 2.7) return .28;
+        if (dz <= 3.3) return .14;
+        return -Infinity;
+      });
+    }
+    /* the water is uncrossable except at the bridges (x0 < x1, west-negative) */
+    addBox(BR[0] + 1.7, SX, SZC - SW/2 - .5, SZC + SW/2 + .5);
+    addBox(BR[1] + 1.7, BR[0] - 1.7, SZC - SW/2 - .5, SZC + SW/2 + .5);
+    addBox(EX, BR[1] - 1.7, SZC - SW/2 - .5, SZC + SW/2 + .5);
+  }
+
   /* ========== WATCH C — THE AIR (TRUE VISION, boards 02+04) ==========
      (1) THE MOTES — one Points system of drifting light through the Tree
          plaza and the avenue: slow rise, sine wander, additive, faint.
