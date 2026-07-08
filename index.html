@@ -723,7 +723,8 @@ MAT.glowArch = new THREE.MeshStandardMaterial({ color:0xfff3d2, emissive:0xffd98
 const tickers = [], nameplates = [], banners = [], waterDiscs = [],
       flames = [], glows = [], beams = [], particleMeshes = [], fruits = [],
       lacePinnacles = [],   /* [x, y, z, scale] — THE LACE skyline forest */
-      districtWindows = []; /* [x, y, z, ry] — PASS A: every district window wears the lace */
+      districtWindows = [], /* [x, y, z, ry] — PASS A: every district window wears the lace */
+      bldRecords = [];      /* {x,z,ry,w,dpt,h} — PASS B: buttress/pinnacle candidates */
 let canopyShells = [], canopyPts = null, sprayMat = null;
 function mkGlow(x,y,z,s,color,op){
   const m = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1651,6 +1652,7 @@ function addBuilding(x,z,ry,big){
     P.gold.push(xf(new THREE.ConeGeometry(.35,1.8,6), sxp, sh+5.1, szp));
   }
   addCircle(x, z, Math.hypot(w,dpt)*.52);
+  bldRecords.push({ x, z, ry, w, dpt, h });
 }
 
 {
@@ -1704,6 +1706,27 @@ function addBuilding(x,z,ry,big){
     ti.castShadow = ci.castShadow = SHADOWS;
     ti.frustumCulled = ci.frustumCulled = false;
     scene.add(ti,ci);
+  }
+
+  /* PASS B (FACADES) — THE CROWNS: spirelet clusters ringing the roof
+     apexes of the 36 tallest towers (board-05 crossing towers). Rides the
+     lace-pinnacle InstancedMesh — zero new draw calls. Flying buttresses
+     were BUILT AND CUT here (three placements tried): 1–2m of white-on-
+     white relief does not read under this light — contrast is the
+     ornament in this city, geometry is not (companion to Law 16). */
+  const byHeight = bldRecords.slice().sort((a,b)=> b.h - a.h);
+  for (const b of byHeight.slice(0, 36)){
+    /* spirelet cluster ringing the roof apex — bases sunk in the slope,
+       tops proud of it, beneath the apex finial (board-05 crossing towers).
+       The flat parapet corner was a wrong guess: these roofs overhang. */
+    const ps = Math.min(1.15, .5 + b.h*.022);
+    const roofH = b.h*.42, coneR = Math.max(b.w, b.dpt)*.74;
+    for (let k = 0; k < 4; k++){
+      const a2 = b.ry + PI/4 + k*PI/2;
+      lacePinnacles.push([ b.x + Math.sin(a2)*coneR*.55,
+                           b.h + roofH*.40,
+                           b.z + Math.cos(a2)*coneR*.55, ps ]);
+    }
   }
 }
 
@@ -5169,6 +5192,7 @@ window.__CITY = {
   areaAt(x, z){ for (const a of AREAS) if (a.t(x, z)) return a.n; return ''; },
   begin,
   colliders: { circles:colCircles.length, boxes:colBoxes.length, segs:colSegs.length },
+  bldRecords,
   slots: SLOT_STATUS,
   light: LIGHT_STATUS,
   get harvest(){ return {
