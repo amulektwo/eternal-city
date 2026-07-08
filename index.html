@@ -211,6 +211,18 @@
     border-radius:50%; background:rgba(243,217,139,.55); border:1px solid var(--gold); }
   #err { position:fixed; inset:auto 0 0 0; z-index:40; background:#fff3f0; color:#8a2a12;
     font:13px monospace; padding:10px 14px; display:none; white-space:pre-wrap; }
+  /* ---------- GOAL 6 — THE APPROACH: the arrival title over the causeway ---------- */
+  #approach { position:fixed; inset:0; z-index:5; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start; padding-top:15vh; text-align:center;
+    pointer-events:none; opacity:0; transform:translateY(20px);
+    transition:opacity 2s ease, transform 2s ease; }
+  #approach.show { opacity:1; transform:translateY(0); }
+  #approach h2 { font-family:'Cinzel', serif; font-weight:400; color:#f4e7c2; margin:0;
+    letter-spacing:.34em; font-size:clamp(1.7rem,4.6vw,3.4rem);
+    text-shadow:0 2px 34px rgba(120,88,28,.55), 0 0 2px rgba(255,240,200,.6); }
+  #approach .apsub { font-family:'Cinzel', serif; color:#dcc78e; letter-spacing:.44em;
+    font-size:clamp(.58rem,1.5vw,.92rem); margin-top:1.6em; opacity:.82; }
+  @media (prefers-reduced-motion: reduce){ #approach { transition:opacity .25s; transform:none; } }
 </style>
 </head>
 <body>
@@ -239,6 +251,7 @@
   </div>
 </div>
 <div id="dot"></div>
+<div id="approach"><h2>THE ETERNAL CITY</h2><div class="apsub">walk through the gate</div></div>
 <div id="fps"></div>
 <div id="invite"><div class="t"></div><div class="s"></div></div>
 <div id="whisper">The fruit of the Tree hold the scrolls — draw near and touch one.</div>
@@ -4113,6 +4126,84 @@ async function initLace(){
   console.log(`LACE ornament: ${LACE_STATUS.value}`);
 }
 
+/* ================================================================
+   GOAL 6 — THE APPROACH: arrival as revelation (board-02)
+   The walker spawns OUTSIDE the great axial portal (the head of the
+   Street of Gold, gate at +Z ~118.5) on a marble causeway in the mist.
+   Crossing the portal fires the city's ONE orchestrated moment: the
+   veil of mist parts, the Tree is revealed down the axis, the god-rays
+   swell once, then stillness. Causeway folds into the baked white/gold
+   meshes (ZERO draws); only the veil is a new draw. ≤2 total, honored.
+   NOTE (Seer): "east portal" here = the axial gate at +Z that heads the
+   Street of Gold with the Tree straight down the axis — the compass
+   name is lore; this is geometrically THE great portal.
+================================================================ */
+const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:null, veilMesh:null, el:null };
+{
+  const CW = 6.0, z0c = 127, z1c = 160, zc = (z0c+z1c)/2, len = z1c - z0c;
+  /* deck — top at +.02 to clear the foundation disc at the seam */
+  P.white.push(xf(new THREE.BoxGeometry(CW*2+1.2, .7, len), 0, -.33, zc));
+  for (const sx of [-1, 1]){
+    P.white.push(xf(new THREE.BoxGeometry(.6, 1.2, len), sx*CW, .58, zc));   /* parapet */
+    P.gold.push(xf(new THREE.BoxGeometry(.82, .16, len), sx*CW, 1.24, zc));  /* gilt rail cap (the guaranteed read, Law 38) */
+    for (let z = z0c + 3; z <= z1c - 3; z += 6){                              /* balustrade posts + gold finials */
+      P.white.push(xf(new THREE.BoxGeometry(.92, 1.5, .92), sx*CW, .77, z));
+      P.gold.push(xf(new THREE.ConeGeometry(.5, .62, 4), sx*CW, 1.78, z, PI/4));
+    }
+    addBox(sx*CW - .4, sx*CW + .4, z0c, z1c);                                 /* parapet collider */
+  }
+  P.white.push(xf(new THREE.BoxGeometry(CW*2+1.2, 1.5, .9), 0, .5, z1c));     /* far-end cap */
+  P.gold.push(xf(new THREE.BoxGeometry(CW*2+1.4, .16, 1.0), 0, 1.28, z1c));
+  addBox(-CW-.6, CW+.6, z1c - .45, z1c + .45);
+  platforms.push((x, z)=> (Math.abs(x) <= CW + .2 && z > z0c - .5 && z < z1c) ? 0 : -Infinity);
+
+  /* THE PORTAL VEIL — soft drifting mist filling the arch, hiding the axis
+     until the walker crosses. Normal-blended white cloud (occludes, unlike
+     the additive shafts). One draw. */
+  const veilMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{ uOp:{ value:.9 }, uTime:{ value:0 }, uTex:{ value:noiseTex } },
+    vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+      gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uOp,uTime; uniform sampler2D uTex; varying vec2 vUv;
+      void main(){
+        float n  = texture2D(uTex, vUv*1.3 + vec2(uTime*0.015, uTime*0.008)).r;
+        float n2 = texture2D(uTex, vUv*2.2 - vec2(uTime*0.011, 0.004)).r;
+        float cloud = mix(n, n2, 0.5);
+        float edge = smoothstep(0.0,0.16,vUv.x)*smoothstep(1.0,0.84,vUv.x)
+                   * smoothstep(0.0,0.06,vUv.y)*smoothstep(1.0,0.80,vUv.y);
+        float rise = smoothstep(1.0, 0.10, vUv.y);        /* mist denser low, wisps to nothing up top */
+        float a = uOp * edge * (0.30 + 0.55*rise) * (0.55 + 0.55*cloud);
+        /* cool grey mist — occludes the axis without the white glare */
+        gl_FragColor = vec4(vec3(0.80,0.82,0.87), clamp(a,0.0,1.0));
+      }`
+  });
+  const veil = new THREE.Mesh(new THREE.PlaneGeometry(13.5, 22), veilMat);
+  veil.position.set(0, 10, 117); veil.frustumCulled = false;
+  scene.add(veil);
+  APPROACH.veilMat = veilMat; APPROACH.veilMesh = veil;
+  tickers.push(t => { veilMat.uniforms.uTime.value = t; });
+
+  /* THE ORCHESTRATION — one ticker drives the whole moment from crossT:
+     veil parts (uOp→0), rays swell once (×2.4 up then back), then stillness. */
+  tickers.push(t => {
+    if (!APPROACH.crossed || APPROACH.done) return;
+    if (APPROACH.crossT < 0) APPROACH.crossT = t;
+    const e = t - APPROACH.crossT;
+    const tierF = (TIER === 0 ? .45 : 1);
+    if (PREFERS_STATIC){                       /* reduced motion: reveal at once, no swell */
+      veilMat.uniforms.uOp.value = 0; veil.visible = false;
+      for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * tierF;
+      APPROACH.done = true; return;
+    }
+    veilMat.uniforms.uOp.value = Math.max(0, .9 * (1 - e / 2.2));
+    if (e > 2.4) veil.visible = false;
+    const f = e < 4 ? 1 + 1.4 * Math.sin((e / 4) * PI) : 1;   /* up then back to rest */
+    for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * tierF * f;
+    if (e >= 4.2) APPROACH.done = true;        /* stillness — release the shafts at base */
+  });
+}
+
 bake();
 applyTier(TIER);
 initSlots();
@@ -4140,8 +4231,8 @@ const AREAS = [
    18. PLAYER · PHYSICS · INPUT
 ================================================================ */
 const player = {
-  pos: new THREE.Vector3(0, 1.7, 108),
-  yaw: 0,            // yaw 0 faces -Z (north, into the city)
+  pos: new THREE.Vector3(0, 1.7, 152),   // GOAL 6: spawn OUTSIDE the great portal on the causeway
+  yaw: 0,            // yaw 0 faces -Z — down the causeway, through the gate, to the Tree
   pitch: 0,
   velY: 0,
   onGround: true,
@@ -5000,6 +5091,11 @@ function stepPlayer(dt){
     } else if (ny - 1.7 > gH + .05) player.onGround = false;
   }
   if (ny < -18){ nx=0; nz=108; ny=1.7; player.velY=0; }
+  /* GOAL 6 — crossing the great portal fires the arrival moment, once */
+  if (APPROACH.active && !APPROACH.crossed && player.pos.z >= 118.5 && nz < 118.5 && Math.abs(nx) < 6.5){
+    APPROACH.crossed = true;
+    if (APPROACH.el) APPROACH.el.classList.remove('show');
+  }
   player.pos.set(nx, ny, nz);
   const bob = (m>0.05 && player.onGround) ? Math.sin(performance.now()*.011)*(run?.05:.028) : 0;
   camera.position.set(nx, ny + bob, nz);
@@ -5057,6 +5153,8 @@ function begin(){
   dotEl.style.display = 'block';
   if (IS_TOUCH) stick.style.display = 'block';
   if (!started){ started = true; }
+  /* GOAL 6 — the title rises over the causeway while the approach stands */
+  if (APPROACH.active && !APPROACH.crossed && APPROACH.el) APPROACH.el.classList.add('show');
   if (!IS_TOUCH){
     try {
       const r = canvasEl.requestPointerLock();
@@ -5070,6 +5168,15 @@ ovEl.addEventListener('click', ()=>{ if (started) begin(); });
 /* deep-link spawn — share a viewpoint or test a vantage:
    ?pos=x,z[&yaw=deg][&pitch=rad][&autostart=1] */
 {
+  APPROACH.el = document.getElementById('approach');
+  /* GOAL 6 — ?skip (or any deep-link ?pos) bypasses the arrival liturgy:
+     spawn inside as before, the veil never stands, the moment is pre-spent. */
+  const skipApproach = qs.get('skip') !== null || !!qs.get('pos') || !!qs.get('scroll');
+  if (skipApproach){
+    APPROACH.active = false; APPROACH.crossed = true; APPROACH.done = true;
+    if (APPROACH.veilMesh) APPROACH.veilMesh.visible = false;
+    if (qs.get('skip') !== null) player.pos.set(0, 1.7, 108);   /* the old inside spawn */
+  }
   const ps = qs.get('pos');
   if (ps){
     const [px, pz] = ps.split(',').map(Number);
@@ -5210,6 +5317,10 @@ window.__CITY = {
   setPos(x,y,z){ player.pos.set(x,y,z); },
   setYaw(a){ player.yaw = a; },
   lookAt(x,z){ player.yaw = Math.atan2(-(x-player.pos.x), -(z-player.pos.z)); },
+  get approach(){ return { active:APPROACH.active, crossed:APPROACH.crossed, done:APPROACH.done,
+    veilOp: APPROACH.veilMat ? +APPROACH.veilMat.uniforms.uOp.value.toFixed(3) : null,
+    shaftOp: TR.shafts[0] ? +TR.shafts[0].uniforms.uOp.value.toFixed(3) : null }; },
+  crossPortal(){ if (APPROACH.active){ APPROACH.crossed = true; if (APPROACH.el) APPROACH.el.classList.remove('show'); } },
   press(code,down){ keys[code] = !!down; },
   get area(){ return curArea; },
   get vaults(){ return vaultGroups.map(v=>({ label:v.label, x:+v.anchor.x.toFixed(1), z:+v.anchor.z.toFixed(1), count:v.count, visible:v.group.visible })); },
