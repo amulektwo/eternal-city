@@ -1902,6 +1902,97 @@ function addBuilding(x,z,ry,big){
   scene.add(rainbow);   /* survives a GLB fountain swap, like the spray */
   tickers.push(t=>{ rainbow.material.opacity = .15 + .07*Math.sin(t*1.7); });
 
+  /* ========== WATCH A — THE WATERS (TRUE VISION, boards 01+05) ==========
+     (1) A second faint rainbow standing in the far spray.
+     (2) THE WATERFALL — a chuted sheet of living water on the west façade
+         behind the court: scrolling dual-noise shader ribbon in a marble
+         chute (chute merges into the city's own accumulators — the sheet
+         and its splash are the only new draws), pouring into the court.
+     (3) The pools SHIMMER — every waterDisc breathes its opacity.
+     +3 draw calls, ~1.6k tris. */
+  const rainbow2 = new THREE.Sprite(new THREE.SpriteMaterial({
+    map:rainbowTex, transparent:true, opacity:.13, depthWrite:false }));
+  rainbow2.position.set(FX-2.1, 4.6, FZ-1.6);
+  rainbow2.scale.set(3.9, 2.3, 1);
+  scene.add(rainbow2);
+  tickers.push(t=>{ rainbow2.material.opacity = .10 + .05*Math.sin(t*1.3 + 2.1); });
+
+  {
+    const WX = -63.2, WZ = 8, WH = 12.5, WW = 3.4;
+    /* the chute — marble jambs and a gold lip, merged (zero draws) */
+    P.white.push(xf(new THREE.BoxGeometry(.55, WH+1.2, .8), WX-.15, (WH+1.2)/2, WZ-WW/2-.35));
+    P.white.push(xf(new THREE.BoxGeometry(.55, WH+1.2, .8), WX-.15, (WH+1.2)/2, WZ+WW/2+.35));
+    P.gold.push(xf(new THREE.BoxGeometry(.5, .3, WW+1.5), WX-.1, WH+.9, WZ));
+    P.white.push(xf(new THREE.CylinderGeometry(2.6, 2.9, .7, 22), WX+1.2, .35, WZ));
+    const wfMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, side:THREE.DoubleSide,
+      uniforms:{ uTime:{value:0} },
+      vertexShader:`varying vec2 vUv;
+        void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; varying vec2 vUv;
+        float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+        float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+          return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
+        void main(){
+          float y = vUv.y + uTime*.55;
+          float a = n2(vec2(vUv.x*9.0, y*7.0));
+          float b = n2(vec2(vUv.x*17.0 + 5.0, y*13.0 - uTime*.35));
+          float streak = smoothstep(.42, .95, a*.6 + b*.55);
+          float edge = smoothstep(0.0,.12,vUv.x)*smoothstep(1.0,.88,vUv.x);
+          float foam = smoothstep(.12,.0,vUv.y)*.5;
+          vec3 col = mix(vec3(.66,.82,.96), vec3(1.0), streak);
+          gl_FragColor = vec4(col, (streak*.72 + .26 + foam) * edge);
+        }`
+    });
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(WW, WH, 1, 1), wfMat);
+    sheet.rotation.y = PI/2;
+    sheet.position.set(WX+.15, WH/2 + .5, WZ);
+    scene.add(sheet);
+    tickers.push(t=>{ wfMat.uniforms.uTime.value = t; });
+    /* splash at the foot — small cousin of the court spray */
+    const SN = 130;
+    const sb = new Float32Array(SN*3), sv = new Float32Array(SN*3), st0 = new Float32Array(SN);
+    for (let i=0;i<SN;i++){
+      const a = rng()*TAU;
+      sb[i*3] = WX+1.2 + Math.sin(a)*.7; sb[i*3+1] = .7; sb[i*3+2] = WZ + Math.cos(a)*.7;
+      sv[i*3] = Math.sin(a)*rr(.8,1.5); sv[i*3+1] = rr(1.4,2.4); sv[i*3+2] = Math.cos(a)*rr(.8,1.5);
+      st0[i] = rng()*1.3;
+    }
+    const sg2 = new THREE.BufferGeometry();
+    sg2.setAttribute('position', new THREE.BufferAttribute(sb,3));
+    sg2.setAttribute('aVel', new THREE.BufferAttribute(sv,3));
+    sg2.setAttribute('aT0', new THREE.BufferAttribute(st0,1));
+    const splashMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      uniforms:{ uTime:{value:0}, uTex:{value:glowTex} },
+      vertexShader:`attribute vec3 aVel; attribute float aT0; uniform float uTime; varying float vA;
+        void main(){
+          float life = 1.3;
+          float t = mod(uTime + aT0, life);
+          vec3 p = position + aVel*t; p.y -= 0.5*5.0*t*t;
+          vec4 mv = modelViewMatrix*vec4(p,1.0);
+          gl_PointSize = (7.0+5.0*t) * (10.0/max(-mv.z,1.0));
+          vA = smoothstep(0.0,.12,t)*smoothstep(life,life*.55,t)*.5;
+          gl_Position = projectionMatrix*mv;
+        }`,
+      fragmentShader:`uniform sampler2D uTex; varying float vA;
+        void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
+          gl_FragColor = vec4(vec3(.85,.93,1.0), s2.a*vA); }`
+    });
+    const splash = new THREE.Points(sg2, splashMat);
+    splash.frustumCulled = false;
+    scene.add(splash);
+    tickers.push(t=>{ splashMat.uniforms.uTime.value = t; });
+  }
+
+  /* the pools breathe — one ticker, every water disc */
+  tickers.push(t=>{
+    waterDiscs.forEach((w, i)=>{
+      if (w.material.opacity !== undefined && w.userData.op0 === undefined) w.userData.op0 = w.material.opacity;
+      if (w.userData.op0 !== undefined) w.material.opacity = w.userData.op0 + .05*Math.sin(t*1.3 + i*1.9);
+    });
+  });
+
   const wMat = new THREE.MeshStandardMaterial({ color:0xcfeaff, transparent:true, opacity:.8,
     roughness:.13, metalness:.15, envMapIntensity:1.15 });
   for (const [r,y] of [[5.10,.95],[2.50,3.9],[1.38,5.95]]){

@@ -183,3 +183,11 @@ FLAGS FOR THE SEER: (1) bodies remain in the PUBLIC repo's git HISTORY — true 
 - **THE ROOTS & THE POOL**: ten root tubes flare from the braid into a reflecting pool (crystal disc over a dark bed — the bed gives the water its depth against white marble; City-A river recipe).
 - Verified: zero console errors; Tree vantage 358k tris / 161 draws (≤700k law); verbatim scroll 144 sha `bc797d33ac63…` through the shield gate; fps 60 in headless harness (true gate remains the Seer's glass).
 - NEXT ON THE LADDER: water & rainbows (façade waterfalls, fountain spray) → ornament normal maps → atmosphere/mist/motes → living green → blue-gold cloth banners. Deferred until GLBs: dignified citizens + sculpted angels via dropbox.
+
+## LAST PASS — 2026-07-08e · WATCH A — THE WATERS (Four Watches loop, boards 01+05) — KEPT
+- **THE WATERFALL** — a chuted sheet of living water on the west façade of the Fountain Court: dual-noise scrolling shader between marble jambs with a gold lip, pouring into a merged marble basin with its own 130-point splash system. Chute/basin merged into the city accumulators; sheet + splash + second rainbow = +3 draw calls, ~1.6k tris.
+- **THE SECOND RAINBOW** stands faint in the far spray (opacity breathing .10–.15).
+- **THE POOLS BREATHE** — one ticker modulates every waterDisc's opacity (±.05, phase-offset); the Tree pool and fountain tiers shimmer.
+- Sheet strengthened once after first look (alpha .55→.72, bluer glass) — kept on second look.
+- Verified: zero console errors; Fountain vantage 327k tris / 134 draws (≤700k law); scroll 144 verbatim green earlier this session; fps 60 harness (true gate = the Seer's glass).
+- NEXT WATCHES: B THE CARVING (ornament normals) → C THE AIR (motes, layered mist, glory shaft) → D THE GARLANDS (ivy, gardens, blue-gold banners).
