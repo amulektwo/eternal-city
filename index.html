@@ -662,10 +662,10 @@ const canopyStripeTex = canvasTex(128, (g,w,h)=>{
   }
 });
 const bannerTex = canvasTex(256, (g,w,h)=>{
-  g.fillStyle = '#c8502e'; g.fillRect(0,0,w,h);
+  g.fillStyle = '#24427e'; g.fillRect(0,0,w,h);   /* royal blue — board-01 */
   g.strokeStyle = '#f3d98b'; g.lineWidth = 14; g.strokeRect(10,10,w-20,h-20);
   g.fillStyle = '#f3d98b'; g.beginPath(); g.arc(w/2,h/2,44,0,TAU); g.fill();
-  g.fillStyle = '#c8502e'; g.beginPath(); g.arc(w/2,h/2,30,0,TAU); g.fill();
+  g.fillStyle = '#24427e'; g.beginPath(); g.arc(w/2,h/2,30,0,TAU); g.fill();
   g.fillStyle = '#f3d98b'; g.beginPath(); g.arc(w/2,h/2,12,0,TAU); g.fill();
 }, 128);
 
@@ -687,6 +687,10 @@ const roseTex = canvasTex(512, (g,w,h)=>{
   g.beginPath(); g.arc(cx,cy,R*.3,0,TAU); g.stroke();
 });
 
+/* THE PURGE (Seer's order, 2026-07-08): no cone souls, no lollipop
+   ball-trees, no red fabric — dignified GLB citizens come later. */
+const THE_PURGE = true;
+
 const MAT = {
   white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.66 }),
   ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.4 }),
@@ -697,7 +701,7 @@ const MAT = {
             clearcoat:.85, clearcoatRoughness:.28, envMapIntensity:1.05 }),
   glow:   new THREE.MeshStandardMaterial({ color:0xfff3d2, emissive:0xffd98a, emissiveIntensity:2.1, roughness:.4 }),
   glowHot:new THREE.MeshStandardMaterial({ color:0xfff8e8, emissive:0xffe9b0, emissiveIntensity:3.4, roughness:.3 }),
-  crimson:new THREE.MeshStandardMaterial({ color:0xc8502e, roughness:.7, metalness:0,
+  crimson:new THREE.MeshStandardMaterial({ color:0x24427e, roughness:.7, metalness:0,   /* royal blue since THE PURGE */
             polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 }),
   leaf:   new THREE.MeshStandardMaterial({ color:0xe9c66c, emissive:0x8a6400, emissiveIntensity:.28, roughness:.55 }),
 };
@@ -1671,7 +1675,7 @@ function addBuilding(x,z,ry,big){
     if (isReserved(x,z,4)) continue;
     tPos.push([x,z]); addCircle(x,z,.7);
   }
-  if (tPos.length){
+  if (!THE_PURGE && tPos.length){
     const ti = new THREE.InstancedMesh(new THREE.CylinderGeometry(.28,.42,3.4,6), MAT.ivory, tPos.length);
     const ci = new THREE.InstancedMesh(new THREE.SphereGeometry(2.1, 10, 8), MAT.leaf, tPos.length);
     const d = new THREE.Object3D();
@@ -2805,7 +2809,8 @@ function addBuilding(x,z,ry,big){
      hands, notched extruded WINGS swept up behind the shoulders, gold
      halo/collar/hem. ~1.3k tris per statue; same anchors, same slot —
      a future GLB still replaces everything. */
-  const heroAngel = new THREE.Group(); scene.add(heroAngel);
+  const heroAngel = new THREE.Group();
+  if (!THE_PURGE) scene.add(heroAngel);   /* purged until dignified GLBs arrive */
   const anW = [], anG = [], anP = [], angelAnchors = [];
   const wingShape = new THREE.Shape();
   wingShape.moveTo(0, 0);
@@ -3134,7 +3139,7 @@ function addBuilding(x,z,ry,big){
      every still soul */
   const citGeo = soulGeo();
   const sashGeo = soulSashGeo();
-  const PATHS = [
+  const PATHS = THE_PURGE ? [] : [
     { kind:'line', a:[-2.6,86], b:[-2.6,30],  v:1.1, off:0 },
     { kind:'line', a:[2.6,30],  b:[2.6,86],   v:0.9, off:33 },
     { kind:'line', a:[-2.2,-28],b:[-2.2,-49], v:1.0, off:9 },
@@ -3246,10 +3251,10 @@ function addBuilding(x,z,ry,big){
   /* ONE FLESH (Pass 8): the Tree witnesses already fill SOULS — they
      stay at the HEAD (the Tree plaza never empties at MEDIUM), then
      the stations interleave so the tier trim keeps presence everywhere */
-  const order = SOULS.slice();
+  const order = THE_PURGE ? [] : SOULS.slice();
   const idx = [0, 0, 0];
   const stationTotal = stations[0].length + stations[1].length + stations[2].length;
-  while (order.length < SOULS.length + stationTotal)
+  while (!THE_PURGE && order.length < SOULS.length + stationTotal)
     for (let s = 0; s < 3; s++)
       if (idx[s] < stations[s].length) order.push(stations[s][idx[s]++]);
   const bodyG = soulGeo();
