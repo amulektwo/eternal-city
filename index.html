@@ -5223,6 +5223,109 @@ ovEl.addEventListener('click', ()=>{ if (started) begin(); });
 /* ================================================================
    21. DAY CYCLE · ANIMATE · ADAPTIVE QUALITY
 ================================================================ */
+/* ================================================================
+   GOAL 1 — THE MIRROR FLOOR (boards 01+04: wet marble that holds the sky)
+   Law 31's priced debt, paid with STRUCTURED reflections: one planar
+   mirror render (both floors share the y=0 plane) into a half-res
+   target, projected onto two overlay discs (Tree plaza ring + Fountain
+   Court disc) at ~20% with a grazing-angle boost. Oblique near-plane
+   clipping removes below-floor geometry; shadows render ONCE per frame
+   (autoUpdate off, needsUpdate per frame); a 55m distance gate spares
+   the far vantages. NO envMapIntensity anywhere near this (Law 31).
+   ?mirror=1 forces on · ?mirror=0 forces off · default set by the
+   battery verdict below. */
+const MIRROR = { on:false, near:false, rt:null, cam:null, meshes:[], mats:[],
+                 texMat:new THREE.Matrix4(), str:.5 };
+{
+  const MIRROR_DEFAULT = true;    /* the battery kept it: 60fps ×7 HIGH with the
+                                     mirror counted, worst 667.8k ≤ 700k (2026-07-08n) */
+  const q = qs.get('mirror');
+  MIRROR.on = q === '1' || (MIRROR_DEFAULT && TIER === 2 && q !== '0');
+}
+if (MIRROR.on){
+  const RES = .5;
+  MIRROR.rt = new THREE.WebGLRenderTarget(
+    Math.max(64, innerWidth*RES|0), Math.max(64, innerHeight*RES|0));
+  MIRROR.cam = new THREE.PerspectiveCamera();
+  const mkMirrorMat = ()=> new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false,
+    uniforms:{ uMirror:{value:MIRROR.rt.texture}, uTexMat:{value:MIRROR.texMat}, uStr:{value:MIRROR.str} },
+    vertexShader:`
+      uniform mat4 uTexMat; varying vec4 vUv4; varying vec3 vW;
+      void main(){
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vW = w.xyz; vUv4 = uTexMat * w;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader:`
+      uniform sampler2D uMirror; uniform float uStr;
+      varying vec4 vUv4; varying vec3 vW;
+      void main(){
+        vec3 V = normalize(cameraPosition - vW);
+        float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 2.2);
+        vec3 refl = texture2DProj(uMirror, vUv4).rgb;
+        /* true dielectric fresnel: wet marble is near-blind head-on and a
+           mirror at grazing — kills the warm-sky stain underfoot while the
+           standing view holds the city (the .45 base was the stain) */
+        float a = uStr * mix(0.06, 1.0, fres);
+        /* projector edge-fade: where the mirrored frustum has no data,
+           the floor is simply dry — never smear the texture border */
+        vec2 uvp = vUv4.xy / max(vUv4.w, 1e-5);
+        a *= smoothstep(0.0, 0.05, uvp.x) * smoothstep(1.0, 0.95, uvp.x)
+           * smoothstep(0.0, 0.05, uvp.y) * smoothstep(1.0, 0.95, uvp.y);
+        if (vUv4.w <= 0.0) a = 0.0;
+        gl_FragColor = vec4(refl, a);
+      }`
+  });
+  for (const [geo, x, z] of [
+    [new THREE.RingGeometry(13, 28.5, 72).rotateX(-PI/2), 0, 0],      /* Tree plaza (outside the pool+dais) */
+    [new THREE.CircleGeometry(21, 56).rotateX(-PI/2), -52, 8],        /* Fountain Court */
+  ]){
+    const mat = mkMirrorMat();
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, .045, z);
+    scene.add(mesh);
+    MIRROR.meshes.push(mesh); MIRROR.mats.push(mat);
+  }
+  if (SHADOWS) renderer.shadowMap.autoUpdate = false;   /* animate marks needsUpdate once per frame */
+}
+const _mv1 = new THREE.Vector3(), _mv2 = new THREE.Vector3(),
+      _mv3 = new THREE.Vector3(), _mv4 = new THREE.Vector3(),
+      _mPlane = new THREE.Plane(), _mClip = new THREE.Vector4(), _mQ = new THREE.Vector4();
+function renderMirror(){
+  const c = camera, m = MIRROR.cam;
+  m.position.set(c.position.x, -c.position.y, c.position.z);
+  _mv1.set(0,0,-1).applyQuaternion(c.quaternion);
+  _mv2.copy(c.position).add(_mv1); _mv2.y *= -1;
+  _mv3.set(0,1,0).applyQuaternion(c.quaternion);
+  _mv4.copy(c.position).add(_mv3); _mv4.y *= -1;
+  m.up.subVectors(_mv4, m.position);
+  m.lookAt(_mv2);
+  /* wider fov than the eye: when the walker pitches DOWN, near-floor
+     points reflect sky ABOVE the mirrored frustum — widening keeps the
+     projector fed (the fragment edge-fade catches whatever remains) */
+  m.fov = Math.min(110, c.fov + 18); m.aspect = c.aspect; m.near = c.near; m.far = c.far;
+  m.updateProjectionMatrix(); m.updateMatrixWorld();
+  MIRROR.texMat.set(.5,0,0,.5, 0,.5,0,.5, 0,0,.5,.5, 0,0,0,1);
+  MIRROR.texMat.multiply(m.projectionMatrix).multiply(m.matrixWorldInverse);
+  /* oblique near-plane clip at the floor plane (kills below-y=0 geometry) */
+  _mPlane.set(new THREE.Vector3(0,1,0), 0).applyMatrix4(m.matrixWorldInverse);
+  _mClip.set(_mPlane.normal.x, _mPlane.normal.y, _mPlane.normal.z, _mPlane.constant);
+  const pe = m.projectionMatrix.elements;
+  _mQ.set((Math.sign(_mClip.x) + pe[8]) / pe[0],
+          (Math.sign(_mClip.y) + pe[9]) / pe[5],
+          -1,
+          (1 + pe[10]) / pe[14]);
+  _mClip.multiplyScalar(2 / _mClip.dot(_mQ));
+  pe[2] = _mClip.x; pe[6] = _mClip.y; pe[10] = _mClip.z + 1 - .003; pe[14] = _mClip.w;
+  for (const o of MIRROR.meshes) o.visible = false;
+  renderer.setRenderTarget(MIRROR.rt);
+  renderer.clear();
+  renderer.render(scene, m);
+  renderer.setRenderTarget(null);
+  for (const o of MIRROR.meshes) o.visible = true;
+}
+
 const clock = new THREE.Clock();
 let fpsAcc=0, fpsN=0, fpsAvg=60;
 const fpsEl = document.getElementById('fps');
@@ -5332,6 +5435,16 @@ function animate(){
   }
   watchdog(t, dt);
 
+  /* GOAL 1 — the mirror floor: shadows render once per frame; the mirror
+     pass runs only near a mirrored floor (Tree plaza / Fountain Court) */
+  if (MIRROR.on){
+    if (SHADOWS) renderer.shadowMap.needsUpdate = true;
+    const cx = camera.position.x, cz = camera.position.z;
+    MIRROR.near = Math.min(Math.hypot(cx, cz), Math.hypot(cx + 52, cz - 8)) < 55;
+    for (const o of MIRROR.meshes) o.visible = MIRROR.near;
+    if (MIRROR.near) renderMirror();
+  }
+
   composer.render();
 }
 
@@ -5341,6 +5454,7 @@ addEventListener('resize', ()=>{
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
   applyPostSizes();
+  if (MIRROR.rt) MIRROR.rt.setSize(Math.max(64, innerWidth*.5|0), Math.max(64, innerHeight*.5|0));
 });
 
 renderer.setAnimationLoop(animate);
@@ -5376,6 +5490,10 @@ window.__CITY = {
     coverBias:+skyUni.uCoverBias.value.toFixed(3),
     rayLen: HOUR.rayMat ? +HOUR.rayMat.uniforms.uLen.value.toFixed(3) : null }; },
   setHour(x){ HOUR.fixed = (x === null || x === undefined) ? null : Math.max(0, Math.min(1, +x)); },
+  get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str,
+    res: MIRROR.rt ? [MIRROR.rt.width, MIRROR.rt.height] : null }; },
+  setMirrorStrength(x){ MIRROR.str = Math.max(0, Math.min(1, +x));
+    for (const m of MIRROR.mats) m.uniforms.uStr.value = MIRROR.str; },
   setBloom(threshold, strength, radius){
     if (isFinite(threshold)) bloomPass.threshold = threshold;
     if (isFinite(strength)) bloomPass.strength = strength;
