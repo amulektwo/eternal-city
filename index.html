@@ -55,6 +55,40 @@
     text-shadow:0 1px 3px rgba(90,60,0,.55), 0 0 14px rgba(255,214,120,.75);
     opacity:0; transition:opacity .7s ease; }
   #toast.on { opacity:1; }
+  /* ---------- THE SEEK — the lamp of the city (transplanted from the elder temple) ---------- */
+  #lampBtn { position:fixed; top:18px; right:18px; z-index:12; width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+    color:var(--gold); background:rgba(12,8,2,.4); border:1px solid rgba(212,175,55,.45);
+    cursor:pointer; transition:all .3s; }
+  #lampBtn:hover { border-color:var(--gold); box-shadow:0 0 22px rgba(212,175,55,.4); }
+  #lampBtn svg { width:22px; height:22px; }
+  #seek { position:fixed; inset:0; z-index:32; display:flex; align-items:flex-start;
+    justify-content:center; padding-top:11vh; }
+  #seek[hidden] { display:none; }
+  #seekVeil { position:absolute; inset:0; background:rgba(12,8,2,.78); cursor:pointer; }
+  #seekBox { position:relative; width:min(620px, 92vw); background:rgba(16,11,3,.96);
+    border:1px solid rgba(212,175,55,.5); box-shadow:0 0 60px rgba(0,0,0,.6); }
+  #seekInput { width:100%; box-sizing:border-box; background:transparent; border:none;
+    border-bottom:1px solid rgba(212,175,55,.35); outline:none; color:#f3ead3;
+    font-family:inherit; font-style:italic; font-size:1.15rem; padding:1rem 1.4rem; }
+  #seekInput::placeholder { color:rgba(200,175,120,.45); }
+  #seekResults { max-height:52vh; overflow-y:auto; padding:0 0 .6rem; }
+  #seekResults::-webkit-scrollbar { width:3px; }
+  #seekResults::-webkit-scrollbar-thumb { background:rgba(212,175,55,.4); }
+  .seekGate { padding:.7rem 1.4rem .15rem; color:rgba(212,175,55,.85); font-size:.66rem;
+    letter-spacing:.26em; }
+  .seekHit { display:block; width:100%; text-align:left; background:none; border:none;
+    cursor:pointer; padding:.45rem 1.4rem; font-family:inherit; }
+  .seekHit:hover { background:rgba(212,175,55,.1); }
+  .seekHit .si { color:var(--gold); font-size:.78rem; letter-spacing:.12em; margin-right:.7rem; }
+  .seekHit .st { color:#f3ead3; font-size:1.02rem; }
+  .seekHit .sx { display:block; color:rgba(200,180,140,.55); font-size:.78rem;
+    font-style:italic; margin-top:.15rem; white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; }
+  .seekHint { padding:1.1rem 1.4rem; color:rgba(200,175,120,.5); font-size:.8rem;
+    letter-spacing:.2em; text-align:center; }
+  #seekFoot { padding:.55rem 1.4rem .8rem; text-align:center; color:rgba(200,175,120,.4);
+    font-size:.62rem; letter-spacing:.22em; border-top:1px solid rgba(212,175,55,.18); }
   /* ---------- THE READER — parchment scroll overlay (THE HARVEST) ---------- */
   #reader { position:fixed; inset:0; z-index:30; display:flex; align-items:center;
     justify-content:center; padding:4vh 3vw; }
@@ -208,6 +242,18 @@
 <div id="fps"></div>
 <div id="invite"><div class="t"></div><div class="s"></div></div>
 <div id="whisper">The fruit of the Tree hold the scrolls — draw near and touch one.</div>
+<button id="lampBtn" aria-label="Seek the scrolls" title="Seek the scrolls ( / )">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+    <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+</button>
+<div id="seek" hidden>
+  <div id="seekVeil"></div>
+  <div id="seekBox">
+    <input id="seekInput" type="text" placeholder="Seek the scrolls…" autocomplete="off" spellcheck="false">
+    <div id="seekResults"></div>
+    <div id="seekFoot">CHOOSING A SCROLL CARRIES YOU TO ITS VAULT</div>
+  </div>
+</div>
 <div id="stick"><div id="knob"></div></div>
 <div id="err"></div>
 
@@ -3524,10 +3570,21 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
   return [px,pz];
 }
 
-addEventListener('keydown', e=>{ keys[e.code]=true;
+addEventListener('keydown', e=>{
+  /* the lamp owns the keyboard while it burns — typing must not walk the city */
+  if (seekOpen){
+    if (e.code==='Escape'){ e.preventDefault(); closeSeek(); }
+    return;
+  }
+  keys[e.code]=true;
   if (e.code==='Space') e.preventDefault();
   /* Esc re-furls an open scroll BEFORE it may pause the city */
   if (e.code==='Escape' && readerOpen){ closeReader(); return; }
+  /* "/" or Cmd/Ctrl-K lights the lamp */
+  if ((e.code==='Slash' || ((e.metaKey||e.ctrlKey) && e.code==='KeyK'))
+      && started && !paused && !readerOpen){
+    e.preventDefault(); openSeek(); return;
+  }
   /* ESC must still pause when pointer lock was denied or lost (drag-look mode) */
   if (e.code==='Escape' && started && !paused && !document.pointerLockElement && !IS_TOUCH){
     paused = true; showOverlay(true);
@@ -3540,11 +3597,11 @@ const canvasEl = renderer.domElement;
 let dragLook = false, lastX=0, lastY=0;
 document.addEventListener('pointerlockchange', ()=>{
   const locked = document.pointerLockElement === canvasEl;
-  /* losing lock while a scroll is open is expected — the reader owns the screen */
-  if (!locked && started && !IS_TOUCH && !readerOpen){ paused = true; showOverlay(true); }
+  /* losing lock while a scroll or the lamp is open is expected — they own the screen */
+  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen){ paused = true; showOverlay(true); }
 });
 addEventListener('mousemove', e=>{
-  if (!started || paused || readerOpen) return;
+  if (!started || paused || readerOpen || seekOpen) return;
   if (document.pointerLockElement === canvasEl){
     player.yaw   -= e.movementX * .0022;
     player.pitch -= e.movementY * .0022;
@@ -3624,7 +3681,7 @@ function scanScrollTarget(ndcX, ndcY){
   return best;
 }
 function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvasEl)){
-  if (!started || paused || readerOpen) return false;
+  if (!started || paused || readerOpen || seekOpen) return false;
   const best = useCenter ? scanScrollTarget(0, 0)
     : scanScrollTarget(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
   if (!best) return false;
@@ -3874,6 +3931,122 @@ function closeReader(){
 document.getElementById('readerClose').addEventListener('click', closeReader);
 document.getElementById('readerVeil').addEventListener('click', closeReader);
 
+/* ---- THE SEEK (transplanted from the elder temple, 2026-07-08) ----
+   A lamp over the canon: keyword search on data/search-index.json
+   (title + excerpt, lazily fetched once). Choosing a scroll carries the
+   walker to its vault-house anchor and opens the reader there. The lamp
+   shares the reader's gating so the city stands still while it burns. */
+let seekOpen = false, seekIndex = null, seekLoadState = 'cold';
+const seekEl = document.getElementById('seek');
+const seekInput = document.getElementById('seekInput');
+const seekResults = document.getElementById('seekResults');
+
+async function loadSeekIndex(){
+  if (seekLoadState !== 'cold') return;
+  seekLoadState = 'loading';
+  try {
+    const res = await fetch(`data/search-index.json?v=${DATA_VERSION}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    seekIndex = await res.json();
+    seekLoadState = 'lit';
+  } catch { seekLoadState = 'cold'; }
+}
+function openSeek(){
+  if (seekOpen || readerOpen) return;
+  seekOpen = true;
+  if (document.pointerLockElement) document.exitPointerLock();
+  seekEl.hidden = false;
+  seekInput.value = '';
+  seekResults.innerHTML = '<div class="seekHint">ASK, AND THE SCROLLS ANSWER</div>';
+  loadSeekIndex();
+  setTimeout(()=> seekInput.focus(), 40);
+}
+function closeSeek(){
+  if (!seekOpen) return;
+  seekOpen = false; seekEl.hidden = true; seekInput.blur();
+}
+function seekQuery(q){
+  if (!seekIndex) return [];
+  const tokens = q.toLowerCase().split(/[^a-z0-9.]+/).filter(t=> t.length > 1);
+  if (!tokens.length) return [];
+  const phrase = q.toLowerCase().trim();
+  const scored = [];
+  for (const r of seekIndex){
+    const tl = r.t.toLowerCase(), xl = r.x.toLowerCase();
+    let s = 0;
+    for (const tok of tokens){
+      if (String(r.id).toLowerCase() === tok) s += 12;
+      if (tl.includes(tok)) s += 5;
+      if (xl.includes(tok)) s += 1;
+    }
+    if (phrase.length > 3){
+      if (tl.includes(phrase)) s += 10;
+      else if (xl.includes(phrase)) s += 4;
+    }
+    if (s > 0) scored.push([s, r]);
+  }
+  scored.sort((a,b)=> b[0]-a[0]);
+  return scored.slice(0, 24).map(x=> x[1]);
+}
+function renderSeek(){
+  const q = seekInput.value.trim();
+  if (seekLoadState === 'loading'){
+    seekResults.innerHTML = '<div class="seekHint">THE LAMP IS BEING LIT</div>'; return;
+  }
+  if (q.length < 2){
+    seekResults.innerHTML = '<div class="seekHint">ASK, AND THE SCROLLS ANSWER</div>'; return;
+  }
+  const hits = seekQuery(q);
+  if (!hits.length){
+    seekResults.innerHTML = '<div class="seekHint">THE CANON IS SILENT ON THIS — TRY OTHER WORDS</div>'; return;
+  }
+  let html = '', lastGate = null;
+  for (const h of hits){
+    if (h.g !== lastGate){
+      lastGate = h.g;
+      html += `<div class="seekGate">${escHTML((h.g || 'THE CITY').toUpperCase())}</div>`;
+    }
+    html += `<button class="seekHit" data-id="${escHTML(String(h.id))}">` +
+      `<span class="si">${escHTML(String(h.id))}</span>` +
+      `<span class="st">${escHTML(h.t)}</span>` +
+      (h.x ? `<span class="sx">${escHTML(h.x.slice(0,140))}</span>` : '') +
+      `</button>`;
+  }
+  seekResults.innerHTML = html;
+}
+function seekTravel(id){
+  const entry = seekIndex && seekIndex.find(r=> String(r.id) === String(id));
+  closeSeek();
+  const st = entry && vaultGroups.find(v=> v.label === entry.g);
+  if (st && st.anchor){
+    /* stand 4.6m inward of the vault anchor, facing it; collisions and
+       ground resolve on the next step (Law 23: read pos back, never trust) */
+    const ax = st.anchor.x, az = st.anchor.z;
+    const d = Math.hypot(ax, az) || 1;
+    player.pos.x = ax - (ax/d)*4.6;
+    player.pos.z = az - (az/d)*4.6;
+    player.yaw = Math.atan2(-(ax-player.pos.x), -(az-player.pos.z));
+    player.pitch = 0;
+    openScroll(id, new THREE.Vector3(ax, 2.4, az));
+  } else {
+    openScroll(id);
+  }
+}
+let seekDebounce = 0;
+seekInput.addEventListener('input', ()=>{
+  clearTimeout(seekDebounce);
+  seekDebounce = setTimeout(()=>{
+    if (seekLoadState !== 'lit'){ loadSeekIndex().then(renderSeek); }
+    renderSeek();
+  }, 160);
+});
+seekResults.addEventListener('click', e=>{
+  const btn = e.target.closest('.seekHit');
+  if (btn) seekTravel(btn.dataset.id);
+});
+document.getElementById('seekVeil').addEventListener('click', closeSeek);
+document.getElementById('lampBtn').addEventListener('click', openSeek);
+
 /* ---- THE SCROLL STATIONS (THE FULLNESS, Seer's Ruling R3) ----
    Every gate vault serves its house's FULL roster through paged shelves
    of 24 lights; four lecterns bring the reading into the city's heart.
@@ -4062,7 +4235,7 @@ let moveTouchId = null, lookTouchId = null, lookLX=0, lookLY=0, stickCX=0, stick
     lookT0=0, lookMoved=0, moveT0=0, moveMoved=0;
 if (IS_TOUCH){
   addEventListener('touchstart', e=>{
-    if (!started || readerOpen) return;   /* the reader owns the screen */
+    if (!started || readerOpen || seekOpen) return;   /* the reader (or the lamp) owns the screen */
     for (const t of e.changedTouches){
       if (t.clientX < innerWidth*.45 && moveTouchId===null){
         moveTouchId = t.identifier;
