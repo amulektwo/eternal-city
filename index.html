@@ -1630,11 +1630,39 @@ function addBuilding(x,z,ry,big){
   const w = rr(6,11)*(big?1.25:1), dpt = rr(6,11)*(big?1.25:1), h = rr(9,20)*(big?1.35:1);
   P.white.push(xf(new THREE.BoxGeometry(w,h,dpt), x, h/2, z, ry));
   P.gold.push(xf(new THREE.BoxGeometry(w+.5,.45,dpt+.5), x, h, z, ry));
-  const roofH = h*.42;
-  P.ivory.push(xf(new THREE.ConeGeometry(Math.max(w,dpt)*.74, roofH, 4), x, h+roofH/2, z, ry+PI/4));
-  P.gold.push(xf(new THREE.ConeGeometry(.5,1.6,4), x, h+roofH+.7, z, ry));
+  /* PASS D (FACADES) — ROOFLINE VARIETY: the identical square pyramids
+     break into spires, domes, and hipped ridges (board-05). Type chosen by
+     a COARSE spatial hash so each ~26m zone shares a roof family — variety
+     across the city, coherence within a quarter. No rng (layout law). */
+  const roofH = h*.42, roofBase = Math.max(w,dpt)*.74;
+  const rtype = Math.abs(Math.floor(x/26)*7 + Math.floor(z/26)*13) % 4;
+  let apexY;
+  if (rtype === 1){                 /* SPIRE — tall thin octagonal steeple */
+    const sH = roofH*1.95;
+    P.ivory.push(xf(new THREE.ConeGeometry(roofBase*.60, sH, 8), x, h+sH/2, z, ry));
+    apexY = h + sH;
+    P.gold.push(xf(new THREE.ConeGeometry(.4, 2.4, 6), x, apexY+1.1, z));
+    apexY += 1.8;
+  } else if (rtype === 2){          /* DOME — pearl cupola on a short drum */
+    const drumH = 1.3, domeR = Math.min(w,dpt)*.54;
+    P.ivory.push(xf(new THREE.CylinderGeometry(domeR*1.04, domeR*1.08, drumH, 14), x, h+drumH/2, z));
+    P.pearl.push(xf(new THREE.SphereGeometry(domeR, 16, 10, 0, TAU, 0, PI/2), x, h+drumH, z));
+    apexY = h + drumH + domeR;
+    P.gold.push(xf(new THREE.ConeGeometry(.42, 1.9, 8), x, apexY+.9, z));
+    apexY += 1.5;
+  } else if (rtype === 3){          /* HIP — elongated ridge, not a square cap */
+    P.ivory.push(xf(new THREE.ConeGeometry(roofBase, roofH, 4), x, h+roofH/2, z, ry+PI/4, 1, 1, 1.75));
+    apexY = h + roofH;
+    P.gold.push(xf(new THREE.ConeGeometry(.5, 1.6, 4), x, apexY+.7, z, ry));
+    apexY += 1.4;
+  } else {                          /* PYRAMID — the classic square cap */
+    P.ivory.push(xf(new THREE.ConeGeometry(roofBase, roofH, 4), x, h+roofH/2, z, ry+PI/4));
+    apexY = h + roofH;
+    P.gold.push(xf(new THREE.ConeGeometry(.5, 1.6, 4), x, apexY+.7, z, ry));
+    apexY += 1.4;
+  }
   /* THE LACE: every roof apex joins the skyline forest (deterministic scale — no rng, layout law) */
-  lacePinnacles.push([x, h+roofH+.9, z, .85 + (Math.abs(x*7 + z*13) % 10) * .04]);
+  lacePinnacles.push([x, apexY+.2, z, .85 + (Math.abs(x*7 + z*13) % 10) * .04]);
   const rows = Math.max(2, h/5|0), cols = Math.max(2, w/3|0);
   for (let rI=0;rI<rows;rI++) for (let c=0;c<cols;c++){
     const lx = -w/2 + (c+.5)*(w/cols), ly = 2.5 + rI*(h-4)/rows;
