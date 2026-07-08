@@ -200,3 +200,11 @@ FLAGS FOR THE SEER: (1) bodies remain in the PUBLIC repo's git HISTORY — true 
 
 ### LAW-LEARNED 37 — THE HERALD (2026-07-08)
 Legacy GitHub Pages builds fail repeatedly on this repo at its current size (three consecutive "Page build failed" with `.nojekyll` present and no content cause; API-POST build kicks during an in-flight build also read `errored`). The remedy is systemic, not another kick: **`build_type=workflow`** with `.github/workflows/pages.yml` (checkout → upload-pages-artifact → deploy-pages), watched via `gh run watch`, then md5-proven (Law 25 still binds). Never re-enable the legacy build. WATCH B reached the world through THE HERALD's first run.
+
+## LAST PASS — 2026-07-08g · WATCH C — THE AIR (Four Watches loop, boards 02+04) — KEPT
+- **THE MOTES** — one Points system (600/380/220 by tier): drifting light through the Tree plaza and the avenue, slow rise + sine wander, additive, faint (alpha ≤ .25 effective).
+- **THE BREATH OF THE DISTRICTS** — one open cylinder shell at r112 (y0–16), vertical-gradient alpha peaking .13 with slow drift — far spires now stack in layers; the UNMILKING stands (no bloom change, no additive stacking on marble).
+- **ONE GLORY SHAFT** slanting over the Fountain Court (additive .09, breathing).
+- +3 draw calls, ~1k tris. Verified: zero console errors; Street vantage 316k tris / 149 draws; Tree plaza composite clean; fps 60 harness (true gate = the Seer's glass).
+- Noted in passing: the purge's banner recolor is proven in the world — the Street of Gold flies blue-and-gold.
+- NEXT WATCH: D THE GARLANDS (ivy cards, fountain garden beds, banner sway).

@@ -1985,6 +1985,95 @@ function addBuilding(x,z,ry,big){
     tickers.push(t=>{ splashMat.uniforms.uTime.value = t; });
   }
 
+  /* ========== WATCH C — THE AIR (TRUE VISION, boards 02+04) ==========
+     (1) THE MOTES — one Points system of drifting light through the Tree
+         plaza and the avenue: slow rise, sine wander, additive, faint.
+     (2) THE BREATH OF THE DISTRICTS — a single mist shell at r≈112
+         between the walls and the outer spires, vertical alpha gradient,
+         peak .13 — layering, never milk (the UNMILKING stands).
+     (3) ONE GLORY SHAFT slanting over the Fountain Court, additive .09.
+     +3 draw calls, ~1k tris. */
+  {
+    const MN = TIER > 1 ? 600 : (TIER > 0 ? 380 : 220);
+    const mb = new Float32Array(MN*3), mph = new Float32Array(MN);
+    for (let i=0;i<MN;i++){
+      const inPlaza = i % 5 < 3;
+      if (inPlaza){
+        const a = rng()*TAU, r = Math.sqrt(rng())*21;
+        mb[i*3] = Math.sin(a)*r; mb[i*3+2] = Math.cos(a)*r;
+      } else {
+        mb[i*3] = rr(-7,7); mb[i*3+2] = rr(28,92);
+      }
+      mb[i*3+1] = rr(.8,13.5);
+      mph[i] = rng()*TAU;
+    }
+    const mg = new THREE.BufferGeometry();
+    mg.setAttribute('position', new THREE.BufferAttribute(mb,3));
+    mg.setAttribute('aPh', new THREE.BufferAttribute(mph,1));
+    const moteMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      uniforms:{ uTime:{value:0}, uTex:{value:glowTex} },
+      vertexShader:`attribute float aPh; uniform float uTime; varying float vA;
+        void main(){
+          vec3 p = position;
+          float t = uTime*.12 + aPh;
+          p.y = .8 + mod(position.y + uTime*.22 + aPh, 13.0);
+          p.x += sin(t*1.7 + p.y*.4)*.7;
+          p.z += cos(t*1.3 + p.y*.3)*.7;
+          vec4 mv = modelViewMatrix*vec4(p,1.0);
+          gl_PointSize = 5.5 * (10.0/max(-mv.z,1.0)) * (1.0 + .4*sin(t*2.3));
+          vA = .30 + .20*sin(t*2.0);
+          gl_Position = projectionMatrix*mv;
+        }`,
+      fragmentShader:`uniform sampler2D uTex; varying float vA;
+        void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
+          gl_FragColor = vec4(vec3(1.0,.94,.78), s2.a*vA*.5); }`
+    });
+    const motes = new THREE.Points(mg, moteMat);
+    motes.frustumCulled = false;
+    scene.add(motes);
+    tickers.push(t=>{ moteMat.uniforms.uTime.value = t; });
+
+    /* the breath between districts */
+    const mistMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, side:THREE.DoubleSide,
+      uniforms:{ uTime:{value:0} },
+      vertexShader:`varying vec2 vUv; varying vec3 vW;
+        void main(){ vUv = uv; vW = (modelMatrix*vec4(position,1.0)).xyz;
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; varying vec2 vUv; varying vec3 vW;
+        void main(){
+          float band = smoothstep(.02,.28,vUv.y)*smoothstep(1.0,.42,vUv.y);
+          float drift = .8 + .2*sin(vW.x*.05 + uTime*.05)*sin(vW.z*.04 - uTime*.04);
+          gl_FragColor = vec4(vec3(1.0,.96,.88), band*drift*.13);
+        }`
+    });
+    const mist = new THREE.Mesh(new THREE.CylinderGeometry(112,112,16,72,1,true), mistMat);
+    mist.position.y = 8; mist.frustumCulled = false;
+    scene.add(mist);
+    tickers.push(t=>{ mistMat.uniforms.uTime.value = t; });
+
+    /* one glory shaft over the court */
+    const gloryMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ uTime:{value:0} },
+      vertexShader:`varying vec2 vUv;
+        void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; varying vec2 vUv;
+        void main(){
+          float x = smoothstep(0.0,.35,vUv.x)*smoothstep(1.0,.65,vUv.x);
+          float y = smoothstep(0.0,.10,vUv.y)*smoothstep(1.0,.55,vUv.y);
+          float breathe = .8 + .2*sin(uTime*.4);
+          gl_FragColor = vec4(vec3(1.0,.95,.80), x*y*.09*breathe);
+        }`
+    });
+    const glory = new THREE.Mesh(new THREE.PlaneGeometry(11, 30), gloryMat);
+    glory.position.set(FX+4.5, 15, FZ+3);
+    glory.rotation.set(0, .6, -.42);
+    scene.add(glory);
+    tickers.push(t=>{ gloryMat.uniforms.uTime.value = t; });
+  }
+
   /* the pools breathe — one ticker, every water disc */
   tickers.push(t=>{
     waterDiscs.forEach((w, i)=>{
