@@ -177,3 +177,9 @@ FLAGS FOR THE SEER: (1) bodies remain in the PUBLIC repo's git HISTORY — true 
 - **LAW 29 AMENDED by the Seer (2026-07-08): royal red is RETIRED city-wide.** Royal accents are BLUE-AND-GOLD per board-01. Law 3 (zero-red Tree scan) unchanged and still the verifier.
 - Verified: parse clean, zero console errors, Tree vantage 387k tris / Fountain 327k (≤700k law), fps 60 in harness (headless — desktop verdict remains the Seer's glass; no FPS claim).
 - NEXT ASCENT LADDER (per THE TRUE VISION prompt): 1) Tree canopy → thousands of instanced golden leaf-cards + root pool; 2) water & rainbows (spray, façade waterfalls, spray-rainbow); 3) ornament density via normal maps (Law 16); 4) atmosphere (mist, motes, priced mirror floor per Law 31); 5) living green (ivy/garden cards); 6) blue-gold banners with cloth sway.
+
+## LAST PASS — 2026-07-08d · THE TREE (TRUE VISION pass 2, board-03) — KEPT
+- **THE LEAF CANOPY**: 5,200 golden leaf-cards (alpha-tested canvas leaf, ONE InstancedMesh, ~10k tris) clothe the dome and crown skirt; the old icosahedron masses recede to inner glow (scale ×.6, emissive .9→.55). The canopy reads as foliage, not blobs.
+- **THE ROOTS & THE POOL**: ten root tubes flare from the braid into a reflecting pool (crystal disc over a dark bed — the bed gives the water its depth against white marble; City-A river recipe).
+- Verified: zero console errors; Tree vantage 358k tris / 161 draws (≤700k law); verbatim scroll 144 sha `bc797d33ac63…` through the shield gate; fps 60 in headless harness (true gate remains the Seer's glass).
+- NEXT ON THE LADDER: water & rainbows (façade waterfalls, fountain spray) → ornament normal maps → atmosphere/mist/motes → living green → blue-gold cloth banners. Deferred until GLBs: dignified citizens + sculpted angels via dropbox.

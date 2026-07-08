@@ -2050,7 +2050,7 @@ function addBuilding(x,z,ry,big){
   {
     const leafN = 620;   /* full buffer — the tier trims via InstancedMesh.count */
     const leafMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
-      emissiveIntensity:.9, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+      emissiveIntensity:.55, roughness:.42, metalness:.35, envMapIntensity:1.0 });
     const leafI = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), leafMat, leafN);
     const ld = new THREE.Object3D();
     for (let i=0;i<leafN;i++){
@@ -2059,7 +2059,7 @@ function addBuilding(x,z,ry,big){
       const r = rr(8.6,14.6);
       ld.position.set(Math.sin(b)*Math.sin(a)*r, 28.8 + Math.cos(b)*r*.82, Math.sin(b)*Math.cos(a)*r);
       ld.rotation.set(rng()*TAU, rng()*TAU, rng()*TAU);
-      ld.scale.setScalar(rr(.55,1.6));
+      ld.scale.setScalar(rr(.55,1.6)*.6);   /* THE TREE pass: blobs recede behind the leaves */
       ld.updateMatrix();
       leafI.setMatrixAt(i, ld.matrix);
     }
@@ -2080,7 +2080,7 @@ function addBuilding(x,z,ry,big){
   {
     const cr = mulberry32(303);
     const crownMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
-      emissiveIntensity:.9, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+      emissiveIntensity:.55, roughness:.42, metalness:.35, envMapIntensity:1.0 });
     const spots = [];
     /* the skirt: ten clumps with air between them */
     for (let cl = 0; cl < 10; cl++){
@@ -2110,7 +2110,7 @@ function addBuilding(x,z,ry,big){
     spots.forEach(([x, y, z, s], i)=>{
       cd2.position.set(x, y, z);
       cd2.rotation.set(cr()*TAU, cr()*TAU, cr()*TAU);
-      cd2.scale.setScalar(s);
+      cd2.scale.setScalar(s*.6);   /* THE TREE pass: skirt masses recede */
       cd2.updateMatrix();
       crownI.setMatrixAt(i, cd2.matrix);
     });
@@ -2138,6 +2138,79 @@ function addBuilding(x,z,ry,big){
     const boughM = new THREE.Mesh(mergeGeometries(boughParts), MAT.white);
     boughM.castShadow = SHADOWS;
     heroTree.add(boughM);
+  }
+
+  /* ========== THE TREE (TRUE VISION pass, board-03) ==========
+     Thousands of golden LEAF CARDS in ONE InstancedMesh clothe the dome
+     and the crown skirt; the old icosahedron masses recede to an inner
+     glow. Root flare pours into a reflecting pool at the base. Local
+     seeded rng (layout law). +3 draw calls, ~13k tris. */
+  {
+    const lr = mulberry32(707);
+    const lrr = (a,b)=> a + lr()*(b-a);
+    const leafTex = canvasTex(64, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      g.fillStyle = '#f6d98d';
+      g.beginPath();
+      g.moveTo(w/2, 2);
+      g.quadraticCurveTo(w*.92, h*.38, w/2, h-2);
+      g.quadraticCurveTo(w*.08, h*.38, w/2, 2);
+      g.fill();
+      g.strokeStyle = '#caa14e'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(w/2, 4); g.lineTo(w/2, h-4); g.stroke();
+    }, 64);
+    const cardMat = new THREE.MeshStandardMaterial({
+      map:leafTex, alphaTest:.45, side:THREE.DoubleSide,
+      color:0xf3d27a, emissive:0xcf8f1e, emissiveIntensity:.7,
+      roughness:.5, metalness:.3, envMapIntensity:.9 });
+    const CARDS = 5200;
+    const cardI = new THREE.InstancedMesh(new THREE.PlaneGeometry(.6,.95), cardMat, CARDS);
+    const cd = new THREE.Object3D();
+    for (let i = 0; i < CARDS; i++){
+      let x, y, z;
+      if (i < 3200){            /* the dome */
+        const a = lr()*TAU, b = Math.acos(lrr(.05,1)), r = lrr(8.2,15.2);
+        x = Math.sin(b)*Math.sin(a)*r; y = 28.8 + Math.cos(b)*r*.82; z = Math.sin(b)*Math.cos(a)*r;
+      } else {                  /* the skirt clumps */
+        const cl = (i - 3200) % 10;
+        const a = cl/10*TAU + .17 + (lr()-.5)*.62;
+        const r = 14.0 + lr()*6.2;
+        y = 26.2 + lr()*3.8 - (r-14.0)*.28;
+        x = Math.sin(a)*r; z = Math.cos(a)*r;
+      }
+      cd.position.set(x, y, z);
+      cd.rotation.set(lr()*TAU, lr()*TAU, lr()*TAU);
+      cd.scale.setScalar(lrr(.7,1.45));
+      cd.updateMatrix();
+      cardI.setMatrixAt(i, cd.matrix);
+    }
+    cardI.frustumCulled = false;
+    cardI.userData.fullCount = CARDS; TR.instanced.push(cardI);
+    heroTree.add(cardI);
+
+    /* root flare into the reflecting pool */
+    const rootParts = [];
+    for (let b = 0; b < 10; b++){
+      const a = b/10*TAU + .31;
+      rootParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.sin(a)*2.0, 2.6, Math.cos(a)*2.0),
+        new THREE.Vector3(Math.sin(a+.06)*4.2, .9, Math.cos(a+.06)*4.2),
+        new THREE.Vector3(Math.sin(a+.14)*7.0, .07, Math.cos(a+.14)*7.0),
+      ]), 12, .34, 6));
+    }
+    const rootM = new THREE.Mesh(mergeGeometries(rootParts), MAT.white);
+    rootM.castShadow = SHADOWS;
+    heroTree.add(rootM);
+    /* the bed gives the water its depth; the crystal reads against it */
+    const bedM = new THREE.Mesh(new THREE.CircleGeometry(8.7, 40).rotateX(-PI/2),
+      new THREE.MeshStandardMaterial({ color:0x16283a, roughness:.35, metalness:.2 }));
+    bedM.position.set(0, .045, 0);
+    heroTree.add(bedM);
+    const poolMat = new THREE.MeshStandardMaterial({ color:0x9fd4ef, transparent:true, opacity:.8,
+      roughness:.1, metalness:.2, envMapIntensity:1.3 });
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(8.6, 40).rotateX(-PI/2), poolMat);
+    pool.position.set(0, .07, 0);
+    heroTree.add(pool); waterDiscs.push(pool);
   }
 
   /* luminous canopy — glow shells + golden core */
