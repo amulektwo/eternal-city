@@ -690,11 +690,11 @@ const roseTex = canvasTex(512, (g,w,h)=>{
 const MAT = {
   white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.48, metalness:.04, envMapIntensity:.62 }),
   ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.4 }),
-  gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.26, metalness:1.0, envMapIntensity:1.25 }),
+  gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.30, metalness:1.0, envMapIntensity:.95 }),
   goldSt: new THREE.MeshStandardMaterial({ color:0xf5c569, roughness:.34, metalness:.95, envMapIntensity:1.0,
             polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 }),
-  pearl:  new THREE.MeshPhysicalMaterial({ color:0xfdfaf4, roughness:.16, metalness:.1,
-            clearcoat:.85, clearcoatRoughness:.22, envMapIntensity:1.4 }),
+  pearl:  new THREE.MeshPhysicalMaterial({ color:0xfdfaf4, roughness:.21, metalness:.1,
+            clearcoat:.85, clearcoatRoughness:.28, envMapIntensity:1.05 }),
   glow:   new THREE.MeshStandardMaterial({ color:0xfff3d2, emissive:0xffd98a, emissiveIntensity:2.1, roughness:.4 }),
   glowHot:new THREE.MeshStandardMaterial({ color:0xfff8e8, emissive:0xffe9b0, emissiveIntensity:3.4, roughness:.3 }),
   crimson:new THREE.MeshStandardMaterial({ color:0xc8502e, roughness:.7, metalness:0,
@@ -791,6 +791,11 @@ const skyUni = {
         vec3 col = mix(vec3(0.58,0.54,0.52), litC, lit);
         /* silver lining — only thin edges facing the sun cross into bloom */
         col += vec3(1.0,0.92,0.74) * d*(1.0-d)*2.2 * pow(sd, 5.0);
+        /* THE NACRE (celestial pass) — mother-of-pearl iridescence breathes
+           along the thin edges, the way clouds shine in a higher air than
+           Earth's. Cosine palette over the raw field; edge-masked, faint. */
+        vec3 iri = 0.5 + 0.5*cos(6.2832*(f*1.35 + uTime*0.008 + vec3(0.0, 0.33, 0.67)));
+        col += iri * d*(1.0-d) * 0.55 * (0.25 + 0.75*pow(sd, 2.0));
         /* the projection blows up at the rim — hand the deck to the glow */
         d *= smoothstep(0.015, 0.10, dir.y);
         return vec4(col, d);
@@ -822,6 +827,27 @@ const skyUni = {
             vec4 c2 = deck(dir, 0.34, 3.10, vec2(-0.0028,0.0022), 0.55, 0.0, oct, sd);
             col = mix(col, c2.rgb, c2.a*0.30*(1.0-cover));
             cover = max(cover, c2.a*0.5);
+          }
+        }
+
+        /* THE HIGH GLORY (celestial pass) — this heaven is not Earth's:
+           a breathing veil of white-gold light drifts near the zenith,
+           and the deep blue holds its stars even at noon. Tier-gated;
+           both live inside this same single draw call. */
+        if (uQual > 0.5 && h > 0.30){
+          float zen = smoothstep(0.30, 0.62, h);
+          /* the veil — two slow interfering curtains */
+          float veil = sin(dir.x*2.6 + uTime*0.021 + fbm(dir.xz*1.7, 3)*2.4)
+                     * sin(dir.z*2.1 - uTime*0.016 + 1.7);
+          veil = pow(max(veil, 0.0), 2.0);
+          col += vec3(1.0, 0.95, 0.82) * veil * 0.085 * zen * (1.0 - cover);
+          /* the day-stars — faint, patient, high */
+          vec2 cell = floor(dir.xz/max(dir.y,0.35)*38.0);
+          float star = fract(sin(dot(cell, vec2(127.1, 311.7)))*43758.5453);
+          if (star > 0.9965){
+            vec2 cuv = fract(dir.xz/max(dir.y,0.35)*38.0) - 0.5;
+            float twk = 0.65 + 0.35*sin(uTime*0.6 + star*90.0);
+            col += vec3(1.0,0.98,0.9) * smoothstep(0.10,0.0,length(cuv)) * 0.16 * twk * zen * (1.0 - cover);
           }
         }
 
@@ -1848,7 +1874,7 @@ function addBuilding(x,z,ry,big){
   tickers.push(t=>{ rainbow.material.opacity = .15 + .07*Math.sin(t*1.7); });
 
   const wMat = new THREE.MeshStandardMaterial({ color:0xcfeaff, transparent:true, opacity:.8,
-    roughness:.08, metalness:.15, envMapIntensity:1.6 });
+    roughness:.13, metalness:.15, envMapIntensity:1.15 });
   for (const [r,y] of [[5.10,.95],[2.50,3.9],[1.38,5.95]]){
     const w = new THREE.Mesh(new THREE.CircleGeometry(r,28).rotateX(-PI/2), wMat);
     w.position.set(FX,y,FZ); heroFountain.add(w); waterDiscs.push(w);
@@ -2208,7 +2234,7 @@ function addBuilding(x,z,ry,big){
 
     /* the golden foot */
     const poolMat = new THREE.MeshStandardMaterial({
-      color:0xffd894, roughness:.10, metalness:1.0, envMapIntensity:1.7 });
+      color:0xffd894, roughness:.18, metalness:1.0, envMapIntensity:1.15 });
     const pool = new THREE.Mesh(new THREE.RingGeometry(7.9, 11.6, 56).rotateX(-PI/2), poolMat);
     pool.position.set(0, .045, 0);
     pool.receiveShadow = SHADOWS;
@@ -3016,7 +3042,7 @@ function addBuilding(x,z,ry,big){
      avenue's heart, polished to catch the sun (+1 draw call). */
   {
     const paveMat = new THREE.MeshStandardMaterial({
-      color:0xffd894, roughness:.12, metalness:1.0, envMapIntensity:1.55 });
+      color:0xffd894, roughness:.18, metalness:1.0, envMapIntensity:1.1 });
     const pave = new THREE.Mesh(new THREE.BoxGeometry(3.6, .06, 54), paveMat);
     pave.position.set(0, .03, 59);
     pave.receiveShadow = SHADOWS;
@@ -3750,7 +3776,8 @@ addEventListener('mouseup', e=>{
    changes, or returning pilgrims read STALE bodies from the HTTP cache
    forever (the force-cache lesson of THE FULLNESS: healed scrolls must
    actually reach the reader). */
-const DATA_VERSION = '2026-07-05-the-tree-is-whole';
+const DATA_VERSION = '2026-07-08-the-shield-and-the-seek';
+const SHIELD_GATE = 'https://zionos-temple.vercel.app/api/city/';
 const HARVEST = { status: 'LOADING', index: null };
 const vaultGroups  = [];   /* the scroll stations: 12 gate vaults + 4 lecterns */
 let readerOpen = false, readerScrollId = null;
@@ -3890,9 +3917,15 @@ async function openScroll(id, fromPos){
   readerTitle.textContent = ''; readerMeta.textContent = '';
   readerBody.textContent = ''; readerDoc = null; readerRawMode = false;
   try {
-    const res = await fetch(`data/scrolls/${encodeURIComponent(id)}.json?v=${DATA_VERSION}`);
+    /* THE SHIELD (Seer's ruling C, 2026-07-08): scroll bodies live in the
+       private treasury behind a rate-limited gate; the public repo keeps
+       only metadata. Local files remain the fallback for metadata so a
+       closed gate still names the scroll it could not open. */
+    let res = await fetch(`${SHIELD_GATE}${encodeURIComponent(id)}?v=${DATA_VERSION}`).catch(()=> null);
+    if (!res || !res.ok) res = await fetch(`data/scrolls/${encodeURIComponent(id)}.json?v=${DATA_VERSION}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const doc = await res.json();
+    if (!doc.body) throw new Error('THE GATE IS CLOSED');
     if (!readerOpen || readerScrollId !== id) return;   /* re-furled while loading */
     readerTitle.textContent = doc.title;
     readerMeta.textContent = `${doc.gate} · ${doc.author}${doc.sealed ? ' · SEALED' : ''}`;
