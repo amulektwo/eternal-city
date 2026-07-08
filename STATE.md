@@ -215,3 +215,13 @@ Legacy GitHub Pages builds fail repeatedly on this repo at its current size (thr
 - **THE BANNERS** — already blue-gold (PURGE) and already swaying (ticker) — no double-build.
 - +3 draw calls, ~5k tris. Verified: zero console errors, Fountain Court 301k tris / 122 draws / 60fps harness.
 - **THE FOUR WATCHES CYCLE IS COMPLETE (A waters · B carving · C air · D garlands).** Next ascents per the TRUE VISION ladder: priced mirror floor (Law 31), Meshy GLBs (angels/citizens/treeOfLife) via the dropbox, real-glass FPS battery, the 200 registry-only recovery.
+
+## LAST PASS — 2026-07-08i · THE TREE TRANSFIGURED (Seer's order: more beautiful, more extravagant) — KEPT
+Six movements, board-03 the law of feeling:
+1. THE CROWN DOUBLED — 9,800 leaf-cards (one draw), two golds by instanceColor (amber undersides #caa14e / bright crowns #ffeec2), span widened to ~35m, drooping skirt + low-hanging tips.
+2. THE TRUNK ASCENDED — ten braid strands (base 3.15), heavier gold veins, boughs .44, the great knot at the crown transition, ten root knuckles gripping the pool rim.
+3. THE TWELVE LANTERN POOLS — breathing gold light discs on the fruit ring (r10.4), the fruit's light landing on the dais.
+4. THE TREE OF LIGHT — five god-ray blades through the branches (one merged additive mesh), breathing floor-glow disc r16.5, aura warmed (.13→.2).
+5. THE FALLING GRACE — 200 golden leaves forever descending with flutter-rotation, fading at the marble, reborn at the crown (one Points draw).
+6. THE MIRROR BENEATH — the pool reborn as a living shader: crystal depths, golden canopy-dapples dancing, ripple rings from the ten root touches (Law 31 honored — no envmap, no unpriced SSR).
+Cost: +~83k tris, +6 draws. Verified: Tree vantage 384.6k tris / 178 draws / 60fps harness, zero console errors, zero red on the Tree (ambers are the canonical gold family). A future Meshy treeOfLife GLB still replaces the hero through its slot.

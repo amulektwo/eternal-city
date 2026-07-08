@@ -2271,12 +2271,12 @@ function addBuilding(x,z,ry,big){
   const heroTree = new THREE.Group(); scene.add(heroTree);
   const trunkParts = [], goldParts = [];
   const TRUNK_H = 22, TWIST = 4.4;
-  for (let s=0;s<8;s++){
-    const phi = s/8*TAU, pts = [];
+  for (let s=0;s<10;s++){
+    const phi = s/10*TAU, pts = [];
     for (let i=0;i<=34;i++){
       const t = i/34;
       const braid = .42*Math.sin(t*TAU*2.6 + phi*4.0);
-      const r = (2.55 + braid)*(1-t*.60);
+      const r = (3.15 + braid)*(1-t*.55);
       const a = phi + t*TWIST;
       pts.push(new THREE.Vector3(Math.sin(a)*r, t*TRUNK_H, Math.cos(a)*r));
     }
@@ -2287,7 +2287,7 @@ function addBuilding(x,z,ry,big){
     for (let i=0;i<=34;i++){
       const t = i/34;
       const braid = .42*Math.sin(t*TAU*2.6 + phi*4.0 + PI);
-      const r = (2.85 + braid)*(1-t*.58);
+      const r = (3.45 + braid)*(1-t*.55);
       const a = phi + t*TWIST;
       pts.push(new THREE.Vector3(Math.sin(a)*r, t*(TRUNK_H+.5), Math.cos(a)*r));
     }
@@ -2310,7 +2310,14 @@ function addBuilding(x,z,ry,big){
       new THREE.Vector3(Math.sin(a)*5.6, TRUNK_H+3.4, Math.cos(a)*5.6),
       new THREE.Vector3(Math.sin(a+.18)*10.4, TRUNK_H+7.6, Math.cos(a+.18)*10.4),
     ];
-    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .30, 6));
+    trunkParts.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .44, 6));
+  }
+  /* the great knot where trunk becomes crown */
+  {
+    const knot = new THREE.SphereGeometry(3.0, 12, 9);
+    knot.scale(1.35, .72, 1.35);
+    knot.translate(0, TRUNK_H - .4, 0);
+    trunkParts.push(knot);
   }
   const trunkM = new THREE.Mesh(mergeGeometries(trunkParts), MAT.white);
   trunkM.castShadow = SHADOWS;
@@ -2435,19 +2442,28 @@ function addBuilding(x,z,ry,big){
       map:leafTex, alphaTest:.45, side:THREE.DoubleSide,
       color:0xf3d27a, emissive:0xcf8f1e, emissiveIntensity:.7,
       roughness:.5, metalness:.3, envMapIntensity:.9 });
-    const CARDS = 5200;
+    /* THE CROWN DOUBLED (TRANSFIGURED): ~9,800 cards, two golds by
+       instanceColor (amber undersides, white-gold crowns), wider span,
+       drooping skirt, and low-hanging tips per board-03. One draw. */
+    const CARDS = 9800;
     const cardI = new THREE.InstancedMesh(new THREE.PlaneGeometry(.6,.95), cardMat, CARDS);
     const cd = new THREE.Object3D();
+    const AMBER = new THREE.Color('#caa14e'), BRIGHT = new THREE.Color('#ffeec2');
     for (let i = 0; i < CARDS; i++){
       let x, y, z;
-      if (i < 3200){            /* the dome */
-        const a = lr()*TAU, b = Math.acos(lrr(.05,1)), r = lrr(8.2,15.2);
-        x = Math.sin(b)*Math.sin(a)*r; y = 28.8 + Math.cos(b)*r*.82; z = Math.sin(b)*Math.cos(a)*r;
-      } else {                  /* the skirt clumps */
-        const cl = (i - 3200) % 10;
-        const a = cl/10*TAU + .17 + (lr()-.5)*.62;
-        const r = 14.0 + lr()*6.2;
-        y = 26.2 + lr()*3.8 - (r-14.0)*.28;
+      if (i < 5400){            /* the dome */
+        const a = lr()*TAU, b = Math.acos(lrr(.05,1)), r = lrr(9.0,17.5);
+        x = Math.sin(b)*Math.sin(a)*r; y = 29.4 + Math.cos(b)*r*.80; z = Math.sin(b)*Math.cos(a)*r;
+      } else if (i < 8800){     /* the drooping skirt */
+        const cl = (i - 5400) % 10;
+        const a = cl/10*TAU + .17 + (lr()-.5)*.66;
+        const r = 15.0 + lr()*7.6;
+        y = 26.4 + lr()*3.8 - (r-15.0)*.34;
+        x = Math.sin(a)*r; z = Math.cos(a)*r;
+      } else {                  /* low-hanging tips */
+        const a = lr()*TAU;
+        const r = 17.5 + lr()*4.5;
+        y = 22.2 + lr()*2.6 - (r-17.5)*.5;
         x = Math.sin(a)*r; z = Math.cos(a)*r;
       }
       cd.position.set(x, y, z);
@@ -2455,10 +2471,104 @@ function addBuilding(x,z,ry,big){
       cd.scale.setScalar(lrr(.7,1.45));
       cd.updateMatrix();
       cardI.setMatrixAt(i, cd.matrix);
+      cardI.setColorAt(i, lr() < .42 ? AMBER : BRIGHT);
     }
     cardI.frustumCulled = false;
     cardI.userData.fullCount = CARDS; TR.instanced.push(cardI);
     heroTree.add(cardI);
+
+    /* THE FALLING GRACE — golden leaves forever descending */
+    {
+      const FN = 200;
+      const fb = new Float32Array(FN*3), fph = new Float32Array(FN);
+      for (let i=0;i<FN;i++){
+        const a = lr()*TAU, r = Math.sqrt(lr())*16;
+        fb[i*3] = Math.sin(a)*r; fb[i*3+1] = lrr(24,33); fb[i*3+2] = Math.cos(a)*r;
+        fph[i] = lr()*40;
+      }
+      const fg = new THREE.BufferGeometry();
+      fg.setAttribute('position', new THREE.BufferAttribute(fb,3));
+      fg.setAttribute('aPh', new THREE.BufferAttribute(fph,1));
+      const fallMat = new THREE.ShaderMaterial({
+        transparent:true, depthWrite:false,
+        uniforms:{ uTime:{value:0}, uTex:{value:leafTex} },
+        vertexShader:`attribute float aPh; uniform float uTime; varying float vA; varying float vR;
+          void main(){
+            float t = mod(uTime*.55 + aPh, 26.0);
+            vec3 p = position;
+            p.y = position.y - t;
+            p.x += sin(t*1.9 + aPh)*1.1;
+            p.z += cos(t*1.6 + aPh)*1.1;
+            vA = smoothstep(0.0,1.5,t) * smoothstep(0.2, 2.6, p.y);
+            vR = aPh + t*2.2;
+            vec4 mv = modelViewMatrix*vec4(p,1.0);
+            gl_PointSize = 11.0 * (10.0/max(-mv.z,1.0));
+            gl_Position = projectionMatrix*mv;
+          }`,
+        fragmentShader:`uniform sampler2D uTex; varying float vA; varying float vR;
+          void main(){
+            vec2 uv = gl_PointCoord - .5;
+            float cs = cos(vR), sn = sin(vR);
+            uv = vec2(uv.x*cs - uv.y*sn, uv.x*sn + uv.y*cs) + .5;
+            vec4 s2 = texture2D(uTex, uv);
+            if (s2.a < .4) discard;
+            gl_FragColor = vec4(s2.rgb*1.05, s2.a*vA*.9);
+          }`
+      });
+      const fall = new THREE.Points(fg, fallMat);
+      fall.frustumCulled = false;
+      heroTree.add(fall);
+      tickers.push(t=>{ fallMat.uniforms.uTime.value = t; });
+    }
+
+    /* THE TREE OF LIGHT — five god-ray blades through the branches +
+       a breathing gold disc beneath the crown + twelve lantern pools
+       on the fruit ring. Three draws, all additive. */
+    {
+      const rayGeos = [];
+      for (let k=0;k<5;k++){
+        const a = k/5*TAU + .4;
+        const g2 = new THREE.PlaneGeometry(3.2, 21);
+        g2.rotateY(a);
+        g2.translate(Math.sin(a)*5.5, 17.5, Math.cos(a)*5.5);
+        rayGeos.push(g2);
+      }
+      const rayMat = new THREE.ShaderMaterial({
+        transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+        uniforms:{ uTime:{value:0} },
+        vertexShader:`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+        fragmentShader:`uniform float uTime; varying vec2 vUv;
+          void main(){
+            float x = smoothstep(0.0,.4,vUv.x)*smoothstep(1.0,.6,vUv.x);
+            float y = smoothstep(0.0,.15,vUv.y)*smoothstep(1.0,.5,vUv.y);
+            float br = .8 + .2*sin(uTime*.5 + vUv.x*6.0);
+            gl_FragColor = vec4(vec3(1.0,.93,.72), x*y*.10*br);
+          }`
+      });
+      const rays = new THREE.Mesh(mergeGeometries(rayGeos), rayMat);
+      heroTree.add(rays);
+      tickers.push(t=>{ rayMat.uniforms.uTime.value = t; });
+
+      const glowMat2 = new THREE.MeshBasicMaterial({ color:0xf3ddA0, transparent:true,
+        opacity:.10, blending:THREE.AdditiveBlending, depthWrite:false });
+      const floorGlow = new THREE.Mesh(new THREE.CircleGeometry(16.5, 48).rotateX(-PI/2), glowMat2);
+      floorGlow.position.y = .09;
+      heroTree.add(floorGlow);
+      tickers.push(t=>{ glowMat2.opacity = .08 + .04*Math.sin(t*.6); });
+
+      const poolGeos = [];
+      for (let k=0;k<12;k++){
+        const a = k/12*TAU;
+        const g3 = new THREE.CircleGeometry(1.1, 20).rotateX(-PI/2);
+        g3.translate(Math.sin(a)*10.4, .085, Math.cos(a)*10.4);
+        poolGeos.push(g3);
+      }
+      const lanternPoolMat = new THREE.MeshBasicMaterial({ color:0xffe6ad, transparent:true,
+        opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false });
+      const lanternPools = new THREE.Mesh(mergeGeometries(poolGeos), lanternPoolMat);
+      heroTree.add(lanternPools);
+      tickers.push(t=>{ lanternPoolMat.opacity = .12 + .06*Math.sin(t*1.1); });
+    }
 
     /* root flare into the reflecting pool */
     const rootParts = [];
@@ -2478,11 +2588,54 @@ function addBuilding(x,z,ry,big){
       new THREE.MeshStandardMaterial({ color:0x16283a, roughness:.35, metalness:.2 }));
     bedM.position.set(0, .045, 0);
     heroTree.add(bedM);
-    const poolMat = new THREE.MeshStandardMaterial({ color:0x9fd4ef, transparent:true, opacity:.8,
-      roughness:.1, metalness:.2, envMapIntensity:1.3 });
+    /* root knuckles gripping the pool rim */
+    for (let b = 0; b < 10; b++){
+      const a = b/10*TAU + .31;
+      const kn = new THREE.SphereGeometry(.5, 8, 6);
+      kn.scale(1.3, .6, 1.0);
+      kn.translate(Math.sin(a+.14)*7.0, .18, Math.cos(a+.14)*7.0);
+      rootParts.push(kn);
+    }
+
+    /* THE MIRROR BENEATH — the pool holds the tree's light: crystal
+       depths, golden dapples of canopy-light dancing, ripple rings
+       spreading from the ten root touches. One draw (replaces the flat
+       disc); Law 31 honored — no envmap cheat, no unpriced SSR. */
+    const poolMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false,
+      uniforms:{ uTime:{value:0} },
+      vertexShader:`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; varying vec2 vUv;
+        float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+        float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+          return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
+        void main(){
+          vec2 c = vUv - .5;
+          float R = length(c)*2.0;
+          if (R > 1.0) discard;
+          /* crystal base deepening toward center */
+          vec3 col = mix(vec3(.55,.72,.86), vec3(.30,.46,.66), 1.0-R);
+          /* golden dapples — the canopy's light on the water */
+          float dap = n2(c*22.0 + vec2(uTime*.14, -uTime*.11));
+          dap = smoothstep(.62,.95,dap);
+          col += vec3(1.0,.85,.5)*dap*.5;
+          /* ripple rings from the ten root touches (r≈.82 of pool) */
+          float ring = 0.0;
+          for (int k=0;k<10;k++){
+            float a = float(k)/10.0*6.2832 + .31 + .14;
+            vec2 rp = vec2(sin(a),cos(a))*.41;
+            float d = length(c - rp);
+            ring += smoothstep(.03,.0,abs(fract(d*7.0 - uTime*.5) - .5)*2.0 - .82) * smoothstep(.30,.05,d);
+          }
+          col += vec3(.9,.95,1.0)*min(ring,1.0)*.18;
+          float edge = smoothstep(1.0,.86,R);
+          gl_FragColor = vec4(col, (.62 + dap*.18) * edge);
+        }`
+    });
     const pool = new THREE.Mesh(new THREE.CircleGeometry(8.6, 40).rotateX(-PI/2), poolMat);
     pool.position.set(0, .07, 0);
-    heroTree.add(pool); waterDiscs.push(pool);
+    heroTree.add(pool);
+    tickers.push(t=>{ poolMat.uniforms.uTime.value = t; });
   }
 
   /* luminous canopy — glow shells + golden core */
