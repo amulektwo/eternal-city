@@ -705,11 +705,25 @@ const MAT = {
             polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 }),
   leaf:   new THREE.MeshStandardMaterial({ color:0xe9c66c, emissive:0x8a6400, emissiveIntensity:.28, roughness:.55 }),
 };
+/* PASS A (FACADES) — district windows glow in a lancet silhouette, not a
+   rectangle: the alpha cut matches the gold lace frame drawn over them */
+const archGlowTex = canvasTex(512, (g,w,h)=>{
+  g.fillStyle = '#000'; g.fillRect(0,0,w,h);
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.moveTo(w*.11, h*.965); g.lineTo(w*.11, h*.36);
+  g.quadraticCurveTo(w*.11, h*.16, w/2, h*.055);
+  g.quadraticCurveTo(w*.89, h*.16, w*.89, h*.36);
+  g.lineTo(w*.89, h*.965); g.closePath(); g.fill();
+}, 256);
+MAT.glowArch = new THREE.MeshStandardMaterial({ color:0xfff3d2, emissive:0xffd98a,
+  emissiveIntensity:2.1, roughness:.4, alphaMap:archGlowTex, alphaTest:.5 });
 
 /* shared animated/registry lists */
 const tickers = [], nameplates = [], banners = [], waterDiscs = [],
       flames = [], glows = [], beams = [], particleMeshes = [], fruits = [],
-      lacePinnacles = [];   /* [x, y, z, scale] — THE LACE skyline forest */
+      lacePinnacles = [],   /* [x, y, z, scale] — THE LACE skyline forest */
+      districtWindows = []; /* [x, y, z, ry] — PASS A: every district window wears the lace */
 let canopyShells = [], canopyPts = null, sprayMat = null;
 function mkGlow(x,y,z,s,color,op){
   const m = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1172,7 +1186,7 @@ function addSeg(ax,az,bx,bz,r){ colSegs.push({ax,az,bx,bz,r}); }
 /* ================================================================
    6. MERGED-GEOMETRY ACCUMULATORS
 ================================================================ */
-const P = { white:[], ivory:[], gold:[], glow:[], pearl:[], goldSt:[], crimson:[] };
+const P = { white:[], ivory:[], gold:[], glow:[], glowArch:[], pearl:[], goldSt:[], crimson:[] };
 function addFloorMedallion(x, z, r, y = .075, spokes = 12, phase = 0){
   P.goldSt.push(xf(new THREE.RingGeometry(r*.72, r*.78, 48).rotateX(-PI/2), x, y, z));
   P.goldSt.push(xf(new THREE.RingGeometry(r*.30, r*.34, 36).rotateX(-PI/2), x, y+.004, z));
@@ -1625,7 +1639,8 @@ function addBuilding(x,z,ry,big){
     const lx = -w/2 + (c+.5)*(w/cols), ly = 2.5 + rI*(h-4)/rows;
     const wx = x + Math.cos(ry)*lx + Math.sin(ry)*(dpt/2+.06);
     const wz = z - Math.sin(ry)*lx + Math.cos(ry)*(dpt/2+.06);
-    P.glow.push(xf(new THREE.PlaneGeometry(.8,1.9), wx, ly, wz, ry));
+    P.glowArch.push(xf(new THREE.PlaneGeometry(1.02, 2.36), wx, ly+.12, wz, ry));
+    districtWindows.push([wx + Math.sin(ry)*.05, ly+.12, wz + Math.cos(ry)*.05, ry]);
   }
   if (rng() < .3){
     const sh = h + rr(7,15);
@@ -3926,6 +3941,9 @@ const laceGold = new THREE.MeshStandardMaterial({
     lancetParts.push(xf(new THREE.PlaneGeometry(1.75, 4.9),
       Math.sin(a)*17.18, 8.5, -72 + Math.cos(a)*17.18, a));
   }
+  /* PASS A (FACADES) — every district window wears the lace: same mesh, zero new draws */
+  for (const [dwx, dwy, dwz, dry] of districtWindows)
+    lancetParts.push(xf(new THREE.PlaneGeometry(1.06, 2.44), dwx, dwy, dwz, dry));
   const lancetMesh = new THREE.Mesh(
     mergeGeometries(lancetParts.map(g=> g.index ? g.toNonIndexed() : g)), traceryMatOf(lancetTex));
   scene.add(lancetMesh);
