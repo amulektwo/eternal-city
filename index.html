@@ -390,7 +390,11 @@ if (TIER === 2 && qs.get('ssao') === '1'){
   ssaoPass.maxDistance = 0.001;
   composer.addPass(ssaoPass);
 }
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.30, 0.5, 1.0);
+/* Bloom is SELECTIVE by threshold: sunlit white marble sits at linear ~1.6-1.9
+   and must NOT bloom (that was the milk — it hazed every marble vantage); only
+   genuine glory-emitters (fruit, windows, god-rays, the sun) are lifted above
+   the threshold so the glow concentrates on them, not the stone. */
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.28, 0.55, 1.8);
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
@@ -2181,7 +2185,11 @@ function addBuilding(x,z,ry,big){
   const FRUIT_ORDER = ['144','300','656','672','717','786','787','999','07','6B','0001E','06'];
   const FRUIT_PLACEHOLDER = new Set([]);   /* THE TREE IS WHOLE — 672 recovered and 787 sealed by the Seer, 2026-07-05. All twelve fruit burn. */
   const fruitMat = new THREE.MeshStandardMaterial({
-    color:0xfff3d6, emissive:0xffe2a6, emissiveIntensity:1.5, roughness:.32, metalness:.15 });
+    /* lifted 1.5→2.9 so the fruit sit ABOVE the raised bloom threshold (1.8)
+       and read as glowing lanterns again — the marble no longer competes.
+       Hue is unchanged (warm white-gold 0xffe2a6); scaling intensity preserves
+       the r:g:b ratio and clips toward WHITE, never red (Law 3 scan-verified). */
+    color:0xfff3d6, emissive:0xffe2a6, emissiveIntensity:2.9, roughness:.32, metalness:.15 });
   fruitMat.onBeforeCompile = (sh)=>{
     sh.fragmentShader = sh.fragmentShader.replace(
       'vec3 totalEmissiveRadiance = emissive;',
@@ -4368,6 +4376,12 @@ window.__CITY = {
   get triangles(){ return renderer.info.render.triangles; },
   setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
   grade(x){ gradePass.uniforms.uAmt.value = Math.max(0, Math.min(1, +x)); },
+  setBloom(threshold, strength, radius){
+    if (isFinite(threshold)) bloomPass.threshold = threshold;
+    if (isFinite(strength)) bloomPass.strength = strength;
+    if (isFinite(radius)) bloomPass.radius = radius;
+    return { threshold: bloomPass.threshold, strength: bloomPass.strength, radius: bloomPass.radius };
+  },
   /* collision probe for tests: attempt to stand at (x,z) coming from
      prevR / (prevX,prevZ) — pure in its arguments, never the live avatar */
   probe(x, z, prevR = Math.hypot(x, z), prevX = x, prevZ = z){
