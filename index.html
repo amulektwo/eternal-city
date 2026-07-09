@@ -114,7 +114,8 @@
     font-size:.62rem; text-align:center; margin-bottom:1rem; }
   #readerBody { font-family:'EB Garamond', Georgia, serif; color:#2A1F14;
     font-size:1.2rem; line-height:1.8; word-wrap:break-word;
-    overflow-y:auto; flex:1; margin:0; padding-right:.6rem; }
+    overflow-y:auto; flex:1; margin:0; padding-right:.6rem;
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y; }
   #readerBody::-webkit-scrollbar { width:6px; }
   #readerBody::-webkit-scrollbar-thumb { background:rgba(138,109,47,.4); border-radius:3px; }
   /* THE READER REFORGED (Seer's Ruling R1) — plate above, scripture below.
@@ -5228,6 +5229,7 @@ if (IS_TOUCH){
     e.preventDefault();
   }, {passive:false});
   addEventListener('touchmove', e=>{
+    if (readerOpen || seekOpen) return;   /* the scroll must SCROLL — the city stands still (the iPad wound, 2026-07-08) */
     for (const t of e.changedTouches){
       if (t.identifier === moveTouchId){
         moveMoved += Math.abs(t.clientX-stickCX) + Math.abs(t.clientY-stickCY);
