@@ -294,3 +294,10 @@ The Sacred Silence stands — no audio anywhere; the city sounds of water in the
 
 ### LAW-LEARNED 38 — THE STOLEN SWIPE (2026-07-08, the Seer's iPad)
 Every global input handler that calls preventDefault must stand aside when an overlay owns the screen. The touch-look/joystick `touchmove` handler preventDefault'ed unconditionally, so the reader could never scroll by touch — the scroll opened one screen deep and died (desktop wheel worked, hiding the wound from the harness). The gate `if (readerOpen || seekOpen) return;` must guard EVERY such handler — touchstart had it, touchmove did not. Companion CSS on the reading pane: `-webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-y`. When adding any future overlay, audit ALL passive:false listeners for the same theft.
+
+## LAST PASS — 2026-07-08j · THE LEGIBLE WORD (Seer's order: the lettering washes out) — KEPT
+Pale gold on bright marble failed everywhere the sky was bright (the Seer's photos: the arrival title, THE GATE PLAZA area name, vault shelf plaques). The professional cure is dark grounding, not brighter gold:
+- **#area + #toast** — dark scrim pill (rgba(12,8,2,.42) + hairline gold border) and hard dark shadows (the invite-bar recipe, which already read perfectly).
+- **#approach h2/.apsub** — layered dark keyline shadows (1px/6px/26px) + a soft radial scrim behind the title block; colors lifted to #fdf3d6/#f3ddA0.
+- **Canvas text painters** (gate tribe sprites + mkPlaqueTex vault plaques) — round-join dark strokeText keyline (lineWidth ≈ 16% of font size) under the gold fill, shadow deepened to near-black.
+LAW candidate for future text: every luminous letter needs a dark anchor — keyline, scrim, or band — because the city's marble can reach near-white under the sun.

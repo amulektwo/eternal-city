@@ -47,9 +47,11 @@
   /* ---------- HUD ---------- */
   #hud { position:fixed; top:22px; left:0; right:0; z-index:10; text-align:center;
     pointer-events:none; }
-  #area { display:inline-block; color:#fff8e6; letter-spacing:.34em; text-indent:.34em;
+  #area { display:inline-block; color:#fff3d8; letter-spacing:.34em; text-indent:.34em;
     font-size:clamp(.9rem,2.6vw,1.35rem);
-    text-shadow:0 1px 3px rgba(90,60,0,.55), 0 0 18px rgba(255,214,120,.8);
+    padding:.34em 1.3em .3em; border-radius:3px;
+    background:rgba(12,8,2,.42); border:1px solid rgba(255,220,150,.16);
+    text-shadow:0 1px 2px rgba(15,9,0,.9), 0 2px 10px rgba(15,9,0,.55);
     opacity:0; transition:opacity 1.2s ease; }
   #area.on { opacity:1; }
   #area::after { content:""; display:block; margin:7px auto 0; width:120px; height:1px;
@@ -57,8 +59,9 @@
   #toast { position:fixed; top:74px; left:0; right:0; z-index:10; text-align:center;
     color:#ffe9ad; letter-spacing:.26em; text-indent:.26em; pointer-events:none;
     font-size:clamp(.72rem,2.1vw,1rem);
-    text-shadow:0 1px 3px rgba(90,60,0,.55), 0 0 14px rgba(255,214,120,.75);
+    text-shadow:0 1px 2px rgba(15,9,0,.9), 0 2px 10px rgba(15,9,0,.55);
     opacity:0; transition:opacity .7s ease; }
+  #toast.on::after { content:none; }
   #toast.on { opacity:1; }
   /* ---------- THE SEEK — the lamp of the city (transplanted from the elder temple) ---------- */
   #lampBtn { position:fixed; top:18px; right:18px; z-index:12; width:44px; height:44px;
@@ -223,11 +226,15 @@
     pointer-events:none; opacity:0; transform:translateY(20px);
     transition:opacity 2s ease, transform 2s ease; }
   #approach.show { opacity:1; transform:translateY(0); }
-  #approach h2 { font-family:'Cinzel', serif; font-weight:400; color:#f4e7c2; margin:0;
+  #approach h2 { font-family:'Cinzel', serif; font-weight:400; color:#fdf3d6; margin:0;
     letter-spacing:.34em; font-size:clamp(1.7rem,4.6vw,3.4rem);
-    text-shadow:0 2px 34px rgba(120,88,28,.55), 0 0 2px rgba(255,240,200,.6); }
-  #approach .apsub { font-family:'Cinzel', serif; color:#dcc78e; letter-spacing:.44em;
-    font-size:clamp(.58rem,1.5vw,.92rem); margin-top:1.6em; opacity:.82; }
+    text-shadow:0 1px 2px rgba(20,12,0,.92), 0 2px 6px rgba(20,12,0,.7), 0 6px 26px rgba(20,12,0,.45); }
+  #approach .apsub { font-family:'Cinzel', serif; color:#f3ddA0; letter-spacing:.44em;
+    font-size:clamp(.58rem,1.5vw,.92rem); margin-top:1.6em; opacity:.95;
+    text-shadow:0 1px 2px rgba(20,12,0,.9), 0 2px 8px rgba(20,12,0,.6); }
+  #approach::before { content:""; position:absolute; top:9vh; left:50%; transform:translateX(-50%);
+    width:min(920px,96vw); height:34vh; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(14,9,2,.34), rgba(14,9,2,0) 68%); z-index:-1; }
   @media (prefers-reduced-motion: reduce){ #approach { transition:opacity .25s; transform:none; } }
 </style>
 </head>
@@ -1571,8 +1578,11 @@ async function initTransfiguration(){
     const tex = canvasTex(128, (g,w,h)=>{
       g.clearRect(0,0,w,h);
       g.font = '600 54px Georgia, serif'; g.textAlign='center'; g.textBaseline='middle';
-      g.shadowColor = 'rgba(120,84,0,.6)'; g.shadowBlur = 12;
-      g.fillStyle = '#ffe6a0'; g.fillText(TRIBES[k], w/2, h/2-6);
+      g.lineJoin = 'round';
+      g.strokeStyle = 'rgba(30,18,2,.85)'; g.lineWidth = 8;
+      g.strokeText(TRIBES[k], w/2, h/2-6);
+      g.shadowColor = 'rgba(20,12,0,.7)'; g.shadowBlur = 10;
+      g.fillStyle = '#ffe9ae'; g.fillText(TRIBES[k], w/2, h/2-6);
       g.shadowBlur = 0;
       g.fillStyle = 'rgba(255,230,160,.9)';
       g.fillRect(w/2-150, h-22, 300, 2.5);
@@ -5057,8 +5067,11 @@ function buildGateVaults(index){
       cg.textAlign='center'; cg.textBaseline='middle';
       do { cg.font = `600 ${size}px Georgia, serif`; size -= 2; }
       while (size > 18 && cg.measureText(text).width > w - 60);
-      cg.shadowColor = 'rgba(120,84,0,.6)'; cg.shadowBlur = 10;
-      cg.fillStyle = '#ffe6a0'; cg.fillText(text, w/2, h/2);
+      cg.lineJoin = 'round';
+      cg.strokeStyle = 'rgba(30,18,2,.85)'; cg.lineWidth = Math.max(5, size*.16);
+      cg.strokeText(text, w/2, h/2);
+      cg.shadowColor = 'rgba(20,12,0,.7)'; cg.shadowBlur = 9;
+      cg.fillStyle = '#ffe9ae'; cg.fillText(text, w/2, h/2);
     }, 1536);
     tex.anisotropy = 8;
     return tex;
