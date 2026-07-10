@@ -4470,6 +4470,45 @@ const laceGold = new THREE.MeshStandardMaterial({
     LG2.push(tileUV(xf(ringT, 0, .075, 0), 10, 10));
     const ringF = new THREE.RingGeometry(11.9, 13.3, 64).rotateX(-PI/2);
     LG2.push(tileUV(xf(ringF, -52, .075, 8), 10, 10));
+
+    /* LOOP 6 · PASS C — THE MOSAIC (blue-gold, L29): inlaid pavement in
+       the Tree plaza and Fountain Court — concentric royal-blue bands,
+       chased-gold lattice rings (the LACE ground technique, tileUV on
+       the quatrefoil normal), and a TESSERA CHECKER ring of alternating
+       blue/gold arcs. All flat rings at y.035 — UNDER the mirror
+       overlay (y.045), so the wet sheen renders over the inlay and
+       doubles it. Everything rides the existing P.crimson + laceGold
+       merges: ZERO new draw calls. */
+    const mosaic = (cx, cz, bands)=>{
+      for (const b of bands){
+        if (b.kind === 'blue'){
+          P.crimson.push(xf(new THREE.RingGeometry(b.r0, b.r1, 64).rotateX(-PI/2), cx, .035, cz));
+        } else if (b.kind === 'gold'){
+          LG2.push(tileUV(xf(new THREE.RingGeometry(b.r0, b.r1, 64).rotateX(-PI/2), cx, .035, cz), 56, 4));
+        } else { /* checker — alternating blue/gold tesserae arcs */
+          const N2 = b.n, arc = TAU/N2;
+          for (let k = 0; k < N2; k++){
+            const seg = new THREE.RingGeometry(b.r0, b.r1, 4, 1, k*arc, arc).rotateX(-PI/2);
+            if (k % 2) P.crimson.push(xf(seg, cx, .038, cz));
+            else LG2.push(tileUV(xf(seg, cx, .038, cz), 2, 1));
+          }
+        }
+      }
+    };
+    mosaic(0, 0, [                                   /* the Tree plaza */
+      { kind:'blue',    r0:14.0, r1:14.5 },
+      { kind:'gold',    r0:14.7, r1:16.9 },
+      { kind:'checker', r0:17.1, r1:17.7, n:36 },
+      { kind:'gold',    r0:17.9, r1:20.0 },
+      { kind:'blue',    r0:20.2, r1:20.7 },
+    ]);
+    mosaic(-52, 8, [                                 /* the Fountain Court */
+      { kind:'blue',    r0:14.2, r1:14.6 },
+      { kind:'gold',    r0:14.8, r1:16.6 },
+      { kind:'checker', r0:16.8, r1:17.3, n:28 },
+      { kind:'gold',    r0:17.5, r1:19.2 },
+      { kind:'blue',    r0:19.4, r1:19.8 },
+    ]);
   }
 
   const laceStoneMesh = new THREE.Mesh(mergeGeometries(LS.map(g=> g.index ? g.toNonIndexed() : g)), laceStone);
