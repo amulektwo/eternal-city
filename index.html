@@ -2415,6 +2415,74 @@ function addBuilding(x,z,ry,big){
     scene.add(motes);
     tickers.push(t=>{ moteMat.uniforms.uTime.value = t; });
 
+    /* ========== LOOP 6 · PASS A — THE DOVES (boards 01/02) ==========
+       One instanced flock crossing the heaven on slow great arcs. The
+       whole flight lives in the VERTEX SHADER (orbit + heading + wing
+       fold from uTime) — zero CPU per frame, ONE draw call, ~200 tris.
+       Orbits r56–112 at y40–74: never the Tree canopy, never landing,
+       never the reader's sightline. White-gold catch on the upstroke.
+       Local seeded rng (the global stream is layout law). */
+    {
+      const dr = mulberry32(4444);
+      const DN = 48;
+      /* one dove: two wing triangles + a slim tail fan (local: x=span, z=flight) */
+      const dovePos = new Float32Array([
+        /* left wing */   0,0,.5,   0,0,-.45,  -1.55,0,-.3,
+        /* right wing */  0,0,.5,   1.55,0,-.3, 0,0,-.45,
+        /* tail */        0,0,-.4,  -.28,0,-1.0, .28,0,-1.0,
+      ]);
+      const dg = new THREE.InstancedBufferGeometry();
+      dg.setAttribute('position', new THREE.BufferAttribute(dovePos, 3));
+      const orb = new Float32Array(DN*4), aux = new Float32Array(DN*4);
+      for (let i = 0; i < DN; i++){
+        orb[i*4]   = 56 + dr()*56;          /* orbit radius */
+        orb[i*4+1] = 40 + dr()*34;          /* height */
+        orb[i*4+2] = (.012 + dr()*.014) * (dr() < .5 ? 1 : -1);   /* angular speed, signed */
+        orb[i*4+3] = dr()*TAU;              /* phase */
+        aux[i*4]   = 2.4 + dr()*2.2;        /* flap speed */
+        aux[i*4+1] = dr()*TAU;              /* flap phase */
+        aux[i*4+2] = .8 + dr()*.55;         /* size */
+        aux[i*4+3] = dr()*4;                /* height wander phase */
+      }
+      dg.setAttribute('aOrb', new THREE.InstancedBufferAttribute(orb, 4));
+      dg.setAttribute('aAux', new THREE.InstancedBufferAttribute(aux, 4));
+      dg.instanceCount = DN;
+      const doveMat = new THREE.ShaderMaterial({
+        side: THREE.DoubleSide,
+        uniforms: { uTime:{value:0}, uDawn:{value:1} },
+        vertexShader:`
+          attribute vec4 aOrb; attribute vec4 aAux;
+          uniform float uTime; varying float vCatch;
+          void main(){
+            float ang = aOrb.w + uTime*aOrb.z;
+            float flap = sin(uTime*aAux.x + aAux.y);
+            vec3 p = position * aAux.z;
+            p.y += abs(position.x) * flap * .55 * aAux.z;   /* the wing fold */
+            /* heading = orbit tangent */
+            float hd = ang + (aOrb.z > 0.0 ? 1.5707963 : -1.5707963);
+            vec3 r = vec3(p.x*cos(hd) + p.z*sin(hd), p.y, -p.x*sin(hd) + p.z*cos(hd));
+            vec3 c = vec3(sin(ang)*aOrb.x,
+                          aOrb.y + sin(uTime*.13 + aAux.w)*2.6,
+                          cos(ang)*aOrb.x);
+            vCatch = clamp(flap, 0.0, 1.0);
+            gl_Position = projectionMatrix * viewMatrix * vec4(c + r, 1.0);
+          }`,
+        fragmentShader:`
+          uniform float uDawn; varying float vCatch;
+          void main(){
+            vec3 col = mix(vec3(.99,.97,.93), vec3(1.0,.88,.60), vCatch*.55*uDawn);
+            gl_FragColor = vec4(col, 1.0);
+          }`
+      });
+      const doves = new THREE.Mesh(dg, doveMat);
+      doves.frustumCulled = false;
+      scene.add(doves);
+      tickers.push(t=>{
+        doveMat.uniforms.uTime.value = t;
+        doveMat.uniforms.uDawn.value = 1 + .45*(1 - HOUR.h);   /* the dawn gilds the wings */
+      });
+    }
+
     /* the breath between districts */
     const mistMat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false, side:THREE.DoubleSide,
