@@ -1671,7 +1671,47 @@ async function initTransfiguration(){
     for (let k=0;k<12 && !open;k++) if (angDiff(a, k*PI/6) < GATE_HALF+0.012) open = true;
     if (!open) keep.push(a);
   }
-  const wall = new THREE.InstancedMesh(new THREE.BoxGeometry(segLen, 8, 2.2), MAT.white, keep.length);
+  /* LOOP 9 · PASS B — THE FOUNDATIONS (Rev 21:19-20): six jewel courses
+     banded low on the great wall by WORLD-Y in the wall's own material
+     (albedo strata + gilt separators + groove lips) — zero geometry,
+     zero draws. Scripture's red stones stay OUT per the red-retirement
+     ruling (flagged). Dark polished stone on white marble = L38 value
+     contrast; the bands read in shade by construction. */
+  const wallMat = MAT.white.clone();
+  wallMat.onBeforeCompile = (sh)=>{
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying float vWallY;')
+      .replace('#include <project_vertex>', `#include <project_vertex>
+#ifdef USE_INSTANCING
+  vec4 wwp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+#else
+  vec4 wwp = modelMatrix * vec4(position, 1.0);
+#endif
+  vWallY = wwp.y;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vWallY;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+{
+  vec3 jewels[6];
+  jewels[0] = vec3(0.118, 0.247, 0.561);   /* sapphire   */
+  jewels[1] = vec3(0.110, 0.478, 0.310);   /* emerald    */
+  jewels[2] = vec3(0.851, 0.604, 0.204);   /* amber      */
+  jewels[3] = vec3(0.416, 0.247, 0.627);   /* violet     */
+  jewels[4] = vec3(0.247, 0.647, 0.471);   /* jade       */
+  jewels[5] = vec3(0.310, 0.659, 0.753);   /* aquamarine */
+  for (int k = 0; k < 6; k++){
+    float b0 = 0.35 + float(k)*0.59;
+    float inBand = step(b0, vWallY) * step(vWallY, b0 + 0.50);
+    diffuseColor.rgb = mix(diffuseColor.rgb, jewels[k]*0.48, inBand*0.95);
+    /* groove lip above each course + gilt separator */
+    float lip = step(b0 + 0.50, vWallY) * step(vWallY, b0 + 0.535);
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*0.55, lip);
+    float gilt = step(b0 + 0.535, vWallY) * step(vWallY, b0 + 0.59);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.64, 0.24), gilt*0.95);
+  }
+}`);
+  };
+  const wall = new THREE.InstancedMesh(new THREE.BoxGeometry(segLen, 8, 2.2), wallMat, keep.length);
   const trim = new THREE.InstancedMesh(new THREE.BoxGeometry(segLen, .5, 2.7), MAT.gold, keep.length);
   const d = new THREE.Object3D();
   keep.forEach((a,i)=>{
