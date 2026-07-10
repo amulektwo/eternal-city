@@ -3809,14 +3809,103 @@ function addBuilding(x,z,ry,big){
     colInst.castShadow = SHADOWS; colInst.receiveShadow = SHADOWS;
     colInst.frustumCulled = false;
     scene.add(colInst);
-    /* clerestory lancets — twelve lights between the ribs, facing inward */
+    /* LOOP 8 · PASS A — THE HALL'S LIGHT: the clerestory lancets are
+       JEWEL GLASS (sapphire/emerald/amber/violet — LOOP 5's ruling, no
+       red), each casting its tinted pool on the marble below; three
+       volumetric shafts fall from the high windows. Vertex color rides
+       into the emissive via onBeforeCompile (the fruit's own Law-10
+       recipe). +3 draws (glass, pools, shafts); the LIVING HOUR reaches
+       all of it through TR.shafts and the pool ticker. */
+    const lancetGlassTex = canvasTex(128, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.moveTo(w*.14, h*.97); g.lineTo(w*.14, h*.32);
+      g.quadraticCurveTo(w*.14, h*.12, w/2, h*.045);
+      g.quadraticCurveTo(w*.86, h*.12, w*.86, h*.32);
+      g.lineTo(w*.86, h*.97); g.closePath(); g.fill();
+      g.strokeStyle = '#7a6226'; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(w/2, h*.05); g.lineTo(w/2, h*.97); g.stroke();
+      for (const yy of [.35, .62, .82]){ g.beginPath(); g.moveTo(w*.14, h*yy); g.lineTo(w*.86, h*yy); g.stroke(); }
+    }, 64);
+    const glassJewels = [0x2a55b8, 0x1f8f5c, 0xf0b040, 0x7a4fc0];
+    const tintEmissive = (mat)=>{ mat.onBeforeCompile = (sh)=>{
+      sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_end>',
+        '#include <lights_fragment_end>\n  totalEmissiveRadiance *= vColor;'); }; return mat; };
+    const glassMat = tintEmissive(new THREE.MeshStandardMaterial({
+      color:0x000000, emissive:0xffffff, emissiveMap:lancetGlassTex,
+      emissiveIntensity:2.6, vertexColors:true, alphaMap:lancetGlassTex, alphaTest:.3 }));
+    /* four-jewel pool ATLAS — full-saturation color baked in the texture
+       (LOOP 5's proven pool recipe; vertex tint washed to pastel here) */
+    const poolCols = ['#2a55b8', '#1f8f5c', '#f0b040', '#7a4fc0'];
+    const poolTex8 = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      poolCols.forEach((c, q)=>{
+        const cx2 = (q % 2)*w/2 + w/4, cy2 = (q >> 1)*h/2 + h/4;
+        const rad = g.createRadialGradient(cx2,cy2,2, cx2,cy2,w*.23);
+        rad.addColorStop(0, c + 'ec'); rad.addColorStop(1, c + '00');
+        g.fillStyle = rad; g.beginPath(); g.arc(cx2,cy2,w*.23,0,TAU); g.fill();
+      });
+    }, 256);
+    const poolMat8 = new THREE.MeshBasicMaterial({ map:poolTex8, transparent:true,
+      opacity:.92, depthWrite:false,
+      polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 });
+    const quadUV = (g, q)=>{
+      const uv = g.attributes.uv;
+      for (let k = 0; k < uv.count; k++)
+        uv.setXY(k, uv.getX(k)*.5 + (q % 2)*.5, uv.getY(k)*.5 + (q >> 1)*.5);
+      return g;
+    };
+    const tintGeo = (g, hex)=>{
+      const c = new THREE.Color(hex), n = g.attributes.position.count, arr = new Float32Array(n*3);
+      for (let k = 0; k < n; k++){ arr[k*3]=c.r; arr[k*3+1]=c.g; arr[k*3+2]=c.b; }
+      g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); return g;
+    };
+    const glassParts = [], poolParts8 = [];
+    let ji = 0;
     for (let i = 0; i < 12; i++){
       const a = i*PI/6 + PI/12;
       if (angDiff(a, 0) < GAP + .1) continue;
+      const jewel = glassJewels[ji++ % glassJewels.length];
       const wx = CX + Math.sin(a)*(R - .55), wz = CZ + Math.cos(a)*(R - .55);
-      P.glow.push(xf(new THREE.PlaneGeometry(.95, 2.5), wx, 11.4, wz, a + PI));
+      glassParts.push(tintGeo(xf(new THREE.PlaneGeometry(.95, 2.5), wx, 11.4, wz, a + PI), jewel));
+      /* the tinted pool on the marble, thrown inward from the lancet */
+      const px2 = CX + Math.sin(a)*(R - 3.9), pz2 = CZ + Math.cos(a)*(R - 3.9);
+      poolParts8.push(quadUV(xf(new THREE.PlaneGeometry(5.2, 4.0).rotateX(-PI/2), px2, .04, pz2, a), (ji-1) % 4));
       clerestorySpots.push([CX + Math.sin(a)*(R - .62), 11.4, CZ + Math.cos(a)*(R - .62), a + PI]);
     }
+    const glassMesh = new THREE.Mesh(mergeGeometries(glassParts.map(g=> g.index ? g.toNonIndexed() : g)), glassMat);
+    scene.add(glassMesh);
+    const poolMesh8 = new THREE.Mesh(mergeGeometries(poolParts8.map(g=> g.index ? g.toNonIndexed() : g)), poolMat8);
+    scene.add(poolMesh8);
+    tickers.push(()=>{ poolMat8.opacity = .92 * (1 + .16*(1 - HOUR.h) + .14*HOUR.v); });
+    /* three glory shafts from the high windows to the nave floor */
+    const hallShaftMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ uOp:{value:.115}, uTime:{value:0} },
+      vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uOp,uTime; varying vec2 vUv;
+        void main(){
+          float a = uOp * smoothstep(0.0,.18,vUv.y) * smoothstep(1.0,.55,vUv.y)
+                  * smoothstep(0.0,.3,vUv.x) * smoothstep(1.0,.7,vUv.x)
+                  * (0.82 + 0.18*sin(uTime*.5 + vUv.y*4.0));
+          gl_FragColor = vec4(.84, .91, 1.0, a);   /* cool shaft on warm marble — the hue that reads */
+        }`
+    });
+    const shaftParts = [];
+    for (const a of [105*D2R, 210*D2R, 285*D2R]){
+      const g2 = new THREE.PlaneGeometry(3.7, 13.5);
+      const tx2 = CX + Math.sin(a)*(R - 5.8), tz2 = CZ + Math.cos(a)*(R - 5.8);
+      xf(g2, tx2, 6.2, tz2, a, 1, 1, 1, -.72, 0);
+      shaftParts.push(g2);
+    }
+    const hallShafts = new THREE.Mesh(mergeGeometries(shaftParts), hallShaftMat);
+    hallShafts.frustumCulled = false;
+    scene.add(hallShafts);
+    hallShaftMat.userData.baseOp = .115; TR.shafts.push(hallShaftMat);
+    tickers.push(t=>{ hallShaftMat.uniforms.uTime.value = t; });
+    HALL.lightRefs = { poolMat8, hallShaftMat };   /* PASS D will drive these */
   }
   /* dais — three marble steps */
   const DX=0, DZ=-79.5;
