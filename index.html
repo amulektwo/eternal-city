@@ -1832,6 +1832,43 @@ function addBuilding(x,z,ry,big){
                            b.z + Math.cos(a2)*coneR*.55, ps ]);
     }
   }
+
+  /* LOOP 5 · PASS B — THE RIBS: the buttresses return, Law 38 SOLVED by
+     its own prescription — white-on-white died (LOOP 3, cut), so the rib
+     cores are GRAPHITE-WARM STONE (silhouette against the façade) and
+     every rib wears a GILT string-course edge (the guaranteed read).
+     Six tallest façades; all dark stone merges into ONE mesh (+1 draw);
+     gilt rides P.gold; pier pinnacles ride the instanced forest. */
+  {
+    const ribParts = [];
+    for (const b of byHeight.slice(0, 6)){
+      const hp = b.h*.56, ha = b.h*.84, reach = 2.0;
+      const theta = Math.atan2(ha - hp, reach);
+      const ribLen = Math.hypot(reach, ha - hp) + .5;
+      for (const s of [-1, 1]) for (const dz of [-b.dpt/4, b.dpt/4]){
+        const off = (d)=> [ b.x + Math.cos(b.ry)*s*d + Math.sin(b.ry)*dz,
+                            b.z - Math.sin(b.ry)*s*d + Math.cos(b.ry)*dz ];
+        const [px2, pz2] = off(b.w/2 + reach);
+        const [mx, mz]   = off(b.w/2 + reach/2);
+        ribParts.push(xf(new THREE.BoxGeometry(1.05, hp, 1.05), px2, hp/2, pz2, b.ry));
+        P.gold.push(xf(new THREE.BoxGeometry(1.3, .28, 1.3), px2, hp + .05, pz2, b.ry));
+        const rib = new THREE.BoxGeometry(ribLen, .5, .58);
+        rib.rotateZ(theta);
+        ribParts.push(xf(rib, mx, (hp + ha)/2, mz, b.ry + (s > 0 ? PI : 0)));
+        const ribGold = new THREE.BoxGeometry(ribLen, .13, .64);
+        ribGold.rotateZ(theta);
+        P.gold.push(xf(ribGold, mx, (hp + ha)/2 + .3, mz, b.ry + (s > 0 ? PI : 0)));
+        lacePinnacles.push([px2, hp + .32, pz2, .95]);
+      }
+    }
+    const ribMat = new THREE.MeshStandardMaterial({
+      color:0x8a8078, roughness:.52, metalness:.06, envMapIntensity:.62 });  /* graphite-warm stone */
+    const ribs = new THREE.Mesh(
+      mergeGeometries(ribParts.map(g=> g.index ? g.toNonIndexed() : g)), ribMat);
+    ribs.castShadow = SHADOWS; ribs.receiveShadow = SHADOWS;
+    ribs.frustumCulled = false;
+    scene.add(ribs);
+  }
 }
 
 /* ================================================================
