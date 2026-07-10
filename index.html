@@ -2721,6 +2721,59 @@ function addBuilding(x,z,ry,big){
     }
   }
 
+  /* ========== LOOP 10 · PASS C — THE BANKS (Rev 22:2) ==========
+     Golden fruit-bearing trees on either side of the river — the
+     whole-tree-per-card law (three crossed cards), gold-leaf crowns
+     with lit fruit-glints IN THE TEXTURE (emissiveMap dots, quiet at
+     .9 — far beneath the Tree of Life's fire), 3.2m against its 35.
+     Sixteen bank trees, ONE InstancedMesh, Law 15 colliders. */
+  {
+    const bankTex = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      g.fillStyle = '#6b5b46';
+      g.fillRect(w/2-4, h*.55, 8, h*.44);
+      for (const [px3,py3,r3,col] of [
+        [w*.35,h*.36,w*.20,'#c9a53f'],[w*.63,h*.32,w*.22,'#d9b859'],
+        [w*.48,h*.20,w*.19,'#e8cf7a'],[w*.28,h*.5,w*.14,'#b8943a'],
+        [w*.7,h*.5,w*.14,'#caa64a'],[w*.5,h*.42,w*.17,'#d4af37']]){
+        g.fillStyle = col;
+        g.beginPath(); g.arc(px3, py3, r3, 0, TAU); g.fill();
+      }
+    }, 128);
+    const bankFruitTex = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      g.fillStyle = '#000'; g.fillRect(0,0,w,h);
+      g.fillStyle = '#fff';
+      for (const [fx3,fy3] of [[.3,.3],[.58,.24],[.68,.44],[.4,.46],[.52,.36],[.33,.55],[.64,.58]]){
+        g.beginPath(); g.arc(w*fx3, h*fy3, 4.5, 0, TAU); g.fill();
+      }
+    }, 128);
+    const bankMat = new THREE.MeshStandardMaterial({
+      map:bankTex, alphaTest:.45, side:THREE.DoubleSide,
+      color:0xf0e0b0, roughness:.6, metalness:.15, envMapIntensity:.55,
+      emissive:0xffe9b0, emissiveMap:bankFruitTex, emissiveIntensity:.9 });
+    const bankSpots = [
+      [ .9, -49],[3.4, -49],[ .9, -41],[3.4, -41],
+      [-8, -32.6],[-8, -35.4],[-20, -32.6],[-20, -35.4],[-28, -32.6],[-28, -35.4],
+      [-32.6, -24],[-35.4, -24],[-32.6, -12],[-35.4, -12],
+      [-60, .8],[-60, 3.6],
+    ];
+    const bankI = new THREE.InstancedMesh(new THREE.PlaneGeometry(2.3, 3.2), bankMat, bankSpots.length*3);
+    const bd2 = new THREE.Object3D();
+    let bk = 0;
+    bankSpots.forEach(([tx, tz])=>{
+      addCircle(tx, tz, .45);
+      for (let c = 0; c < 3; c++){
+        bd2.position.set(tx, 1.6, tz);
+        bd2.rotation.set(0, c*PI/3 + (tx*7 + tz*13) % 1, 0);
+        bd2.updateMatrix(); bankI.setMatrixAt(bk++, bd2.matrix);
+      }
+    });
+    bankI.frustumCulled = false;
+    bankI.userData.fullCount = bankI.count; TR.instanced.push(bankI);
+    scene.add(bankI);
+  }
+
   /* ========== WATCH C — THE AIR (TRUE VISION, boards 02+04) ==========
      (1) THE MOTES — one Points system of drifting light through the Tree
          plaza and the avenue: slow rise, sine wander, additive, faint.
