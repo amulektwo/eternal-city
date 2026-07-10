@@ -2409,7 +2409,7 @@ function addBuilding(x,z,ry,big){
       uniforms:{ uTime:{value:0} },
       vertexShader:`varying vec2 vUv;
         void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-      fragmentShader:`uniform float uTime; varying vec2 vUv;
+      fragmentShader:`uniform float uTime; uniform vec3 uWTint; varying vec2 vUv;
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
         float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
           return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
@@ -2420,10 +2420,11 @@ function addBuilding(x,z,ry,big){
           float streak = smoothstep(.42, .95, a*.6 + b*.55);
           float edge = smoothstep(0.0,.12,vUv.x)*smoothstep(1.0,.88,vUv.x);
           float foam = smoothstep(.12,.0,vUv.y)*.5;
-          vec3 col = mix(vec3(.66,.82,.96), vec3(1.0), streak);
+          vec3 col = mix(vec3(.66,.82,.96), vec3(1.0), streak) * uWTint;
           gl_FragColor = vec4(col, (streak*.72 + .26 + foam) * edge);
         }`
     });
+    wfMat.uniforms.uWTint = RIVER.tint;
     const sheet = new THREE.Mesh(new THREE.PlaneGeometry(WW, WH, 1, 1), wfMat);
     sheet.rotation.y = PI/2;
     sheet.position.set(WX+.15, WH/2 + .5, WZ);
@@ -2455,10 +2456,11 @@ function addBuilding(x,z,ry,big){
           vA = smoothstep(0.0,.12,t)*smoothstep(life,life*.55,t)*.5;
           gl_Position = projectionMatrix*mv;
         }`,
-      fragmentShader:`uniform sampler2D uTex; varying float vA;
+      fragmentShader:`uniform sampler2D uTex; uniform vec3 uWTint; varying float vA;
         void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
-          gl_FragColor = vec4(vec3(.85,.93,1.0), s2.a*vA); }`
+          gl_FragColor = vec4(vec3(.85,.93,1.0)*uWTint, s2.a*vA); }`
     });
+    splashMat.uniforms.uWTint = RIVER.tint;
     const splash = new THREE.Points(sg2, splashMat);
     splash.frustumCulled = false;
     scene.add(splash);
@@ -2489,7 +2491,7 @@ function addBuilding(x,z,ry,big){
       uniforms:{ uTime:{value:0} },
       vertexShader:`varying vec2 vUv;
         void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-      fragmentShader:`uniform float uTime; varying vec2 vUv;
+      fragmentShader:`uniform float uTime; uniform vec3 uWTint; varying vec2 vUv;
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
         float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
           return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
@@ -2500,10 +2502,11 @@ function addBuilding(x,z,ry,big){
           float streak = smoothstep(.42, .95, a*.6 + b*.55);
           float edge = smoothstep(0.0,.12,vUv.x)*smoothstep(1.0,.88,vUv.x);
           float foam = smoothstep(.12,.0,vUv.y)*.5;
-          vec3 col = mix(vec3(.66,.82,.96), vec3(1.0), streak);
+          vec3 col = mix(vec3(.66,.82,.96), vec3(1.0), streak) * uWTint;
           gl_FragColor = vec4(col, (streak*.72 + .26 + foam) * edge);
         }`
     });
+    cascMat.uniforms.uWTint = RIVER.tint;
     const sheetParts = [];
     const CN = 270;   /* 90 splash motes per basin */
     const cb = new Float32Array(CN*3), cv = new Float32Array(CN*3), ct0 = new Float32Array(CN);
@@ -2554,10 +2557,11 @@ function addBuilding(x,z,ry,big){
           vA = smoothstep(0.0,.12,t)*smoothstep(life,life*.55,t)*.5;
           gl_Position = projectionMatrix*mv;
         }`,
-      fragmentShader:`uniform sampler2D uTex; varying float vA;
+      fragmentShader:`uniform sampler2D uTex; uniform vec3 uWTint; varying float vA;
         void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
-          gl_FragColor = vec4(vec3(.85,.93,1.0), s2.a*vA); }`
+          gl_FragColor = vec4(vec3(.85,.93,1.0)*uWTint, s2.a*vA); }`
     });
+    cascSplashMat.uniforms.uWTint = RIVER.tint;
     const cascSplash = new THREE.Points(cg, cascSplashMat);
     cascSplash.frustumCulled = false;
     scene.add(cascSplash);
@@ -2591,7 +2595,7 @@ function addBuilding(x,z,ry,big){
       uniforms:{ uTime:{value:0} },
       vertexShader:`varying vec2 vUv;
         void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-      fragmentShader:`uniform float uTime; varying vec2 vUv;
+      fragmentShader:`uniform float uTime; uniform vec3 uWTint; varying vec2 vUv;
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
         float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
           return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
@@ -2601,10 +2605,11 @@ function addBuilding(x,z,ry,big){
           float b = n2(vec2(x*1.9 + 7.0, vUv.y*5.0 - uTime*.22));
           float glint = smoothstep(.55, .95, a*.55 + b*.55);
           float edge = smoothstep(0.0,.18,vUv.y)*smoothstep(1.0,.82,vUv.y);
-          vec3 col = mix(vec3(.42,.62,.86), vec3(.95,.99,1.0), glint);
+          vec3 col = mix(vec3(.42,.62,.86), vec3(.95,.99,1.0), glint) * uWTint;
           gl_FragColor = vec4(col, (0.52 + glint*.4) * edge);
         }`
     });
+    strMat.uniforms.uWTint = RIVER.tint;
     const stream = new THREE.Mesh(new THREE.PlaneGeometry(LEN, SW).rotateX(-PI/2), strMat);
     stream.position.set((SX+EX)/2, .14, SZC);
     scene.add(stream);
@@ -2706,10 +2711,11 @@ function addBuilding(x,z,ry,big){
           vA = smoothstep(0.0,.1,t)*smoothstep(life,life*.5,t)*.5;
           gl_Position = projectionMatrix*mv;
         }`,
-      fragmentShader:`uniform sampler2D uTex; varying float vA;
+      fragmentShader:`uniform sampler2D uTex; uniform vec3 uWTint; varying float vA;
         void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
-          gl_FragColor = vec4(vec3(.9,.96,1.0), s2.a*vA); }`
+          gl_FragColor = vec4(vec3(.9,.96,1.0)*uWTint, s2.a*vA); }`
     });
+    weirMat.uniforms.uWTint = RIVER.tint;
     const weirFoam = new THREE.Points(fg2, weirMat);
     weirFoam.frustumCulled = false;
     scene.add(weirFoam);
@@ -2774,6 +2780,32 @@ function addBuilding(x,z,ry,big){
     scene.add(bankI);
   }
 
+  /* LOOP 10 · PASS D — the double rainbow at THE CONFLUENCE only:
+     where the river gives itself to the canal (hour-linked, dawn-strong) */
+  {
+    const confTex = canvasTex(128, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      const bands = ['rgba(122,79,192,','rgba(63,111,208,','rgba(31,143,92,','rgba(240,176,64,'];
+      for (let i=0;i<bands.length;i++){
+        g.strokeStyle = bands[i]+'0.45)'; g.lineWidth = 5;
+        g.beginPath(); g.arc(w/2, h*0.95, h*0.62 - i*6, PI, TAU); g.stroke();
+      }
+    }, 128);
+    const cbow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:confTex, transparent:true, opacity:.16, depthWrite:false }));
+    cbow.position.set(-72.2, 2.6, 2.2); cbow.scale.set(3.4, 2.0, 1);
+    scene.add(cbow);
+    const cbow2 = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:confTex, transparent:true, opacity:.10, depthWrite:false }));
+    cbow2.position.set(-74.4, 3.3, 2.6); cbow2.scale.set(4.6, 2.7, 1);
+    scene.add(cbow2);
+    tickers.push(t=>{
+      const dawnF = 1 + (1 - HOUR.h)*.85;
+      cbow.material.opacity  = (.13 + .05*Math.sin(t*1.4)) * dawnF;
+      cbow2.material.opacity = (.08 + .04*Math.sin(t*1.1 + 2.0)) * dawnF;
+    });
+  }
+
   /* ========== WATCH C — THE AIR (TRUE VISION, boards 02+04) ==========
      (1) THE MOTES — one Points system of drifting light through the Tree
          plaza and the avenue: slow rise, sine wander, additive, faint.
@@ -2814,7 +2846,7 @@ function addBuilding(x,z,ry,big){
           vA = .30 + .20*sin(t*2.0);
           gl_Position = projectionMatrix*mv;
         }`,
-      fragmentShader:`uniform sampler2D uTex; varying float vA;
+      fragmentShader:`uniform sampler2D uTex; uniform vec3 uWTint; varying float vA;
         void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
           gl_FragColor = vec4(vec3(1.0,.94,.78), s2.a*vA*.5); }`
     });
@@ -3195,12 +3227,13 @@ function addBuilding(x,z,ry,big){
         vC = aCol;
         gl_Position = projectionMatrix*mv;
       }`,
-    fragmentShader:`uniform sampler2D uTex; varying float vA; varying vec3 vC;
+    fragmentShader:`uniform sampler2D uTex; uniform vec3 uWTint; varying float vA; varying vec3 vC;
       void main(){
         vec4 s = texture2D(uTex, gl_PointCoord);
-        gl_FragColor = vec4(vC, s.a*vA);
+        gl_FragColor = vec4(vC*uWTint, s.a*vA);
       }`
   });
+  sprayMat.uniforms.uWTint = RIVER.tint;
   const spray = new THREE.Points(sg, sprayMat);
   /* the spray lives at scene root (positions are absolute), NOT in the
      heroFountain group — a GLB fountain hides the group, and the city's
@@ -6743,6 +6776,7 @@ function animate(){
   if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
   NACRE.t.value = t;
   RIVER.time.value = t;
+  RIVER.tint.value.setRGB(1 + .05*(1-h) - .05*v, 1 + .012*(1-h) + .01*v, 1 - .04*(1-h) + .09*v);
   NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
