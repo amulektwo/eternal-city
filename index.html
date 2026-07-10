@@ -1726,6 +1726,101 @@ async function initTransfiguration(){
   wall.frustumCulled = trim.frustumCulled = false;
   scene.add(wall, trim);
 
+  /* LOOP 9 · PASS C — THE RAMPARTS: the wall becomes a walk. The trim
+     ledge is the floor (walkable ring on kept segments only), marble
+     balusters + gold handrails line both parapets (ALL merged pre-bake
+     — zero new draws), and one stair tower rises NW of the main portal.
+     Analytic rails + gate end-stops live in resolveCollisions. */
+  {
+    const keepSet = keep.map(a => a);
+    platforms.push((x, z)=>{
+      const r = Math.hypot(x, z);
+      if (r < WALL_R - 1.35 || r > WALL_R + 1.35) return -Infinity;
+      const a = angOf(x, z);
+      if (angDiff(a, TERR_A) < TERR_OPEN) return -Infinity;
+      for (let k = 0; k < 12; k++) if (angDiff(a, k*PI/6) < GATE_HALF + 0.012) return -Infinity;
+      return 8.5;
+    });
+    /* balusters + rails on both parapets — their OWN non-casting meshes
+       (extOnly: sub-pixel through the hall door; and out of the shadow
+       pass — the interior 350k law demanded it). +2 draws. */
+    const railParts = [], balGeo = new THREE.BoxGeometry(.11, .82, .11);
+    const balI = new THREE.InstancedMesh(balGeo, MAT.white, keepSet.length*4);
+    const bd = new THREE.Object3D();
+    let bi = 0;
+    for (const a of keepSet){
+      const sx2 = Math.sin(a), cz2 = Math.cos(a);
+      for (const s2 of [-1, 1]){
+        const rr2 = WALL_R + s2*1.18;
+        railParts.push(xf(new THREE.BoxGeometry(segLen, .09, .09), sx2*rr2, 9.42, cz2*rr2, a + PI/2));
+        for (const off of [-segLen/3.6, segLen/3.6]){
+          bd.position.set(sx2*rr2 + Math.cos(a)*off, 8.95, cz2*rr2 - Math.sin(a)*off);
+          bd.rotation.set(0, a, 0); bd.updateMatrix();
+          balI.setMatrixAt(bi++, bd.matrix);
+        }
+      }
+    }
+    balI.count = bi;
+    balI.frustumCulled = false; balI.userData.extOnly = true;
+    scene.add(balI);
+    const railMesh = new THREE.Mesh(
+      mergeGeometries(railParts.map(g=> g.index ? g.toNonIndexed() : g)), MAT.gold);
+    railMesh.frustumCulled = false; railMesh.userData.extOnly = true;
+    scene.add(railMesh);
+    /* THE STAIR TOWER — switchback flights against the inner face, NW
+       of the main portal; enterable, collision-true */
+    const TXa = -13, TXb = -24, TZ0 = 112.4, TW = 2.2;
+    /* flights: ground->2.85 (out), 2.85->5.65 (back), 5.65->8.5 (out to the wall) */
+    const flights = [
+      { x0: TXa, x1: TXb, z: TZ0,       y0: 0,    y1: 2.85 },
+      { x0: TXb, x1: TXa, z: TZ0 + 2.6, y0: 2.85, y1: 5.65 },
+      { x0: TXa, x1: TXb, z: TZ0 + 5.2, y0: 5.65, y1: 8.5  },
+    ];
+    for (const f of flights){
+      const len = Math.abs(f.x1 - f.x0), mx2 = (f.x0 + f.x1)/2, rise = f.y1 - f.y0;
+      const g2 = new THREE.BoxGeometry(Math.hypot(len, rise) + .4, .3, TW);
+      g2.rotateZ(Math.atan2(f.x1 > f.x0 ? rise : -rise, len));
+      P.white.push(xf(g2, mx2, (f.y0 + f.y1)/2 - .12, f.z));
+      platforms.push((x, z)=>{
+        if (Math.abs(z - f.z) > TW/2 + .1) return -Infinity;
+        const lo = Math.min(f.x0, f.x1), hi = Math.max(f.x0, f.x1);
+        if (x < lo - .3 || x > hi + .3) return -Infinity;
+        const t2 = Math.max(0, Math.min(1, (x - f.x0) / (f.x1 - f.x0)));
+        return f.y0 + rise*t2;
+      });
+      /* side guards (2D walls beside each flight, full height — inside the tower footprint) */
+      addBox(Math.min(f.x0,f.x1) - .4, Math.max(f.x0,f.x1) + .4, f.z - TW/2 - .5, f.z - TW/2 - .2);
+      addBox(Math.min(f.x0,f.x1) - .4, Math.max(f.x0,f.x1) + .4, f.z + TW/2 + .2, f.z + TW/2 + .5);
+    }
+    /* landings at the switchbacks */
+    platforms.push((x, z)=>{
+      if (x < TXb - 1.9 || x > TXb + .4) return -Infinity;
+      if (z < TZ0 - 1 || z > TZ0 + 3.7) return -Infinity;
+      return 2.85;
+    });
+    platforms.push((x, z)=>{
+      if (x < TXa - .4 || x > TXa + 1.9) return -Infinity;
+      if (z < TZ0 + 1.5 || z > TZ0 + 6.3) return -Infinity;
+      return 5.65;
+    });
+    P.white.push(xf(new THREE.BoxGeometry(2.2, .3, 3.9), TXb - .7, 2.7, TZ0 + 1.3));
+    P.white.push(xf(new THREE.BoxGeometry(2.2, .3, 3.9), TXa + .7, 5.5, TZ0 + 3.9));
+    /* the tower shell: two side walls + back, a doorway at the south face */
+    /* south face split around the doorway (x -13.6..-11.4, height 3.2) */
+    P.white.push(xf(new THREE.BoxGeometry(12.2, 11.2, .5), -19.7, 5.6, TZ0 - 1.65));
+    P.white.push(xf(new THREE.BoxGeometry(.9, 11.2, .5), -11.0, 5.6, TZ0 - 1.65));
+    P.white.push(xf(new THREE.BoxGeometry(2.4, 8.0, .5), -12.5, 7.2, TZ0 - 1.65));
+    P.gold.push(xf(new THREE.BoxGeometry(2.8, .3, .8), -12.5, 3.35, TZ0 - 1.65));
+    P.white.push(xf(new THREE.BoxGeometry(14.6, 11.2, .5), -18.5, 5.6, TZ0 + 6.45));
+    P.white.push(xf(new THREE.BoxGeometry(.5, 11.2, 8.6), TXb - 1.6, 5.6, TZ0 + 2.4));
+    P.gold.push(xf(new THREE.BoxGeometry(15.2, .4, 9.2), -18.5, 11.3, TZ0 + 2.4));
+    addBox(-26.1, -13.8, TZ0 - 1.95, TZ0 - 1.35);
+    addBox(-11.2, -10.9, TZ0 - 1.95, TZ0 - 1.35);
+    addBox(-26.1, -10.9, TZ0 + 6.15, TZ0 + 6.75);
+    addBox(TXb - 1.9, TXb - 1.3, TZ0 - 1.9, TZ0 + 6.7);
+    /* doorway: the south wall opens at the entry flight's foot (x -13.. -11) */
+  }
+
   /* gold finials crowning every third wall segment */
   const finA = keep.filter((_,i)=> i%3===0);
   const fin = new THREE.InstancedMesh(new THREE.ConeGeometry(.34,1.6,6), MAT.gold, finA.length);
@@ -5199,7 +5294,7 @@ function groundAt(x,z){
   return h;
 }
 
-function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z){
+function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z, feetY = 0){
   const PR = .55;
   for (const b of colBoxes){
     const nx = Math.max(b.x0, Math.min(px, b.x1));
@@ -5239,23 +5334,46 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
       px = qx + dx/d*rad; pz = qz + dz/d*rad;
     }
   }
-  /* city wall ring with openings */
+  /* city wall ring with openings — LOOP 9 PASS C: height-aware. Below
+     the wall top the band blocks as ever; ON the rampart (feet >= 8)
+     the same ring becomes analytic RAILS (r clamped to the walk) and
+     angular END-STOPS at every gate gap. */
   {
     const r = Math.hypot(px,pz);
     const a = angOf(px,pz);
-    const IN = WALL_R-1.65, OUT = WALL_R+1.65;
-    if (r > IN-PR && r < OUT+PR){
-      let open = angDiff(a,TERR_A) < TERR_OPEN - .012;
-      for (let k=0;k<12 && !open;k++) if (angDiff(a,k*PI/6) < GATE_PASS) open = true;
-      if (!open){
-        const target = prevR < WALL_R ? IN-PR : OUT+PR;
-        const sc = target / (r||1e-6);
-        px *= sc; pz *= sc;
+    if (feetY < 8.0){
+      const IN = WALL_R-1.65, OUT = WALL_R+1.65;
+      if (r > IN-PR && r < OUT+PR){
+        let open = angDiff(a,TERR_A) < TERR_OPEN - .012;
+        for (let k=0;k<12 && !open;k++) if (angDiff(a,k*PI/6) < GATE_PASS) open = true;
+        if (!open){
+          const target = prevR < WALL_R ? IN-PR : OUT+PR;
+          const sc = target / (r||1e-6);
+          px *= sc; pz *= sc;
+        }
+      }
+    } else if (r > WALL_R-2.6 && r < WALL_R+2.6){
+      /* the walk: rails at both parapets */
+      const rc = Math.max(WALL_R-1.05, Math.min(WALL_R+1.05, r));
+      const sc = rc / (r||1e-6);
+      px *= sc; pz *= sc;
+      /* end-stops: never walk off into a gate gap or the terrace opening */
+      for (let k = 0; k < 12; k++){
+        const ga = k*PI/6;
+        const d = ((a - ga + PI*3) % TAU) - PI;
+        const lim = (angDiff(a,TERR_A) < TERR_OPEN + .06) ? TERR_OPEN + .035 : GATE_HALF + .035;
+        if (Math.abs(d) < lim){
+          const aa = ga + Math.sign(d || 1)*lim;
+          const rr2 = Math.hypot(px,pz);
+          px = Math.sin(aa)*rr2; pz = Math.cos(aa)*rr2;
+          break;
+        }
       }
     }
   }
-  /* the invisible rail before the falls */
-  {
+  /* the invisible rail before the falls — ground walkers only; the
+     rampart has its own parapets */
+  if (feetY < 8.0){
     const r = Math.hypot(px,pz);
     const a = angOf(px,pz);
     const lim = (angDiff(a,TERR_A) < TERR_HALF) ? TERR_RAIL-.5 : RAIL_R;
@@ -6032,7 +6150,7 @@ function stepPlayer(dt){
   /* forward = (-sin yaw, -cos yaw); right = (cos yaw, -sin yaw) */
   let nx = player.pos.x + ((-sy)*(-mz) + cy*mx) * sp;
   let nz = player.pos.z + ((-cy)*(-mz) + (-sy)*mx) * sp;
-  [nx,nz] = resolveCollisions(nx,nz,prevR);
+  [nx,nz] = resolveCollisions(nx,nz,prevR,player.pos.x,player.pos.z,player.pos.y-1.7);
   const gH = groundAt(nx,nz);
   const feet = player.pos.y - 1.7;
   if (player.onGround && keys['Space']){ player.velY = 8.2; player.onGround = false; }
