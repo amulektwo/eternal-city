@@ -394,4 +394,11 @@ LAW candidate for future text: every luminous letter needs a dark anchor — key
 - Battery green (11-pose; candles cost no battery tris — 12 stubs ≈ 1.2k only when placed, none at battery poses). Live md5 `b6b734d7…`; commit `186a2c0`.
 - Flag (cosmetic, Seer's call): the candle dish reads only from near-above; a taller brass stand would make marks visible from afar — priced at ~40 tris/candle if wanted. The resume petal can overlap a lectern invite bottom-center for its 12s; it renders above and withdraws.
 - NEXT: Pass D — THE PHONE IS FIRST-CLASS (touch audit incl. STOLEN SWIPE re-proof + long-press candle on emulated mobile, tier gating audit, ?bench one-tap device report).
+
+## LAST PASS — 2026-07-10j · LOOP 11 Pass D — THE PHONE IS FIRST-CLASS — KEPT · **LOOP 11 COMPLETE**
+- **?bench** aliases THE PROVING ON GLASS (GOAL 7's device battery — one tap, display-only, no accounts). The on-glass battery grows to the 10 teleport poses of the 11-pose standing standard (+CAUSEWAY, +HALL DAIS, +RAMPART; threshold crossing stays desktop-harness — it needs real walking). Card: per-vantage fps/tris, tier, floor, viewport.
+- **THE PINCH SCAR**: the two-finger-tap detector watched only the CENTROID — a symmetric pinch keeps the centroid still and toggled the petal. The finger SPREAD betrays it (>14px spread change = pinch). Proven: pinch leaves the petal, clean tap toggles it.
+- **Emulated-phone audit** (390×844 @3x, ALL HARNESS NUMBERS — desktop GPU behind the emulation; the true glass is the Seer's): tier 1 auto-chosen ✓ · 60fps/365k at spawn ✓ · two-finger tap toggles petal, pinch does not ✓ · still 850ms hold sets a candle, second lifts it, a MOVING hold sets nothing ✓ · **STOLEN SWIPE holds: yaw drift 0.00000 across a full reader swipe**, readerBody scrolls, no accidental candle ✓ · tap mid-walk skips to arrival + scroll opens at the house ✓ · console clean throughout.
+- Desktop no-regression: 11-pose battery green, numbers unchanged. Live md5 `f118aa0f…`; commit `e0f958f`.
+- **THE WAYFARER'S FOUR PASSES ALL KEPT.** Standing asks unchanged: GOAL 2 Meshy GLBs (Seer's deposits), the Seer's real-glass ?proving/?bench session, 200 registry-only scrolls.
 - NEXT: GOAL 2 GLBs → the glass session (?proving) → 200 registry-only recovery → Tree-pool/waterDisc tint adoption if the Seer wants the last two waters in the family.
