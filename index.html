@@ -621,7 +621,7 @@ function riverMat(flowX, flowZ, alpha, perVertexFlow){
 /* PASS C: the fixed phase now spans [−1,1] — negative is vespers depth */
 /* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
    test bench for the Seer's real devices (see section near the end) */
-const PROVING = qs.get('proving') !== null;
+const PROVING = qs.get('proving') !== null || qs.get('bench') !== null;
 {
   const hq = qs.get('hour');
   if (hq !== null) HOUR.fixed = hq === 'fixed' ? .5
@@ -6814,7 +6814,9 @@ function buildGateVaults(index){
       if (e.touches.length === 2 && started && !readerOpen && !seekOpen)
         tf = { t: performance.now(),
                x: (e.touches[0].clientX + e.touches[1].clientX)/2,
-               y: (e.touches[0].clientY + e.touches[1].clientY)/2 };
+               y: (e.touches[0].clientY + e.touches[1].clientY)/2,
+               s: Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                             e.touches[0].clientY - e.touches[1].clientY) };
     }, { passive: true });
     addEventListener('touchend', (e)=>{
       if (!tf || e.touches.length !== 0) return;
@@ -6826,7 +6828,10 @@ function buildGateVaults(index){
       if (tf && e.touches.length === 2){
         const mx2 = (e.touches[0].clientX + e.touches[1].clientX)/2;
         const my2 = (e.touches[0].clientY + e.touches[1].clientY)/2;
-        if (Math.hypot(mx2 - tf.x, my2 - tf.y) > 14) tf = null;   /* it was a pinch/drag */
+        const ms2 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                               e.touches[0].clientY - e.touches[1].clientY);
+        /* a symmetric pinch keeps the CENTROID still — the spread betrays it */
+        if (Math.hypot(mx2 - tf.x, my2 - tf.y) > 14 || Math.abs(ms2 - tf.s) > 14) tf = null;
       }
     }, { passive: true });
     let petalTick = 0;
@@ -7128,12 +7133,15 @@ const PROVING_RESULTS = [];
 if (PROVING){
   const PV = [
     ['TREE',      0, 18,    0, 0,     .06],
+    ['CAUSEWAY',  0, 140,   0, 0,     .06],
     ['THRONE',    0, -68,   0, -79.5, .06],
+    ['HALL DAIS', 0, -80,   0, 40,    .06],
     ['FOUNTAIN', -44.5, 8, -52, 8,    .06],
     ['GATE',      0, 94,    0, 118.5, .06],
     ['STREET',    0, 60,    0, 100,   .06],
     ['SANCTUARY', 50, -6,  70, -6,    .06],
     ['TERRACE',  -91, -91,  0, 0,     .28],
+    ['RAMPART', -40.5, 111.3, -101, 278, .02],
   ];
   const st = document.createElement('style');
   st.textContent = `
@@ -7154,7 +7162,7 @@ if (PROVING){
   const panel = document.createElement('div');
   panel.id = 'proving';
   panel.innerHTML = `<div id="pvName">THE PROVING ON GLASS</div>
-    <div id="pvFps">—</div><div id="pvInfo">7 vantages · ~70 seconds · keep this window front</div>
+    <div id="pvFps">—</div><div id="pvInfo">10 vantages · ~100 seconds · keep this window front</div>
     <div id="pvSum"></div><button id="pvBtn">BEGIN THE PROVING</button>`;
   document.body.appendChild(panel);
   const elN = panel.querySelector('#pvName'), elF = panel.querySelector('#pvFps'),
@@ -7165,10 +7173,11 @@ if (PROVING){
   const showLive = ()=> { elF.textContent = fpsAvg.toFixed(0); };
   const goto2 = (i)=>{
     const [name, x, z, tx, tz, pitch] = PV[i];
-    player.pos.set(x, groundAt(x, z) + 1.7, z);
+    const gH = groundAt(x, z);
+    player.pos.set(x, (gH > -1e8 ? gH : (name === 'RAMPART' ? 8.5 : 0)) + 1.7, z);
     player.yaw = Math.atan2(-(tx - x), -(tz - z));
     player.pitch = pitch;
-    elN.textContent = `${i + 1} / 7 · ${name}`;
+    elN.textContent = `${i + 1} / ${PV.length} · ${name}`;
     elI.textContent = 'settling…';
   };
   const sample = (i)=>{
