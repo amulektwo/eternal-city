@@ -533,7 +533,7 @@ composer.addPass(gradePass);
 const HOUR = { fixed: null, h: .5, v: 0, rayMat: null, stars: null };
 /* LOOP 7 · PASS B — interior/exterior visibility: objects tagged
    userData.extOnly cull when the walker stands inside the throne hall */
-const HALL = { inside: false, cull: [], lastToggleMs: 0 };
+const HALL = { inside: false, cull: [], lastToggleMs: 0, prog: 0 };
 /* PASS C: the fixed phase now spans [−1,1] — negative is vespers depth */
 /* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
    test bench for the Seer's real devices (see section near the end) */
@@ -3777,6 +3777,7 @@ function addBuilding(x,z,ry,big){
     doorShaft.rotation.x = -.62;
     scene.add(doorShaft);
     shaftMat.userData.baseOp = .055; TR.shafts.push(shaftMat);
+    HALL.doorShaftMat = shaftMat;
     tickers.push(t=>{ shaftMat.uniforms.uTime.value = t; });
   }
   /* ring of glowing windows */
@@ -3880,7 +3881,7 @@ function addBuilding(x,z,ry,big){
     scene.add(glassMesh);
     const poolMesh8 = new THREE.Mesh(mergeGeometries(poolParts8.map(g=> g.index ? g.toNonIndexed() : g)), poolMat8);
     scene.add(poolMesh8);
-    tickers.push(()=>{ poolMat8.opacity = .92 * (1 + .16*(1 - HOUR.h) + .14*HOUR.v); });
+    tickers.push(()=>{ poolMat8.opacity = .92 * (1 + .16*(1 - HOUR.h) + .14*HOUR.v) * (1 + .18*HALL.prog); });
     /* three glory shafts from the high windows to the nave floor */
     const hallShaftMat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
@@ -6356,7 +6357,7 @@ function animate(){
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
   /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
   const shaftHourF = (TIER === 0 ? .45 : 1) * (1.35 - .62*h) * (1 + .3*v) * APPROACH.f;
-  for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * shaftHourF;
+  for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * shaftHourF * (m.userData.walkBoost || 1);
 
   /* LOOP 7 · PASS B — the hall owns its air: exterior atmosphere culls
      when the walker stands inside the drum (hysteresis 16.4/17.4) */
@@ -6368,6 +6369,17 @@ function animate(){
       for (const o of HALL.cull) o.visible = !inHall;
       HALL.lastToggleMs = +(performance.now() - t0).toFixed(3);
     }
+    /* LOOP 8 · PASS D — THE PROCESSION HOME: walking the aisle toward
+       the dais, the shafts lean ahead of the walker and the pools warm
+       underfoot — distance-driven uniforms only. At the dais steps the
+       motion rests: nothing triggers, nothing speaks. The hall's answer
+       is stillness. Same ?skip gate as THE APPROACH. */
+    HALL.prog = (HALL.inside && APPROACH.active)
+      ? Math.max(0, Math.min(1, (-57.5 - camera.position.z) / 14)) : 0;
+    if (HALL.lightRefs)
+      HALL.lightRefs.hallShaftMat.userData.walkBoost = 1 + .32*HALL.prog;
+    if (HALL.doorShaftMat)
+      HALL.doorShaftMat.userData.walkBoost = 1 - .28*HALL.prog;
   }
 
   /* living things */
@@ -6466,7 +6478,10 @@ window.__CITY = {
   get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str,
     res: MIRROR.rt ? [MIRROR.rt.width, MIRROR.rt.height] : null }; },
   get proving(){ return PROVING_RESULTS; },
-  get hall(){ return { inside: HALL.inside, culled: HALL.cull.length, lastToggleMs: HALL.lastToggleMs }; },
+  get hall(){ return { inside: HALL.inside, culled: HALL.cull.length, lastToggleMs: HALL.lastToggleMs,
+    prog: +HALL.prog.toFixed(3),
+    shaftBoost: HALL.lightRefs ? +(HALL.lightRefs.hallShaftMat.userData.walkBoost || 1).toFixed(3) : null,
+    doorBoost: HALL.doorShaftMat ? +(HALL.doorShaftMat.userData.walkBoost || 1).toFixed(3) : null }; },
   get niches(){ return nicheSpots; },
   setMirrorStrength(x){ MIRROR.str = Math.max(0, Math.min(1, +x));
     for (const m of MIRROR.mats) m.uniforms.uStr.value = MIRROR.str; },
