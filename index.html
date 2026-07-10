@@ -534,6 +534,9 @@ const HOUR = { fixed: null, h: .5, v: 0, rayMat: null, stars: null };
 /* LOOP 7 · PASS B — interior/exterior visibility: objects tagged
    userData.extOnly cull when the walker stands inside the throne hall */
 const HALL = { inside: false, cull: [], lastToggleMs: 0, prog: 0 };
+/* LOOP 9 · PASS A — THE PEARLS (Rev 21:21): shared nacre uniforms for
+   every gate; time + hour-breathing amplitude (no red in the ramp) */
+const NACRE = { t: { value: 0 }, amp: { value: .12 } };
 /* PASS C: the fixed phase now spans [−1,1] — negative is vespers depth */
 /* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
    test bench for the Seer's real devices (see section near the end) */
@@ -1451,9 +1454,42 @@ async function initSlots(){
         const gltf = await loader.loadAsync(entry.file);
         const src = gltf.scene;
         dress(src);
+        /* LOOP 9 · PASS A — each gate one pearl: a fresnel thin-film
+           sheen (white -> blue -> gold at grazing, sine-banded nacre)
+           + soft inner luminance breathing with the LIVING HOUR.
+           Shader-only (no envmap word, L31); emissive stays far below
+           the 1.8 bloom line. One shared material across all twelve. */
+        const nacrify = (root)=> root.traverse(o=>{
+          if (!o.isMesh) return;
+          const ms = Array.isArray(o.material) ? o.material : [o.material];
+          for (const m of ms){
+            if (!m || m.userData.nacred) continue;
+            m.userData.nacred = true;
+            m.onBeforeCompile = (sh)=>{
+              sh.uniforms.uNacreT = NACRE.t;
+              sh.uniforms.uNacreA = NACRE.amp;
+              sh.vertexShader = sh.vertexShader
+                .replace('#include <common>', '#include <common>\nvarying vec3 vNcN; varying vec3 vNcV;')
+                .replace('#include <project_vertex>', `#include <project_vertex>
+  vec4 nwp = modelMatrix * vec4(transformed, 1.0);
+  vNcV = cameraPosition - nwp.xyz;
+  vNcN = mat3(modelMatrix) * normal;`);
+              sh.fragmentShader = sh.fragmentShader
+                .replace('#include <common>', '#include <common>\nvarying vec3 vNcN; varying vec3 vNcV;\nuniform float uNacreT; uniform float uNacreA;')
+                .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+  float nfres = pow(1.0 - abs(dot(normalize(vNcN + vec3(1e-5)), normalize(vNcV + vec3(1e-5)))), 2.0);
+  vec3 ncol = mix(vec3(0.72, 0.84, 1.0), vec3(1.0, 0.90, 0.64),
+                  0.5 + 0.5*sin(nfres*6.2832 + uNacreT*0.35));
+  totalEmissiveRadiance += ncol * (nfres*0.5 + 0.08) * uNacreA * 3.2;`);
+            };
+            m.needsUpdate = true;
+          }
+        });
+        if (slot === 'gateArch') nacrify(src);
         let farSrc = null;
         if (entry.far){
-          try { farSrc = (await loader.loadAsync(entry.far)).scene; dress(farSrc); }
+          try { farSrc = (await loader.loadAsync(entry.far)).scene; dress(farSrc);
+                if (slot === 'gateArch') nacrify(farSrc); }
           catch(e){ console.warn(`SLOT ${slot}: far-LOD failed (${entry.far}) — near mesh everywhere.`, e); }
         }
         const sc = (typeof entry.scale === 'number') ? entry.scale : 1;
@@ -6353,6 +6389,8 @@ function animate(){
   renderer.toneMappingExposure = Math.max(.88, 0.95 + .04*Math.sin(cyc*.5) + .03*h - .07*v);
   gradePass.uniforms.uWarm.value = 1.35 - .8*h + .25*v;   /* warmth tracks the hour (Law 30 gate inside) */
   if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
+  NACRE.t.value = t;
+  NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
   /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
