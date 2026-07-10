@@ -2615,6 +2615,114 @@ function addBuilding(x,z,ry,big){
     scene.add(folI, flwI);
   }
 
+  /* ========== LOOP 6 · PASS B — THE AVENUES (board 01) ==========
+     Green leaves its six beds: cypress flames line the Street of Gold
+     and the plaza rims, low silver olives alternate between them, and
+     climbing roses take the throne drum beside both cascades — all in
+     the leaf-card technique the Tree and WATCH D proved (never the
+     purged ball-trees). THREE InstancedMesh draws, ~1k tris, local rng. */
+  {
+    const ar = mulberry32(6161);
+    const arr2 = (a,b)=> a + ar()*(b-a);
+    const mkCardTex = (paint)=> canvasTex(64, (g,w,h)=>{ g.clearRect(0,0,w,h); paint(g,w,h); }, 64);
+    /* cypress & olive as CROSSED FULL-SILHOUETTE cards (3 per tree) —
+       the sprinkled-sprig attempt read as floating leaves (cycle 2);
+       a whole tree painted per card is the technique that reads. */
+    const cypTex = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      const cx = w/2;
+      /* layered flame silhouette, lighter toward the sun side */
+      for (const [sc, col] of [[1,'#4d6b54'],[.82,'#5d7d61'],[.6,'#70906f']]){
+        g.fillStyle = col;
+        g.beginPath();
+        g.moveTo(cx, 4);
+        g.bezierCurveTo(cx + 34*sc, h*.30, cx + 30*sc, h*.62, cx + 20*sc, h*.94);
+        g.lineTo(cx - 20*sc, h*.94);
+        g.bezierCurveTo(cx - 30*sc, h*.62, cx - 34*sc, h*.30, cx, 4);
+        g.fill();
+      }
+      /* ragged edge nicks so the silhouette breathes */
+      g.globalCompositeOperation = 'destination-out';
+      for (let i = 0; i < 26; i++){
+        const yy = 8 + (i/26)*(h-20), side = i % 2 ? 1 : -1;
+        const xx = cx + side*(20 + 14*(1 - yy/h)) + (i*37 % 9) - 4;
+        g.beginPath(); g.arc(xx, yy, 4 + (i*13 % 6), 0, TAU); g.fill();
+      }
+      g.globalCompositeOperation = 'source-over';
+    }, 128);
+    const olvTex = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      /* broad silver crown of overlapping puffs on a short trunk */
+      g.fillStyle = '#6b5b46';
+      g.fillRect(w/2-5, h*.62, 10, h*.36);
+      for (const [px3,py3,r3,col] of [
+        [w*.32,h*.42,w*.20,'#7d917c'],[w*.62,h*.38,w*.23,'#8ba189'],
+        [w*.47,h*.26,w*.21,'#a0b39a'],[w*.72,h*.52,w*.16,'#93a88e'],
+        [w*.26,h*.58,w*.15,'#87997f'],[w*.5,h*.5,w*.19,'#a8b8a0']]){
+        g.fillStyle = col;
+        g.beginPath(); g.arc(px3, py3, r3, 0, TAU); g.fill();
+      }
+    }, 128);
+    const mkCardMat = (tex, tint)=> new THREE.MeshStandardMaterial({
+      map:tex, alphaTest:.45, side:THREE.DoubleSide,
+      color:tint, roughness:.72, metalness:.04, envMapIntensity:.62 });
+    const d6 = new THREE.Object3D();
+    const plantCrossed = (inst, spots, w2, h2, yBase)=>{
+      let k = 0;
+      for (const [tx, tz, sc] of spots){
+        addCircle(tx, tz, .55);
+        for (let c = 0; c < 3; c++){
+          d6.position.set(tx, yBase + h2*sc/2, tz);
+          d6.rotation.set(0, c*PI/3 + (tx*7 + tz*13) % 1, 0);
+          d6.scale.set(sc, sc, sc);
+          d6.updateMatrix(); inst.setMatrixAt(k++, d6.matrix);
+        }
+      }
+    };
+    /* — the cypress stations (Law 15: clear of every walk and circuit) — */
+    const cypSpots = [];
+    for (const sx of [-9.5, 9.5]) for (const z of [36, 52, 68, 84]) cypSpots.push([sx, z, 1.35]);
+    for (const a of [45, 135, 225, 315]) cypSpots.push([Math.sin(a*D2R)*31.5, Math.cos(a*D2R)*31.5, 1.1]);
+    for (const a of [0, 120, 240]) cypSpots.push([-52 + Math.sin(a*D2R)*20.5, 8 + Math.cos(a*D2R)*20.5, .85]);
+    const cypI = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.7, 5.4), mkCardMat(cypTex, 0x9db698), cypSpots.length*3);
+    plantCrossed(cypI, cypSpots, 1.7, 5.4, .1);
+    /* — the olives, low and silver between the cypress — */
+    const olvSpots = [];
+    for (const sx of [-9.5, 9.5]) for (const z of [44, 60, 76]) olvSpots.push([sx, z, 1.15]);
+    const olvI = new THREE.InstancedMesh(new THREE.PlaneGeometry(3.0, 2.6), mkCardMat(olvTex, 0xb2c2aa), olvSpots.length*3);
+    plantCrossed(olvI, olvSpots, 3.0, 2.6, .15);
+    /* rose sprig — blue-green vine, blossom-dominant (white/gold) */
+    const roseSprigTex = mkCardTex((g,w,h)=>{
+      g.fillStyle = '#5f7a63';
+      g.beginPath(); g.moveTo(w/2, 2);
+      g.quadraticCurveTo(w*.92, h*.45, w/2, h-2);
+      g.quadraticCurveTo(w*.08, h*.45, w/2, 2); g.fill();
+      for (const [bx,by,r2] of [[w*.34,h*.28,w*.22],[w*.68,h*.62,w*.24],[w*.42,h*.82,w*.15]]){
+        g.fillStyle = '#fff5dd'; g.beginPath(); g.arc(bx,by,r2,0,TAU); g.fill();
+        g.fillStyle = '#d4af37'; g.beginPath(); g.arc(bx,by,r2*.38,0,TAU); g.fill();
+      }
+    });
+    /* — climbing roses beside both throne cascades (curved drum wall) — */
+    const RSN = 260;
+    const rosI = new THREE.InstancedMesh(new THREE.PlaneGeometry(.5,.7), mkCardMat(roseSprigTex, 0xc9d4b8), RSN);
+    for (let i=0;i<RSN;i++){
+      const side = i < RSN/2 ? 1 : -1;               /* SE / SW cascade */
+      const azC = side * PI/4;
+      const az2 = azC + (i % 2 === 0 ? -1 : 1) * arr2(.14, .30) * (side>0?1:1);
+      const yy = Math.max(.35, arr2(.4, 8.6) * (1 - Math.abs(az2-azC)*1.6));
+      const rr2b = 17.62 + arr2(-.1, .2);
+      d6.position.set(Math.sin(az2)*rr2b, yy, -72 + Math.cos(az2)*rr2b);
+      d6.rotation.set((ar()-.5)*.7, az2 + (ar()-.5)*.9, (ar()-.5)*.7);
+      d6.scale.setScalar(arr2(.7, 1.3));
+      d6.updateMatrix(); rosI.setMatrixAt(i, d6.matrix);
+    }
+    for (const m of [cypI, olvI, rosI]){
+      m.frustumCulled = false;
+      m.userData.fullCount = m.count; TR.instanced.push(m);
+      scene.add(m);
+    }
+  }
+
   /* the pools breathe — one ticker, every water disc */
   tickers.push(t=>{
     waterDiscs.forEach((w, i)=>{
