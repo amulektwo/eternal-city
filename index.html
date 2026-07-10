@@ -4672,16 +4672,20 @@ const laceGold = new THREE.MeshStandardMaterial({
     lacePinnacles.push([Math.sin(a)*17.2, 12.3, -72 + Math.cos(a)*17.2, .85]);
   }
   /* one pinnacle geometry: collar + spire + 6 crockets + tip */
+  /* LOOP 7 · THE QUARRY: open-ended primitives (caps/bases sit hidden
+     against stone or under the spire) + a leaner tip sphere — 144→76
+     tris per pinnacle, silhouette identical beyond arm's length.
+     289 instances → ~19.7k reclaimed. */
   const pinParts = [
-    xf(new THREE.CylinderGeometry(.40, .48, .35, 6), 0, .18, 0),
-    xf(new THREE.ConeGeometry(.30, 3.4, 6), 0, 2.05, 0),
-    xf(new THREE.SphereGeometry(.11, 6, 5), 0, 3.85, 0),
+    xf(new THREE.CylinderGeometry(.40, .48, .35, 6, 1, true), 0, .18, 0),
+    xf(new THREE.ConeGeometry(.30, 3.4, 6, 1, true), 0, 2.05, 0),
+    xf(new THREE.SphereGeometry(.11, 4, 3), 0, 3.85, 0),
   ];
   for (let ring = 0; ring < 2; ring++){
     const ry2 = .9 + ring*1.0, rr2 = .30 - ring*.09;
     for (let k = 0; k < 3; k++){
       const b = k*TAU/3 + ring*TAU/6;
-      const cg = new THREE.ConeGeometry(.08, .30, 3);
+      const cg = new THREE.ConeGeometry(.08, .30, 3, 1, true);
       xf(cg, Math.sin(b)*rr2, ry2, Math.cos(b)*rr2, 0, 1, 1, 1, .6*Math.cos(b), -.6*Math.sin(b));
       pinParts.push(cg);
     }
