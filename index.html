@@ -540,24 +540,34 @@ const NACRE = { t: { value: 0 }, amp: { value: .12 } };
 /* LOOP 10 — THE RIVER OF LIFE: shared water registry. One material
    family, world-anchored noise (seams impossible), per-segment flow. */
 const RIVER = { time: { value: 0 }, tint: { value: new THREE.Color(1, 1, 1) }, mats: [] };
-function riverMat(flowX, flowZ, alpha){
+function riverMat(flowX, flowZ, alpha, perVertexFlow){
   const m = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
+    defines: perVertexFlow ? { AFLOW: 1 } : {},
     uniforms: { uTime: RIVER.time, uTint: RIVER.tint,
                 uFlow: { value: new THREE.Vector2(flowX, flowZ) },
                 uAlpha: { value: alpha } },
-    vertexShader: `varying vec3 vW;
+    vertexShader: `varying vec3 vW; varying vec2 vF;
+      #ifdef AFLOW
+      attribute vec2 aFlow;
+      #endif
+      uniform vec2 uFlow;
       void main(){ vW = (modelMatrix*vec4(position,1.0)).xyz;
+        #ifdef AFLOW
+        vF = aFlow;
+        #else
+        vF = uFlow;
+        #endif
         gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `uniform float uTime, uAlpha; uniform vec2 uFlow; uniform vec3 uTint;
-      varying vec3 vW;
+    fragmentShader: `uniform float uTime, uAlpha; uniform vec3 uTint;
+      varying vec3 vW; varying vec2 vF;
       float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
         return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
       void main(){
-        vec2 p = vW.xz - uFlow*uTime;
+        vec2 p = vW.xz - vF*uTime;
         float a = n2(p*2.6);
-        float b = n2(p*5.1 + 7.0 - uFlow*uTime*0.6);
+        float b = n2(p*5.1 + 7.0 - vF*uTime*0.6);
         float glint = smoothstep(.55, .95, a*.55 + b*.55);
         vec3 col = mix(vec3(.55,.72,.90), vec3(.98,1.0,1.0), glint) * uTint;
         gl_FragColor = vec4(col, (uAlpha + glint*.38));
@@ -2623,6 +2633,92 @@ function addBuilding(x,z,ry,big){
     addBox(BR[0] + 1.7, SX, SZC - SW/2 - .5, SZC + SW/2 + .5);
     addBox(BR[1] + 1.7, BR[0] - 1.7, SZC - SW/2 - .5, SZC + SW/2 + .5);
     addBox(EX, BR[1] - 1.7, SZC - SW/2 - .5, SZC + SW/2 + .5);
+  }
+
+  /* ========== LOOP 10 · PASS B — THE COURSE (Rev 22:1-2) ==========
+     The river runs from the hall doors, descends two white-water weirs
+     down the throne approach, skirts the Tree plaza at z −34, turns
+     north past the court's edge, crosses the Fountain Court's southern
+     floor (grazing the fountain — fed by it to the eye) and joins the
+     canal head at the west rim: flow WEST agrees with the canal. The
+     WHOLE exterior course is ONE mesh (per-vertex flow attribute) +
+     ONE weir-foam Points = 2 draws. Beds/curbs/weirs/crossing-stones
+     ride the P merges. Walkers cross dry-shod: the rill takes NO
+     colliders; flat crossing stones mark the fords. */
+  {
+    const legs = [
+      /* x0,z0, x1,z1, width */
+      [ 2.12, -55.4,  2.12, -34.0, .42 ],
+      [ 2.33, -34.0, -34.0, -34.0, .42 ],
+      [-34.0, -34.21, -34.0,  2.2, .42 ],
+      [-33.79,  2.2, -72.6,   2.2, .46 ],
+    ];
+    const parts = [];
+    for (const [x0, z0, x1, z1, w] of legs){
+      const len = Math.hypot(x1 - x0, z1 - z0) + .42;
+      const ang = Math.atan2(x1 - x0, z1 - z0);
+      const g2 = new THREE.PlaneGeometry(w, len).rotateX(-PI/2);
+      xf(g2, (x0 + x1)/2, .075, (z0 + z1)/2, ang);
+      const fl = new THREE.Vector2(x1 - x0, z1 - z0).normalize().multiplyScalar(.55);
+      const n = g2.attributes.position.count, fa = new Float32Array(n*2);
+      for (let k = 0; k < n; k++){ fa[k*2] = fl.x; fa[k*2+1] = fl.y; }
+      g2.setAttribute('aFlow', new THREE.BufferAttribute(fa, 2));
+      parts.push(g2);
+      /* bed + curbs */
+      P.crimson.push(xf(new THREE.BoxGeometry(w + .12, .05, len).rotateY(0), (x0+x1)/2, .022, (z0+z1)/2, ang));
+      for (const s2 of [-1, 1]){
+        const px2 = (x0+x1)/2 + Math.cos(ang)*s2*(w/2 + .09), pz2 = (z0+z1)/2 - Math.sin(ang)*s2*(w/2 + .09);
+        P.white.push(xf(new THREE.BoxGeometry(.1, .11, len), px2, .055, pz2, ang));
+      }
+    }
+    const course = new THREE.Mesh(
+      mergeGeometries(parts.map(g=> g.index ? g.toNonIndexed() : g)), riverMat(0, 0, .34, true));
+    course.frustumCulled = false;
+    scene.add(course);
+    /* two weirs on the approach — marble lips with white-water breaks */
+    const wr10 = mulberry32(2210);
+    const FN2 = 44;
+    const fb = new Float32Array(FN2*3), fv = new Float32Array(FN2*3), ft0 = new Float32Array(FN2);
+    [[2.12, -52], [2.12, -44]].forEach(([wx2, wz2], wi)=>{
+      P.white.push(xf(new THREE.BoxGeometry(.62, .12, .2), wx2, .1, wz2));
+      P.gold.push(xf(new THREE.BoxGeometry(.66, .05, .1), wx2, .17, wz2));
+      for (let i = 0; i < 22; i++){
+        const k = wi*22 + i;
+        fb[k*3] = wx2 + (wr10()-.5)*.5; fb[k*3+1] = .16; fb[k*3+2] = wz2 + (wr10()-.5)*.16;
+        fv[k*3] = (wr10()-.5)*.5; fv[k*3+1] = .55 + wr10()*.7; fv[k*3+2] = .35 + wr10()*.5;
+        ft0[k] = wr10()*1.1;
+      }
+    });
+    const fg2 = new THREE.BufferGeometry();
+    fg2.setAttribute('position', new THREE.BufferAttribute(fb, 3));
+    fg2.setAttribute('aVel', new THREE.BufferAttribute(fv, 3));
+    fg2.setAttribute('aT0', new THREE.BufferAttribute(ft0, 1));
+    const weirMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      uniforms:{ uTime:{value:0}, uTex:{value:glowTex} },
+      vertexShader:`attribute vec3 aVel; attribute float aT0; uniform float uTime; varying float vA;
+        void main(){
+          float life = 1.1;
+          float t = mod(uTime + aT0, life);
+          vec3 p = position + aVel*t; p.y -= 0.5*3.4*t*t;
+          vec4 mv = modelViewMatrix*vec4(p,1.0);
+          gl_PointSize = (4.5+3.0*t) * (10.0/max(-mv.z,1.0));
+          vA = smoothstep(0.0,.1,t)*smoothstep(life,life*.5,t)*.5;
+          gl_Position = projectionMatrix*mv;
+        }`,
+      fragmentShader:`uniform sampler2D uTex; varying float vA;
+        void main(){ vec4 s2 = texture2D(uTex, gl_PointCoord);
+          gl_FragColor = vec4(vec3(.9,.96,1.0), s2.a*vA); }`
+    });
+    const weirFoam = new THREE.Points(fg2, weirMat);
+    weirFoam.frustumCulled = false;
+    scene.add(weirFoam);
+    tickers.push(t=>{ weirMat.uniforms.uTime.value = t; });
+    /* crossing stones — one ford per leg where the walkers pass */
+    for (const [fx2, fz2, fa2] of [[2.12, -45, 0], [-16, -34, PI/2], [-34, -12, 0], [-52, 2.2, PI/2]]){
+      P.white.push(xf(new THREE.BoxGeometry(.84, .07, .56), fx2, .1, fz2, fa2));
+      P.white.push(xf(new THREE.BoxGeometry(.84, .07, .56), fx2 + (fa2 ? .95 : 0), .1, fz2 + (fa2 ? 0 : .95), fa2));
+    }
   }
 
   /* ========== WATCH C — THE AIR (TRUE VISION, boards 02+04) ==========
