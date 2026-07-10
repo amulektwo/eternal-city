@@ -530,13 +530,16 @@ composer.addPass(gradePass);
    length and strength, and the GRADE's warmth. ?hour=fixed freezes at
    the mean for verification stills; ?hour=<0..1> freezes a chosen phase;
    __CITY.setHour(x|null) live-tunes. */
-const HOUR = { fixed: null, h: .5, rayMat: null };
+const HOUR = { fixed: null, h: .5, v: 0, rayMat: null, stars: null };
+/* PASS C: the fixed phase now spans [−1,1] — negative is vespers depth */
 /* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
    test bench for the Seer's real devices (see section near the end) */
 const PROVING = qs.get('proving') !== null;
 {
   const hq = qs.get('hour');
-  if (hq !== null) HOUR.fixed = hq === 'fixed' ? .5 : Math.max(0, Math.min(1, parseFloat(hq) || 0));
+  if (hq !== null) HOUR.fixed = hq === 'fixed' ? .5
+    : hq === 'vespers' ? -1
+    : Math.max(-1, Math.min(1, parseFloat(hq) || 0));
 }
 
 /* ================================================================
@@ -819,6 +822,7 @@ const skyUni = {
   uTime:   { value: 0 },
   uQual:   { value: TIER },
   uCoverBias: { value: 0 },   /* GOAL 5 — the hour thins the cloud decks at the peak */
+  uVesp: { value: 0 },        /* LOOP 5 PASS C — vespers depth: zenith→indigo, horizon→amber */
 };
 {
   const skyMat = new THREE.ShaderMaterial({
@@ -831,7 +835,7 @@ const skyUni = {
       }`,
     fragmentShader: `
       uniform vec3 uSunDir; uniform float uTime; uniform float uQual;
-      uniform float uCoverBias;
+      uniform float uCoverBias; uniform float uVesp;
       varying vec3 vDir;
 
       float hash(vec2 p){
@@ -895,10 +899,13 @@ const skyUni = {
         float sd = max(dot(dir, uSunDir), 0.0);
         int oct  = uQual > 1.5 ? 5 : (uQual > 0.5 ? 4 : 3);
 
-        /* the gradient of the boards: deep warm blue falling to white-gold */
-        vec3 col = mix(vec3(0.86,0.87,0.92), vec3(0.25,0.41,0.73),
-                       smoothstep(0.10, 0.62, h));
-        col = mix(vec3(0.98,0.88,0.66), col, smoothstep(0.0, 0.20, h));
+        /* the gradient of the boards: deep warm blue falling to white-gold.
+           VESPERS: the zenith deepens to indigo, the horizon warms amber */
+        vec3 zenC = mix(vec3(0.25,0.41,0.73), vec3(0.10,0.12,0.36), uVesp);
+        vec3 midC = mix(vec3(0.86,0.87,0.92), vec3(0.72,0.62,0.66), uVesp*.8);
+        vec3 horC = mix(vec3(0.98,0.88,0.66), vec3(1.02,0.72,0.44), uVesp*.85);
+        vec3 col = mix(midC, zenC, smoothstep(0.10, 0.62, h));
+        col = mix(horC, col, smoothstep(0.0, 0.20, h));
 
         /* the low sun and its glory */
         col += vec3(1.00,0.88,0.64) * pow(sd, 2.0)   * 0.12;
@@ -1011,6 +1018,30 @@ scene.add(sunSprite);
   tickers.push(t => { grMat.uniforms.uTime.value = t; });
   grMat.userData.baseOp = .07; TR.shafts.push(grMat);
   HOUR.rayMat = grMat;   /* GOAL 5 — the hour drives this fan's uLen */
+
+  /* LOOP 5 · PASS C — THE VESPER STARS: a fuller starfield that emerges
+     as the sky deepens (opacity = vespers depth). One Points draw,
+     visible only when v > .02; the sky shader's day-stars remain.
+     Local seeded rng — the global stream is layout law. */
+  {
+    const sr = mulberry32(7770);
+    const SN2 = 900;
+    const sp2 = new Float32Array(SN2*3);
+    for (let i = 0; i < SN2; i++){
+      const az2 = sr()*TAU, ey = .12 + Math.pow(sr(), .6)*.86;   /* weighted toward the zenith */
+      const cx2 = Math.sqrt(Math.max(0, 1 - ey*ey));
+      sp2[i*3] = Math.sin(az2)*cx2*750; sp2[i*3+1] = ey*750; sp2[i*3+2] = Math.cos(az2)*cx2*750;
+    }
+    const sg3 = new THREE.BufferGeometry();
+    sg3.setAttribute('position', new THREE.BufferAttribute(sp2, 3));
+    const starMat = new THREE.PointsMaterial({ color:0xfff6e0, size:2.1,
+      sizeAttenuation:false, transparent:true, opacity:0,
+      depthWrite:false, blending:THREE.AdditiveBlending });
+    const stars = new THREE.Points(sg3, starMat);
+    stars.visible = false; stars.frustumCulled = false;
+    scene.add(stars);
+    HOUR.stars = stars;
+  }
 }
 
 /* drifting cloud sprites above + below */
@@ -5762,23 +5793,33 @@ function animate(){
      dawn (h=0, el 12°, full cloud, long strong rays, warm grade) and
      white-gold noon (h=1, el 24°, thinned cloud, drawn-in rays, whiter
      grade). The old ±9° azimuth breath rides on top. ?hour freezes it. */
+  /* LOOP 5 · PASS C — VESPERS: the SAME clock, a longer arc. One sine
+     phase s ∈ [−1,1] walks noon(+1) → dawn(0) → warm twilight(−1) on a
+     15-minute round. h = max(0,s) keeps every dawn↔noon meaning intact;
+     v = max(0,−s) deepens: sun to 5° amber, zenith to indigo, the
+     starfield emerges, warmth rises. Exposure floors at .88 — the city
+     never goes dark enough to lose the word (THE LEGIBLE WORD). */
   const cyc = t/240*TAU;
-  const h = HOUR.fixed !== null ? HOUR.fixed : (.5 - .5*Math.cos(t/600*TAU));
-  HOUR.h = h;
-  const el = (12 + 12*h + .6*Math.sin(cyc)) * D2R;
+  const s = HOUR.fixed !== null ? HOUR.fixed : Math.sin(t/900*TAU);
+  const h = Math.max(0, s), v = Math.max(0, -s);
+  HOUR.h = h; HOUR.v = v;
+  const el = (12 + 12*h - 7*v + .6*Math.sin(cyc)) * D2R;
   const az = (232 + 9*Math.sin(cyc*.7)) * D2R;
   _sd.set(Math.sin(az)*Math.cos(el), Math.sin(el), Math.cos(az)*Math.cos(el));
   skyUni.uSunDir.value.copy(_sd);
   skyUni.uTime.value = t;
   skyUni.uCoverBias.value = .11*h;                     /* the decks thin at the peak */
+  skyUni.uVesp.value = v;                              /* zenith → indigo, horizon → amber */
   sun.position.copy(_sd).multiplyScalar(320);
-  sun.color.setHSL(.075 + .035*h + .008*Math.sin(cyc), .62 - .24*h, .72 + .12*h);
+  sun.color.setHSL(.075 + .035*h - .018*v + .008*Math.sin(cyc), .62 - .24*h + .16*v, .72 + .12*h - .10*v);
   sunSprite.position.copy(_sd).multiplyScalar(780);
-  renderer.toneMappingExposure = 0.95 + .04*Math.sin(cyc*.5) + .03*h;
-  gradePass.uniforms.uWarm.value = 1.35 - .8*h;        /* warmth tracks the hour (Law 30 gate inside) */
-  if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h;   /* long dawn shafts, short noon */
+  renderer.toneMappingExposure = Math.max(.88, 0.95 + .04*Math.sin(cyc*.5) + .03*h - .07*v);
+  gradePass.uniforms.uWarm.value = 1.35 - .8*h + .25*v;   /* warmth tracks the hour (Law 30 gate inside) */
+  if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
+  if (HOUR.stars){ HOUR.stars.visible = v > .02;
+    HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
   /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
-  const shaftHourF = (TIER === 0 ? .45 : 1) * (1.35 - .62*h) * APPROACH.f;
+  const shaftHourF = (TIER === 0 ? .45 : 1) * (1.35 - .62*h) * (1 + .3*v) * APPROACH.f;
   for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * shaftHourF;
 
   /* living things */
@@ -5869,11 +5910,11 @@ window.__CITY = {
   get triangles(){ return renderer.info.render.triangles; },
   setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
   grade(x){ gradePass.uniforms.uAmt.value = Math.max(0, Math.min(1, +x)); },
-  get hour(){ return { h:+HOUR.h.toFixed(3), fixed:HOUR.fixed,
+  get hour(){ return { h:+HOUR.h.toFixed(3), v:+HOUR.v.toFixed(3), fixed:HOUR.fixed,
     warm:+gradePass.uniforms.uWarm.value.toFixed(3),
     coverBias:+skyUni.uCoverBias.value.toFixed(3),
     rayLen: HOUR.rayMat ? +HOUR.rayMat.uniforms.uLen.value.toFixed(3) : null }; },
-  setHour(x){ HOUR.fixed = (x === null || x === undefined) ? null : Math.max(0, Math.min(1, +x)); },
+  setHour(x){ HOUR.fixed = (x === null || x === undefined) ? null : Math.max(-1, Math.min(1, +x)); },
   get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str,
     res: MIRROR.rt ? [MIRROR.rt.width, MIRROR.rt.height] : null }; },
   get proving(){ return PROVING_RESULTS; },
