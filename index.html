@@ -531,6 +531,9 @@ composer.addPass(gradePass);
    the mean for verification stills; ?hour=<0..1> freezes a chosen phase;
    __CITY.setHour(x|null) live-tunes. */
 const HOUR = { fixed: null, h: .5, v: 0, rayMat: null, stars: null };
+/* LOOP 7 · PASS B — interior/exterior visibility: objects tagged
+   userData.extOnly cull when the walker stands inside the throne hall */
+const HALL = { inside: false, cull: [], lastToggleMs: 0 };
 /* PASS C: the fixed phase now spans [−1,1] — negative is vespers depth */
 /* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
    test bench for the Seer's real devices (see section near the end) */
@@ -1123,6 +1126,7 @@ const cloudSprites = [];
     const m = new THREE.Mesh(
       mergeGeometries(parts.map(g3=> g3.index ? g3.toNonIndexed() : g3)), mkBandMat(b.tex, b.op));
     m.frustumCulled = false; m.renderOrder = -1;   /* behind the city's transparents */
+    m.userData.extOnly = true;
     scene.add(m);
   }
 }
@@ -2463,6 +2467,7 @@ function addBuilding(x,z,ry,big){
           gl_FragColor = vec4(vec3(1.0,.94,.78), s2.a*vA*.5); }`
     });
     const motes = new THREE.Points(mg, moteMat);
+    motes.userData.extOnly = true;
     motes.frustumCulled = false;
     scene.add(motes);
     tickers.push(t=>{ moteMat.uniforms.uTime.value = t; });
@@ -2550,6 +2555,7 @@ function addBuilding(x,z,ry,big){
         }`
     });
     const mist = new THREE.Mesh(new THREE.CylinderGeometry(112,112,16,72,1,true), mistMat);
+    mist.userData.extOnly = true;
     mist.position.y = 8; mist.frustumCulled = false;
     scene.add(mist);
     tickers.push(t=>{ mistMat.uniforms.uTime.value = t; });
@@ -3721,6 +3727,55 @@ function addBuilding(x,z,ry,big){
     addCircle(px,pz,1.15);
   }
   pushArch(P.gold, 7.31, .5, .41, CX, 5.2, CZ+R, 0);
+  /* LOOP 7 · PASS B — THE THRESHOLD: the great two-leaf bronze-gold
+     portal, standing OPEN into the hall. One merged bronze mesh
+     (+1 draw); gold banding rides P.gold; AABB colliders on each open
+     leaf; the coffered jamb joins the LACE (see section 16.7). */
+  {
+    const bronzeMat = new THREE.MeshStandardMaterial({
+      color:0x7a5c34, roughness:.42, metalness:.92, envMapIntensity:.8 });
+    const leafParts = [];
+    for (const s of [-1, 1]){
+      const hx = CX + Math.sin(GAP)*R*s, hz = CZ + Math.cos(GAP)*R;
+      const yaw = s > 0 ? 1.134 : 2.007;            /* open ~115° into the hall */
+      const dx2 = Math.cos(yaw), dz2 = -Math.sin(yaw);
+      const cx2 = hx + dx2*3.1, cz2 = hz + dz2*3.1;
+      leafParts.push(xf(new THREE.BoxGeometry(6.2, 9.6, .26), cx2, 4.8, cz2, yaw));
+      /* raised panel border on both faces */
+      leafParts.push(xf(new THREE.BoxGeometry(5.4, 8.8, .34), cx2, 4.8, cz2, yaw, .88, .9, 1));
+      /* gold banding — three straps + boss row */
+      for (const by of [1.6, 4.8, 8.0])
+        P.gold.push(xf(new THREE.BoxGeometry(6.3, .34, .38), cx2, by, cz2, yaw));
+      /* leaf collider — AABB around the open leaf */
+      const ex = Math.abs(dx2*3.35) + .35, ez = Math.abs(dz2*3.35) + .35;
+      addBox(cx2 - ex, cx2 + ex, cz2 - ez, cz2 + ez);
+    }
+    const leaves = new THREE.Mesh(
+      mergeGeometries(leafParts.map(g=> g.index ? g.toNonIndexed() : g)), bronzeMat);
+    leaves.castShadow = SHADOWS; leaves.receiveShadow = SHADOWS;
+    scene.add(leaves);
+    /* one warm shaft falling from the door into the hall (placeholder
+       light of PASS B — LOOP 8 owns the true interior light) */
+    const shaftMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ uOp:{value:.055}, uTime:{value:0} },
+      vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uOp,uTime; varying vec2 vUv;
+        void main(){
+          float a = uOp * smoothstep(0.0,.2,vUv.y) * smoothstep(1.0,.5,vUv.y)
+                  * smoothstep(0.0,.25,vUv.x) * smoothstep(1.0,.75,vUv.x)
+                  * (0.8 + 0.2*sin(uTime*.4 + vUv.y*3.0));
+          gl_FragColor = vec4(1.0, .92, .72, a);
+        }`
+    });
+    const doorShaft = new THREE.Mesh(new THREE.PlaneGeometry(9.5, 16), shaftMat);
+    doorShaft.position.set(CX, 5.2, CZ + R - 6.5);
+    doorShaft.rotation.x = -.62;
+    scene.add(doorShaft);
+    shaftMat.userData.baseOp = .055; TR.shafts.push(shaftMat);
+    tickers.push(t=>{ shaftMat.uniforms.uTime.value = t; });
+  }
   /* ring of glowing windows */
   for (let i=0;i<12;i++){
     const a = i*PI/6;
@@ -4477,6 +4532,10 @@ const laceGold = new THREE.MeshStandardMaterial({
       LG2.push(tileUV(xf(new THREE.BoxGeometry(3.7, .45, 3.7), px, 15.75, pz, a), 4));
     }
   }
+  /* LOOP 7 · PASS B — the throne door's coffered jamb + lintel */
+  for (const s of [-1, 1])
+    LS.push(tileUV(xf(new THREE.BoxGeometry(.62, 10.6, .95), 7.35*s, 5.2, -56.2), 1, 5));
+  LS.push(tileUV(xf(new THREE.BoxGeometry(15.5, .8, .95), 0, 10.9, -56.2), 8, 1));
   /* — street architrave fascia — */
   for (const sx of [-6.5, 6.5])
     LG2.push(tileUV(xf(new THREE.BoxGeometry(.5, .4, 46), sx, 6.7, 61), 1, 23));
@@ -6012,6 +6071,11 @@ function renderMirror(){
   for (const o of MIRROR.meshes) o.visible = true;
 }
 
+/* LOOP 7 · PASS B — collect the exterior-only atmosphere for the hall toggle */
+scene.traverse(o => { if (o.userData.extOnly) HALL.cull.push(o); });
+for (const m of seaMeshes) HALL.cull.push(m);
+for (const c of cloudSprites) HALL.cull.push(c);
+
 const clock = new THREE.Clock();
 let fpsAcc=0, fpsN=0, fpsAvg=60;
 const fpsEl = document.getElementById('fps');
@@ -6092,6 +6156,18 @@ function animate(){
   /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
   const shaftHourF = (TIER === 0 ? .45 : 1) * (1.35 - .62*h) * (1 + .3*v) * APPROACH.f;
   for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * shaftHourF;
+
+  /* LOOP 7 · PASS B — the hall owns its air: exterior atmosphere culls
+     when the walker stands inside the drum (hysteresis 16.4/17.4) */
+  {
+    const inHall = Math.hypot(camera.position.x, camera.position.z + 72) < (HALL.inside ? 17.4 : 16.4);
+    if (inHall !== HALL.inside){
+      const t0 = performance.now();
+      HALL.inside = inHall;
+      for (const o of HALL.cull) o.visible = !inHall;
+      HALL.lastToggleMs = +(performance.now() - t0).toFixed(3);
+    }
+  }
 
   /* living things */
   for (const fn of tickers) fn(t, dt);
@@ -6189,6 +6265,7 @@ window.__CITY = {
   get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str,
     res: MIRROR.rt ? [MIRROR.rt.width, MIRROR.rt.height] : null }; },
   get proving(){ return PROVING_RESULTS; },
+  get hall(){ return { inside: HALL.inside, culled: HALL.cull.length, lastToggleMs: HALL.lastToggleMs }; },
   setMirrorStrength(x){ MIRROR.str = Math.max(0, Math.min(1, +x));
     for (const m of MIRROR.mats) m.uniforms.uStr.value = MIRROR.str; },
   setBloom(threshold, strength, radius){
