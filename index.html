@@ -537,6 +537,35 @@ const HALL = { inside: false, cull: [], lastToggleMs: 0, prog: 0 };
 /* LOOP 9 · PASS A — THE PEARLS (Rev 21:21): shared nacre uniforms for
    every gate; time + hour-breathing amplitude (no red in the ramp) */
 const NACRE = { t: { value: 0 }, amp: { value: .12 } };
+/* LOOP 10 — THE RIVER OF LIFE: shared water registry. One material
+   family, world-anchored noise (seams impossible), per-segment flow. */
+const RIVER = { time: { value: 0 }, tint: { value: new THREE.Color(1, 1, 1) }, mats: [] };
+function riverMat(flowX, flowZ, alpha){
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: { uTime: RIVER.time, uTint: RIVER.tint,
+                uFlow: { value: new THREE.Vector2(flowX, flowZ) },
+                uAlpha: { value: alpha } },
+    vertexShader: `varying vec3 vW;
+      void main(){ vW = (modelMatrix*vec4(position,1.0)).xyz;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader: `uniform float uTime, uAlpha; uniform vec2 uFlow; uniform vec3 uTint;
+      varying vec3 vW;
+      float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+      float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+        return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
+      void main(){
+        vec2 p = vW.xz - uFlow*uTime;
+        float a = n2(p*2.6);
+        float b = n2(p*5.1 + 7.0 - uFlow*uTime*0.6);
+        float glint = smoothstep(.55, .95, a*.55 + b*.55);
+        vec3 col = mix(vec3(.55,.72,.90), vec3(.98,1.0,1.0), glint) * uTint;
+        gl_FragColor = vec4(col, (uAlpha + glint*.38));
+      }`
+  });
+  RIVER.mats.push(m);
+  return m;
+}
 /* PASS C: the fixed phase now spans [−1,1] — negative is vespers depth */
 /* GOAL 7 — THE PROVING ON GLASS: ?proving turns the city into its own
    test bench for the Seer's real devices (see section near the end) */
@@ -4122,6 +4151,22 @@ function addBuilding(x,z,ry,big){
     scene.add(nichePools);
     HALL.lightRefs.nichePoolMat = nichePoolMat;
   }
+  /* LOOP 10 · PASS A — THE SPRING (Rev 22:1): living water issues from
+     BENEATH the dais's lowest step — the dais itself untouched. A low
+     marble spring-mouth at its foot, and a crystal rill set into the
+     nave floor beside the carpet (bed + micro-curbs merged; ONE water
+     draw, world-anchored noise, flow +z toward the doors). */
+  {
+    P.white.push(xf(new THREE.BoxGeometry(1.5, .34, .55), 2.12, .17, -72.85));
+    P.gold.push(xf(new THREE.BoxGeometry(1.56, .1, .2), 2.12, .38, -72.98));
+    P.crimson.push(xf(new THREE.BoxGeometry(.5, .05, 17.4), 2.12, .026, -64.05));
+    for (const s2 of [-1, 1])
+      P.white.push(xf(new THREE.BoxGeometry(.1, .13, 17.4), 2.12 + s2*.28, .065, -64.05));
+    const rill = new THREE.Mesh(
+      new THREE.PlaneGeometry(.42, 17.2).rotateX(-PI/2), riverMat(0, .55, .34));
+    rill.position.set(2.12, .085, -64.1);
+    scene.add(rill);
+  }
   /* dais — three marble steps */
   const DX=0, DZ=-79.5;
   P.white.push(xf(new THREE.CylinderGeometry(6.5,6.5,.6,40), DX,.3,DZ));
@@ -6548,6 +6593,7 @@ function animate(){
   gradePass.uniforms.uWarm.value = 1.35 - .8*h + .25*v;   /* warmth tracks the hour (Law 30 gate inside) */
   if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
   NACRE.t.value = t;
+  RIVER.time.value = t;
   NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
