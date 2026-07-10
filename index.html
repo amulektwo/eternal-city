@@ -1075,6 +1075,58 @@ const cloudSprites = [];
 }
 
 /* sea of clouds — two vast slowly-rotating discs */
+/* ================================================================
+   LOOP 6 · PASS D — THE HORIZON (board 04: the city goes on forever)
+   Two parallax bands of impostor spire-clusters standing out of the
+   cloud sea beyond the walls. Pure billboard cards, TWO merged meshes
+   (2 draws, ~200 tris). Haze is BAKED into unlit pale textures — fog-
+   matched by construction; far beyond the wall crowns (r≥185 vs 118.5)
+   so nothing can z-fight. Bases sink into the sea, tops stay far below
+   the cloud dome. Local seeded rng (layout law).
+================================================================ */
+{
+  const hr = mulberry32(8888);
+  const hrr = (a,b)=> a + hr()*(b-a);
+  const mkSkyline = (contrast)=> canvasTex(256, (g,w,h)=>{
+    g.clearRect(0,0,w,h);
+    /* a cluster of pale spires, atmospheric gradient toward the base */
+    const grd = g.createLinearGradient(0,0,0,h);
+    grd.addColorStop(0, `rgba(${205+contrast*20},${200+contrast*14},${215+contrast*8},.96)`);
+    grd.addColorStop(.75, 'rgba(236,222,206,.94)');
+    grd.addColorStop(1, 'rgba(248,236,216,.9)');
+    g.fillStyle = grd;
+    let x = 6;
+    while (x < w - 10){
+      const bw = 14 + (x*7 % 30), bh = h*(.28 + ((x*13) % 52)/100);
+      g.fillRect(x, h - bh, bw, bh);                        /* tower body */
+      g.beginPath();                                        /* spire cap */
+      g.moveTo(x, h - bh); g.lineTo(x + bw/2, h - bh - 22 - (x*11 % 26)); g.lineTo(x + bw, h - bh);
+      g.closePath(); g.fill();
+      x += bw + 3 + (x*5 % 7);
+    }
+  }, 256);
+  const mkBandMat = (tex, op)=> new THREE.MeshBasicMaterial({
+    map:tex, transparent:true, opacity:op, alphaTest:.04,
+    depthWrite:false, side:THREE.DoubleSide });
+  const bands = [
+    { r0:185, r1:235, n:22, w:58, hgt:64, yb:-14, tex:mkSkyline(1),  op:.5 },
+    { r0:320, r1:430, n:26, w:115, hgt:92, yb:-18, tex:mkSkyline(0), op:.32 },
+  ];
+  for (const b of bands){
+    const parts = [];
+    for (let i = 0; i < b.n; i++){
+      const a = (i + hr()*.6)/b.n*TAU, r = hrr(b.r0, b.r1);
+      const g2 = new THREE.PlaneGeometry(b.w*hrr(.8,1.3), b.hgt*hrr(.75,1.2));
+      xf(g2, Math.sin(a)*r, b.yb + b.hgt*.45, Math.cos(a)*r, a + PI);
+      parts.push(g2);
+    }
+    const m = new THREE.Mesh(
+      mergeGeometries(parts.map(g3=> g3.index ? g3.toNonIndexed() : g3)), mkBandMat(b.tex, b.op));
+    m.frustumCulled = false; m.renderOrder = -1;   /* behind the city's transparents */
+    scene.add(m);
+  }
+}
+
 const seaMeshes = [];
 {
   const mat = (op, tint)=> new THREE.ShaderMaterial({
