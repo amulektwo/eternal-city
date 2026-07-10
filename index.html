@@ -795,7 +795,8 @@ const tickers = [], nameplates = [], banners = [], waterDiscs = [],
       flames = [], glows = [], beams = [], particleMeshes = [], fruits = [],
       lacePinnacles = [],   /* [x, y, z, scale] — THE LACE skyline forest */
       districtWindows = [], /* [x, y, z, ry] — PASS A: every district window wears the lace */
-      bldRecords = [];      /* {x,z,ry,w,dpt,h} — PASS B: buttress/pinnacle candidates */
+      bldRecords = [],      /* {x,z,ry,w,dpt,h} — PASS B: buttress/pinnacle candidates */
+      clerestorySpots = []; /* [x,y,z,ry] — LOOP 7 PASS C: hall clerestory lace */
 let canopyShells = [], canopyPts = null, sprayMat = null;
 function mkGlow(x,y,z,s,color,op){
   const m = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -3783,6 +3784,40 @@ function addBuilding(x,z,ry,big){
     const wx = CX+Math.sin(a)*(R-.7), wz = CZ+Math.cos(a)*(R-.7);
     P.glow.push(xf(new THREE.PlaneGeometry(1.6,4.6), wx, 8.5, wz, a+PI));
   }
+  /* LOOP 7 · PASS C — THE BONES OF THE HALL: paired marble columns down
+     both sides of the carpet (one instanced mesh, 16 columns), and a
+     clerestory band of lancet lights high on the drum (glow planes ride
+     P.glow; their gold lace joins the lancet mesh via clerestorySpots).
+     The dais stays EXACTLY as the Seer's hand left it. */
+  {
+    const colGeo = mergeGeometries([
+      new THREE.CylinderGeometry(.42, .5, 8.6, 10).translate(0, 4.3, 0),
+      new THREE.CylinderGeometry(.62, .62, .28, 10).translate(0, .14, 0),
+      new THREE.BoxGeometry(1.15, .38, 1.15).translate(0, 8.8, 0),
+    ].map(g=> g.toNonIndexed()));
+    const colInst = new THREE.InstancedMesh(colGeo, MAT.white, 16);
+    const cd = new THREE.Object3D();
+    let ci = 0;
+    for (const s of [-1, 1]) for (const zz of [-59.5, -63.8, -68.1, -72.4]){
+      for (const px of [6.0*s - .95*s, 6.0*s + .95*s]){
+        cd.position.set(px, 0, zz);
+        cd.updateMatrix(); colInst.setMatrixAt(ci++, cd.matrix);
+      }
+      addCircle(6.0*s, zz, 1.6);
+      P.gold.push(xf(new THREE.BoxGeometry(2.6, .3, 1.4), 6.0*s, 9.15, zz));  /* pair entablature */
+    }
+    colInst.castShadow = SHADOWS; colInst.receiveShadow = SHADOWS;
+    colInst.frustumCulled = false;
+    scene.add(colInst);
+    /* clerestory lancets — twelve lights between the ribs, facing inward */
+    for (let i = 0; i < 12; i++){
+      const a = i*PI/6 + PI/12;
+      if (angDiff(a, 0) < GAP + .1) continue;
+      const wx = CX + Math.sin(a)*(R - .55), wz = CZ + Math.cos(a)*(R - .55);
+      P.glow.push(xf(new THREE.PlaneGeometry(.95, 2.5), wx, 11.4, wz, a + PI));
+      clerestorySpots.push([CX + Math.sin(a)*(R - .62), 11.4, CZ + Math.cos(a)*(R - .62), a + PI]);
+    }
+  }
   /* dais — three marble steps */
   const DX=0, DZ=-79.5;
   P.white.push(xf(new THREE.CylinderGeometry(6.5,6.5,.6,40), DX,.3,DZ));
@@ -4532,6 +4567,9 @@ const laceGold = new THREE.MeshStandardMaterial({
       LG2.push(tileUV(xf(new THREE.BoxGeometry(3.7, .45, 3.7), px, 15.75, pz, a), 4));
     }
   }
+  /* LOOP 7 · PASS C — the dome coffered from within (LACE on the
+     ceiling — an interior shell in the carved-stone merge, zero draws) */
+  LS.push(tileUV(xf(new THREE.SphereGeometry(16.6, 32, 12, 0, TAU, .36, PI/2 - .52), 0, 11.5, -72), 18, 5));
   /* LOOP 7 · PASS B — the throne door's coffered jamb + lintel */
   for (const s of [-1, 1])
     LS.push(tileUV(xf(new THREE.BoxGeometry(.62, 10.6, .95), 7.35*s, 5.2, -56.2), 1, 5));
@@ -4696,6 +4734,9 @@ const laceGold = new THREE.MeshStandardMaterial({
   /* PASS A (FACADES) — every district window wears the lace: same mesh, zero new draws */
   for (const [dwx, dwy, dwz, dry] of districtWindows)
     lancetParts.push(xf(new THREE.PlaneGeometry(1.06, 2.44), dwx, dwy, dwz, dry));
+  /* LOOP 7 · PASS C — the hall clerestory wears the lace too */
+  for (const [cwx, cwy, cwz, cry] of clerestorySpots)
+    lancetParts.push(xf(new THREE.PlaneGeometry(1.0, 2.6), cwx, cwy, cwz, cry));
   const lancetMesh = new THREE.Mesh(
     mergeGeometries(lancetParts.map(g=> g.index ? g.toNonIndexed() : g)), traceryMatOf(lancetTex));
   scene.add(lancetMesh);
