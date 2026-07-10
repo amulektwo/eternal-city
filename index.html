@@ -148,11 +148,12 @@
     font-family:'EB Garamond', Georgia, serif; font-size:1.05rem; line-height:1.7; }
   #readerFoot { display:flex; gap:.8rem; justify-content:center; align-items:center;
     margin-top:1.1rem; }
-  #readerClose, #readerRaw { padding:.55rem 2.2rem; font-family:'Cinzel', serif;
+  #readerClose, #readerRaw, #readerWalk { padding:.55rem 2.2rem; font-family:'Cinzel', serif;
     font-size:.72rem; letter-spacing:.3em; text-indent:.3em; color:#5a4718;
     background:transparent; border:1px solid #b8912f; cursor:pointer; transition:all .3s; }
-  #readerRaw { padding:.55rem 1.3rem; font-size:.6rem; opacity:.85; }
-  #readerClose:hover, #readerRaw:hover { background:#b8912f; color:#fff; }
+  #readerRaw, #readerWalk { padding:.55rem 1.3rem; font-size:.6rem; opacity:.85; }
+  #readerWalk[hidden] { display:none; }
+  #readerClose:hover, #readerRaw:hover, #readerWalk:hover { background:#b8912f; color:#fff; }
   #readerSeal { position:absolute; top:-26px; left:50%; margin-left:-26px; width:52px;
     height:52px; pointer-events:none; }
   #readerLoading { font-family:'Cinzel', serif; color:#8a6d2f; letter-spacing:.3em;
@@ -271,6 +272,7 @@
     <div id="readerLoading">THE SEAL BREAKS…</div>
     <div id="readerBody"></div>
     <div id="readerFoot">
+      <button id="readerWalk" hidden>WALK THERE</button>
       <button id="readerRaw">RAW VERBATIM</button>
       <button id="readerClose">SEAL THE SCROLL</button>
     </div>
@@ -5660,6 +5662,7 @@ addEventListener('keydown', e=>{
   keys[e.code]=true;
   if (e.code==='Space') e.preventDefault();
   /* Esc re-furls an open scroll BEFORE it may pause the city */
+  if (e.code==='Escape' && WAYWALK.active){ skipWayWalk(); return; }
   if (e.code==='Escape' && readerOpen){ closeReader(); return; }
   /* "/" or Cmd/Ctrl-K lights the lamp */
   if ((e.code==='Slash' || ((e.metaKey||e.ctrlKey) && e.code==='KeyK'))
@@ -5962,7 +5965,19 @@ async function openScroll(id, fromPos){
   readerOpen = true; readerScrollId = id;
   if (document.pointerLockElement) document.exitPointerLock();
   glide.fromYaw = player.yaw; glide.fromPitch = player.pitch;   /* always captured for close */
-  if (!PREFERS_STATIC && fromPos) startGlide(fromPos);
+  glide.didGlide = !PREFERS_STATIC && !!fromPos;
+  if (glide.didGlide) startGlide(fromPos);
+  /* PASS B — THE FINDER: offer the road when the scroll's house is known
+     and the pilgrim is not already standing before it */
+  readerWalkBtn.hidden = true;
+  loadSeekIndex().then(()=>{
+    if (!readerOpen || readerScrollId !== id) return;
+    const _e = seekIndex && seekIndex.find(r=> String(r.id) === String(id));
+    const _s = _e && vaultGroups.find(v=> v.label === _e.g);
+    if (_s && _s.anchor &&
+        Math.hypot(_s.anchor.x - player.pos.x, _s.anchor.z - player.pos.z) > 14)
+      readerWalkBtn.hidden = false;
+  });
   readerEl.hidden = false;
   readerEl.classList.add('loading');
   readerPanel.classList.remove('animate-unfurl','animate-refurl');
@@ -6010,7 +6025,11 @@ function closeReader(){
     void readerPanel.offsetWidth;
     readerPanel.classList.add('animate-refurl');
     setTimeout(finish, 520);
-    glide.active = true; glide.returning = true; glide.t0 = clock.elapsedTime;
+    if (glide.didGlide){
+      glide.active = true; glide.returning = true; glide.t0 = clock.elapsedTime;
+    } else {
+      player.yaw = glide.fromYaw; player.pitch = glide.fromPitch;
+    }
   } else {
     finish();
     player.yaw = glide.fromYaw; player.pitch = glide.fromPitch;
@@ -6103,22 +6122,10 @@ function renderSeek(){
   seekResults.innerHTML = html;
 }
 function seekTravel(id){
-  const entry = seekIndex && seekIndex.find(r=> String(r.id) === String(id));
+  /* PASS B — the scroll answers WHERE YOU STAND; the reader then offers
+     WALK THERE (the old instant carry retired in favor of the road) */
   closeSeek();
-  const st = entry && vaultGroups.find(v=> v.label === entry.g);
-  if (st && st.anchor){
-    /* stand 4.6m inward of the vault anchor, facing it; collisions and
-       ground resolve on the next step (Law 23: read pos back, never trust) */
-    const ax = st.anchor.x, az = st.anchor.z;
-    const d = Math.hypot(ax, az) || 1;
-    player.pos.x = ax - (ax/d)*4.6;
-    player.pos.z = az - (az/d)*4.6;
-    player.yaw = Math.atan2(-(ax-player.pos.x), -(az-player.pos.z));
-    player.pitch = 0;
-    openScroll(id, new THREE.Vector3(ax, 2.4, az));
-  } else {
-    openScroll(id);
-  }
+  openScroll(id);
 }
 let seekDebounce = 0;
 seekInput.addEventListener('input', ()=>{
@@ -6133,6 +6140,222 @@ seekResults.addEventListener('click', e=>{
   if (btn) seekTravel(btn.dataset.id);
 });
 document.getElementById('seekVeil').addEventListener('click', closeSeek);
+
+/* ================================================================
+   LOOP 11 · PASS B — THE FINDER'S ROAD
+   WALK THERE: an A* road over the city's OWN records — every collider
+   box/circle/segment (inflated by the walker's radius), the wall ring,
+   and THE WATER LAW: the river and canal block the road EXCEPT within
+   arm's reach of their ford stones and bridges (west-avenue ruling,
+   Seer-sealed). The Tree plaza is walked TO, never THROUGH (r<16).
+   The walk itself rides the normal stepPlayer pipeline — collisions
+   and ground resolve honestly, bridges lift the feet. Escape or a
+   quick tap skips to arrival; touching the sticks/keys cancels —
+   the pilgrim's feet are sovereign. ================================ */
+const WAYWALK = { active:false, pts:[], i:0, id:null, ax:0, az:0 };
+let WAY_M = .9;   /* collider inflation; slimmed to .65 on retry for alleys */
+const readerWalkBtn = document.getElementById('readerWalk');
+/* the water law: centerline segments; crossing lawful only at the stones */
+const WATER_LAW = [
+  { ax:  2.12, az:-55.4,  bx:  2.12, bz:-34.0, w: .95, cross:[[ 2.12,-45  ]] },
+  { ax:  2.33, az:-34.0,  bx:-34.0,  bz:-34.0, w: .95, cross:[[-16,  -34  ]] },
+  { ax:-34.0,  az:-34.21, bx:-34.0,  bz:  2.2, w: .95, cross:[[-34,  -12  ]] },
+  { ax:-33.79, az:  2.2,  bx:-72.6,  bz:  2.2, w:1.0,  cross:[[-52,   2.2 ]] },
+  { ax:-72.5,  az:  2.5,  bx:-114,   bz:  2.5, w:2.0,  cross:[[-77,   2.5 ],[-110.5, 2.5]] },
+];
+function _segD2(px, pz, ax, az, bx, bz){
+  const ex = bx-ax, ez = bz-az, L2 = ex*ex + ez*ez || 1e-9;
+  let t = ((px-ax)*ex + (pz-az)*ez) / L2; t = Math.max(0, Math.min(1, t));
+  const qx = ax + ex*t, qz = az + ez*t;
+  return (px-qx)*(px-qx) + (pz-qz)*(pz-qz);
+}
+function wayBlocked(x, z){
+  const r = Math.hypot(x, z);
+  if (r < 16 || r > 114) return true;
+  /* the stones and bridge decks are free ground BY LAW — they override
+     even the collider inflation (the canal reach boxes flank the decks) */
+  for (const w of WATER_LAW)
+    for (const c of w.cross)
+      if ((x-c[0])*(x-c[0]) + (z-c[1])*(z-c[1]) < 1.44) return false;
+  const M = WAY_M;
+  for (const b of colBoxes)
+    if (x > b.x0-M && x < b.x1+M && z > b.z0-M && z < b.z1+M) return true;
+  for (const c of colCircles){
+    const dx = x-c.x, dz = z-c.z, rr = c.r + M;
+    if (dx*dx + dz*dz < rr*rr) return true;
+  }
+  for (const sg of colSegs)
+    if (_segD2(x, z, sg.ax, sg.az, sg.bx, sg.bz) < (sg.r + M)*(sg.r + M)) return true;
+  for (const w of WATER_LAW){
+    if (_segD2(x, z, w.ax, w.az, w.bx, w.bz) < w.w*w.w){
+      let lawful = false;
+      for (const c of w.cross)
+        if ((x-c[0])*(x-c[0]) + (z-c[1])*(z-c[1]) < 3.24) lawful = true;
+      if (!lawful) return true;
+    }
+  }
+  return false;
+}
+function wayClearLine(ax, az, bx, bz){
+  /* .25m samples: a diagonal crossing at the edge of a ford's lawful
+     radius leaves a sliver thinner than .6m — coarse samples stepped it */
+  const d = Math.hypot(bx-ax, bz-az), n = Math.ceil(d / .25);
+  for (let i = 1; i < n; i++){
+    const t = i / n;
+    if (wayBlocked(ax + (bx-ax)*t, az + (bz-az)*t)) return false;
+  }
+  return true;
+}
+function wayRoute(x0, z0, x1, z1){
+  WAY_M = .9;
+  let r = wayRouteAt(x0, z0, x1, z1);
+  if (!r){ WAY_M = .65; r = wayRouteAt(x0, z0, x1, z1); }
+  WAY_M = .9;
+  return r;
+}
+function wayRouteAt(x0, z0, x1, z1){
+  const C = 2;
+  const memo = new Map();
+  const blk = (ix, iz)=>{
+    const k = ix*4096 + iz + 2048;
+    let v = memo.get(k);
+    if (v === undefined){ v = wayBlocked(ix*C, iz*C); memo.set(k, v); }
+    return v;
+  };
+  const snap = (x, z)=>{
+    const ix = Math.round(x/C), iz = Math.round(z/C);
+    if (!blk(ix, iz)) return [ix, iz];
+    for (let rr = 1; rr <= 5; rr++)
+      for (let a = -rr; a <= rr; a++)
+        for (const [ox, oz] of [[a,-rr],[a,rr],[-rr,a],[rr,a]])
+          if (!blk(ix+ox, iz+oz)) return [ix+ox, iz+oz];
+    return null;
+  };
+  const S = snap(x0, z0), G = snap(x1, z1);
+  if (!S || !G) return null;
+  const gk = G[0]*4096 + G[1] + 2048;
+  /* binary min-heap on f — a linear scan dies at city-spanning roads */
+  const heap = [[0, 0, S[0], S[1]]];
+  const hPush = (e)=>{
+    heap.push(e); let i = heap.length-1;
+    while (i > 0){ const p2 = (i-1)>>1;
+      if (heap[p2][0] <= heap[i][0]) break;
+      [heap[p2], heap[i]] = [heap[i], heap[p2]]; i = p2; }
+  };
+  const hPop = ()=>{
+    const top = heap[0], end = heap.pop();
+    if (heap.length){ heap[0] = end; let i = 0;
+      for (;;){ let sm = i; const l = 2*i+1, r2 = 2*i+2;
+        if (l < heap.length && heap[l][0] < heap[sm][0]) sm = l;
+        if (r2 < heap.length && heap[r2][0] < heap[sm][0]) sm = r2;
+        if (sm === i) break;
+        [heap[sm], heap[i]] = [heap[i], heap[sm]]; i = sm; } }
+    return top;
+  };
+  const came = new Map(), gCost = new Map();
+  gCost.set(S[0]*4096 + S[1] + 2048, 0);
+  const H = (ix, iz)=> Math.hypot(ix-G[0], iz-G[1]);
+  let found = null, guard = 0;
+  while (heap.length && guard++ < 240000){
+    const [f, g, ix, iz] = hPop();
+    const ck = ix*4096 + iz + 2048;
+    if (ck === gk){ found = ck; break; }
+    if (g > (gCost.get(ck) ?? Infinity)) continue;
+    for (const [ox, oz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+      const nx2 = ix+ox, nz2 = iz+oz;
+      if (blk(nx2, nz2)) continue;
+      /* the edge must not jump a thin blocked band (the rill is .42m) */
+      if (wayBlocked((ix+nx2)*C/2, (iz+nz2)*C/2)) continue;
+      /* near water, a midpoint is not enough: a diagonal can clip the
+         band with every coarse sample lawful — walk the edge finely */
+      let nearWater = false;
+      for (const w of WATER_LAW)
+        if (_segD2((ix+nx2)*C/2, (iz+nz2)*C/2, w.ax, w.az, w.bx, w.bz) < 12.25){ nearWater = true; break; }
+      if (nearWater && !wayClearLine(ix*C, iz*C, nx2*C, nz2*C)) continue;
+      const ng = g + Math.hypot(ox, oz);
+      const nk = nx2*4096 + nz2 + 2048;
+      if (ng < (gCost.get(nk) ?? Infinity)){
+        gCost.set(nk, ng); came.set(nk, ck);
+        hPush([ng + H(nx2, nz2), ng, nx2, nz2]);
+      }
+    }
+  }
+  if (found === null) return null;
+  const cells = [];
+  for (let k = found; k !== undefined; k = came.get(k)){
+    const rz = ((k % 4096) + 4096) % 4096;   /* floored residue — JS % truncates */
+    cells.unshift([Math.floor(k/4096)*C, (rz - 2048)*C]);
+  }
+  /* greedy line-of-sight smoothing over the same blocked law */
+  const pts = [];
+  let cur = [x0, z0], i2 = 0;
+  while (i2 < cells.length){
+    let far = i2;
+    for (let j = cells.length-1; j > i2; j--)
+      if (wayClearLine(cur[0], cur[1], cells[j][0], cells[j][1])){ far = j; break; }
+    cur = cells[far]; pts.push(cur);
+    i2 = far + 1;
+  }
+  pts.push([x1, z1]);
+  return pts;
+}
+function finishWayWalk(){
+  WAYWALK.active = false;
+  player.yaw = Math.atan2(-(WAYWALK.ax - player.pos.x), -(WAYWALK.az - player.pos.z));
+  player.pitch = 0;
+  openScroll(WAYWALK.id, new THREE.Vector3(WAYWALK.ax, 2.4, WAYWALK.az));
+}
+function skipWayWalk(){
+  if (!WAYWALK.active) return;
+  const last = WAYWALK.pts[WAYWALK.pts.length-1];
+  player.pos.x = last[0]; player.pos.z = last[1];
+  const gH = groundAt(last[0], last[1]);
+  if (gH > -1e8){ player.pos.y = gH + 1.7; player.velY = 0; }
+  finishWayWalk();
+}
+function startWalkThere(id){
+  if (!seekIndex){   /* the lamp not yet lit — light it, then walk */
+    loadSeekIndex().then(()=>{ if (seekIndex) startWalkThere(id); });
+    return true;
+  }
+  const entry = seekIndex.find(r=> String(r.id) === String(id));
+  const st = entry && vaultGroups.find(v=> v.label === entry.g);
+  if (!st || !st.anchor) return false;
+  const ax = st.anchor.x, az = st.anchor.z, d = Math.hypot(ax, az) || 1;
+  const gx = ax - (ax/d)*4.6, gz = az - (az/d)*4.6;
+  WAYWALK.id = id; WAYWALK.ax = ax; WAYWALK.az = az;
+  const pts = PREFERS_STATIC ? null : wayRoute(player.pos.x, player.pos.z, gx, gz);
+  if (!pts){
+    /* reduced motion, or no road found: the old carry — never strand a pilgrim */
+    player.pos.x = gx; player.pos.z = gz;
+    const gH = groundAt(gx, gz);
+    if (gH > -1e8){ player.pos.y = gH + 1.7; player.velY = 0; }
+    finishWayWalk();
+    return true;
+  }
+  WAYWALK.pts = pts; WAYWALK.i = 0; WAYWALK.active = true;
+  return true;
+}
+readerWalkBtn.addEventListener('click', ()=>{
+  const id = readerScrollId;
+  closeReader();
+  startWalkThere(id);
+});
+/* a quick single-finger tap during the walk skips to arrival
+   (drag/joystick cancels instead — handled in stepPlayer) */
+let wwTapT = 0, wwTapX = 0, wwTapY = 0;
+window.addEventListener('touchstart', (e)=>{
+  if (WAYWALK.active && e.touches.length === 1){
+    wwTapT = performance.now();
+    wwTapX = e.touches[0].clientX; wwTapY = e.touches[0].clientY;
+  }
+}, {passive:true});
+window.addEventListener('touchend', (e)=>{
+  if (!WAYWALK.active || e.touches.length !== 0 || !e.changedTouches.length) return;
+  const dt2 = performance.now() - wwTapT;
+  const dx2 = e.changedTouches[0].clientX - wwTapX, dy2 = e.changedTouches[0].clientY - wwTapY;
+  if (dt2 < 260 && dx2*dx2 + dy2*dy2 < 196) skipWayWalk();
+}, {passive:true});
 document.getElementById('lampBtn').addEventListener('click', openSeek);
 
 /* ---- THE SCROLL STATIONS (THE FULLNESS, Seer's Ruling R3) ----
@@ -6549,6 +6772,31 @@ function stepPlayer(dt){
   /* forward = (-sin yaw, -cos yaw); right = (cos yaw, -sin yaw) */
   let nx = player.pos.x + ((-sy)*(-mz) + cy*mx) * sp;
   let nz = player.pos.z + ((-cy)*(-mz) + (-sy)*mx) * sp;
+  /* PASS B — WALK THERE: the road overrides idle feet; the pilgrim's
+     own input cancels it (their feet are sovereign) */
+  if (WAYWALK.active){
+    if (m > .06){ WAYWALK.active = false; }
+    else {
+      const wp = WAYWALK.pts[WAYWALK.i];
+      const wdx = wp[0] - player.pos.x, wdz = wp[1] - player.pos.z;
+      const wd = Math.hypot(wdx, wdz);
+      const isLast = WAYWALK.i === WAYWALK.pts.length - 1;
+      if (wd < (isLast ? .9 : 1.2)){
+        if (isLast) finishWayWalk();
+        else WAYWALK.i++;
+      }
+      if (WAYWALK.active){
+        const ws = Math.min(9 * dt, wd);
+        nx = player.pos.x + (wdx / (wd || 1)) * ws;
+        nz = player.pos.z + (wdz / (wd || 1)) * ws;
+        const wyaw = Math.atan2(-wdx, -wdz);
+        let wdy = wyaw - player.yaw;
+        wdy = Math.atan2(Math.sin(wdy), Math.cos(wdy));
+        player.yaw += wdy * Math.min(1, 5 * dt);
+        player.pitch += (0 - player.pitch) * Math.min(1, 3 * dt);
+      } else { nx = player.pos.x; nz = player.pos.z; }
+    }
+  }
   [nx,nz] = resolveCollisions(nx,nz,prevR,player.pos.x,player.pos.z,player.pos.y-1.7);
   const gH = groundAt(nx,nz);
   const feet = player.pos.y - 1.7;
@@ -7083,6 +7331,12 @@ window.__CITY = {
   get wayfare(){ return { compass: WAYFARE.compassOn,
     glyphs: WAYFARE.glyphs.map(g=>({x:g.x, y:g.y, z:g.z, a:+g.a.toFixed(2)})) }; },
   setWayfare(v){ if (WAYFARE.mesh) WAYFARE.mesh.visible = !!v; },
+  get waywalk(){ return { active: WAYWALK.active, i: WAYWALK.i,
+    n: WAYWALK.pts.length, id: WAYWALK.id,
+    pts: WAYWALK.pts.map(p=>[+p[0].toFixed(1), +p[1].toFixed(1)]) }; },
+  walkThere(id){ return startWalkThere(id); },
+  wayRoute(x0, z0, x1, z1){ return wayRoute(x0, z0, x1, z1); },
+  wayBlocked(x, z){ return wayBlocked(x, z); },
   census(){ /* per-mesh in-frustum tri census at the current pose (debug) */
     const fr = new THREE.Frustum(), mt = new THREE.Matrix4();
     camera.updateMatrixWorld();
