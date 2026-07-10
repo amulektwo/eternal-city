@@ -244,6 +244,21 @@
     background:radial-gradient(circle, transparent 62%, rgba(10,7,2,.14) 100%);
     opacity:0; transition:opacity .35s; display:none; }
   #petal.show { opacity:1; }
+  #resume { position:fixed; left:50%; bottom:9vh; transform:translateX(-50%);
+    z-index:14; padding:.9rem 1.4rem; text-align:center;
+    background:rgba(16,24,44,.78); border:1px solid rgba(243,217,139,.5);
+    border-radius:10px; backdrop-filter:blur(6px);
+    opacity:0; transition:opacity .5s; pointer-events:none; }
+  #resume.show { opacity:1; pointer-events:auto; }
+  #resume .rsTitle { font-family:'Cinzel',serif; color:#f3d98b; font-size:.72rem;
+    letter-spacing:.22em; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  #resume .rsSub { font-family:'EB Garamond',serif; color:#e8e2d2; font-size:.85rem;
+    margin:.25rem 0 .6rem; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  #resume button { font-family:'Cinzel',serif; font-size:.62rem; letter-spacing:.18em;
+    padding:.45rem 1.3rem; margin:0 .3rem; cursor:pointer;
+    background:transparent; color:#f3d98b; border:1px solid rgba(243,217,139,.55);
+    border-radius:6px; }
+  #resume button:hover { background:#b8912f; color:#fff; }
   .pmark { position:absolute; left:50%; top:50%; font-family:'Cinzel', serif;
     font-size:.6rem; letter-spacing:.14em; color:#f3d98b; white-space:nowrap;
     text-shadow:0 1px 2px rgba(10,7,2,.95), 0 0 8px rgba(10,7,2,.6);
@@ -281,6 +296,14 @@
 <div id="dot"></div>
 <div id="approach"><h2>THE ETERNAL CITY</h2><div class="apsub">walk through the gate</div></div>
 <div id="petal"></div>
+<div id="resume" hidden>
+  <div class="rsTitle">THE PILGRIMAGE REMEMBERS</div>
+  <div class="rsSub">return to where you last stood?</div>
+  <div class="rsRow">
+    <button id="resumeGo">RETURN</button>
+    <button id="resumeStay">STAY</button>
+  </div>
+</div>
 <div id="fps"></div>
 <div id="invite"><div class="t"></div><div class="s"></div></div>
 <div id="whisper">The fruit of the Tree hold the scrolls — draw near and touch one.</div>
@@ -5663,6 +5686,9 @@ addEventListener('keydown', e=>{
   if (e.code==='Space') e.preventDefault();
   /* Esc re-furls an open scroll BEFORE it may pause the city */
   if (e.code==='Escape' && WAYWALK.active){ skipWayWalk(); return; }
+  if (e.code==='KeyC' && started && !paused && !readerOpen && !seekOpen){
+    toggleCandle(); return;
+  }
   if (e.code==='Escape' && readerOpen){ closeReader(); return; }
   /* "/" or Cmd/Ctrl-K lights the lamp */
   if ((e.code==='Slash' || ((e.metaKey||e.ctrlKey) && e.code==='KeyK'))
@@ -6342,20 +6368,199 @@ readerWalkBtn.addEventListener('click', ()=>{
   startWalkThere(id);
 });
 /* a quick single-finger tap during the walk skips to arrival
-   (drag/joystick cancels instead — handled in stepPlayer) */
-let wwTapT = 0, wwTapX = 0, wwTapY = 0;
+   (drag/joystick cancels instead — handled in stepPlayer);
+   a STILL long-press (850ms, <12px) sets or lifts a candle */
+let wwTapT = 0, wwTapX = 0, wwTapY = 0, wwHold = 0;
 window.addEventListener('touchstart', (e)=>{
-  if (WAYWALK.active && e.touches.length === 1){
+  if (e.touches.length === 1){
     wwTapT = performance.now();
     wwTapX = e.touches[0].clientX; wwTapY = e.touches[0].clientY;
-  }
+    clearTimeout(wwHold);
+    if (started && !paused && !readerOpen && !seekOpen && !WAYWALK.active){
+      /* still only: the touchmove listener below cancels a moving hold */
+      wwHold = setTimeout(toggleCandle, 850);
+    }
+  } else clearTimeout(wwHold);
+}, {passive:true});
+window.addEventListener('touchmove', (e)=>{
+  if (e.touches.length === 1){
+    const dx3 = e.touches[0].clientX - wwTapX, dy3 = e.touches[0].clientY - wwTapY;
+    if (dx3*dx3 + dy3*dy3 > 144) clearTimeout(wwHold);
+  } else clearTimeout(wwHold);
 }, {passive:true});
 window.addEventListener('touchend', (e)=>{
+  clearTimeout(wwHold);
   if (!WAYWALK.active || e.touches.length !== 0 || !e.changedTouches.length) return;
   const dt2 = performance.now() - wwTapT;
   const dx2 = e.changedTouches[0].clientX - wwTapX, dy2 = e.changedTouches[0].clientY - wwTapY;
   if (dt2 < 260 && dx2*dx2 + dy2*dy2 < 196) skipWayWalk();
 }, {passive:true});
+
+/* ================================================================
+   LOOP 11 · PASS C — THE PILGRIMAGE
+   Everything stays ON THE DEVICE: one localStorage key, versioned
+   with DATA_VERSION. Self-heal: a corrupt or foreign record starts
+   clean; a version bump keeps the GEOMETRY (feet, candles) and
+   drops only stale scroll references. LAST STAND: on return the
+   city offers — never forces — the pilgrim's last place. CANDLES:
+   up to twelve marks set by the pilgrim's own hand (C, or hold on
+   touch); ONE InstancedMesh, one draw; the compass petal learns
+   the nearest candle's bearing. ============================== */
+const PILGRIM = { key:'ec.pilgrimage.v1', candles:[], mesh:null, mat:null, resumed:false };
+function pilgrimLoad(){
+  try {
+    const raw = localStorage.getItem(PILGRIM.key);
+    if (!raw) return null;
+    const st = JSON.parse(raw);
+    if (!st || typeof st !== 'object') return null;
+    if (st.v !== DATA_VERSION){ delete st.lastScroll; st.v = DATA_VERSION; }
+    st.candles = (Array.isArray(st.candles) ? st.candles : [])
+      .filter(c=> Array.isArray(c) && c.length === 3 && c.every(Number.isFinite)).slice(0, 12);
+    if (!Array.isArray(st.pos) || st.pos.length !== 3 || !st.pos.every(Number.isFinite)) st.pos = null;
+    if (!Number.isFinite(st.yaw)) st.yaw = 0;
+    if (!Number.isFinite(st.pitch)) st.pitch = 0;
+    return st;
+  } catch { return null; }
+}
+function pilgrimSave(){
+  try {
+    localStorage.setItem(PILGRIM.key, JSON.stringify({
+      v: DATA_VERSION,
+      pos: [+player.pos.x.toFixed(2), +player.pos.y.toFixed(2), +player.pos.z.toFixed(2)],
+      yaw: +player.yaw.toFixed(3), pitch: +player.pitch.toFixed(3),
+      candles: PILGRIM.candles.map(c=> [+c[0].toFixed(2), +c[1].toFixed(2), +c[2].toFixed(2)]),
+    }));
+  } catch {}
+}
+/* the twelve candles — one merged stub+flame geometry, ONE InstancedMesh.
+   Flame verts carry aGlow=1: emissive rides the attribute (Law 10) with a
+   soft shared flicker; vertex hook anchors project_vertex (Law 39). */
+{
+  /* L16: contrast is the ornament — a white stub on white marble never
+     reads; the GOLD dish and the flame carry the mark */
+  const stub = new THREE.CylinderGeometry(.034, .042, .24, 8).translate(0, .135, 0);
+  const dish = new THREE.CylinderGeometry(.13, .09, .035, 10).translate(0, .018, 0);
+  const flame = new THREE.SphereGeometry(.038, 8, 6).scale(1, 1.9, 1).translate(0, .315, 0);
+  const tag = (g, glow, col)=>{
+    const n = g.attributes.position.count;
+    const a = new Float32Array(n).fill(glow), c = new Float32Array(n*3);
+    for (let i = 0; i < n; i++){ c[i*3] = col[0]; c[i*3+1] = col[1]; c[i*3+2] = col[2]; }
+    g.setAttribute('aGlow', new THREE.BufferAttribute(a, 1));
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    return g;
+  };
+  const geo = mergeGeometries([
+    tag(stub, 0, [.97, .94, .86]),
+    tag(dish, 0, [.86, .66, .22]),
+    tag(flame, 1, [1, .9, .6]),
+  ].map(g=> g.toNonIndexed()));
+  PILGRIM.mat = new THREE.MeshStandardMaterial({ color:0xffffff, vertexColors:true,
+    roughness:.42, metalness:.35 });
+  PILGRIM.mat.onBeforeCompile = (sh)=>{
+    sh.uniforms.uCt = { value: 0 };
+    PILGRIM.mat.userData.uCt = sh.uniforms.uCt;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aGlow; varying float vCg;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\n  vCg = aGlow;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vCg; uniform float uCt;')
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+  totalEmissiveRadiance += vec3(1.0, .74, .38) * vCg * (1.9 + .35*sin(uCt*7.3) * sin(uCt*11.7 + 2.1));`);
+  };
+  const m = new THREE.InstancedMesh(geo, PILGRIM.mat, 12);
+  m.count = 0; m.castShadow = false; m.receiveShadow = false; m.frustumCulled = false;
+  scene.add(m);
+  PILGRIM.mesh = m;
+  tickers.push((t)=>{ if (PILGRIM.mat.userData.uCt) PILGRIM.mat.userData.uCt.value = t; });
+}
+const _cm4 = new THREE.Matrix4();
+function candlesRebuild(){
+  PILGRIM.candles.forEach((c, i)=>{
+    _cm4.makeTranslation(c[0], c[1], c[2]);
+    PILGRIM.mesh.setMatrixAt(i, _cm4);
+  });
+  PILGRIM.mesh.count = PILGRIM.candles.length;
+  PILGRIM.mesh.instanceMatrix.needsUpdate = true;
+  updateCandleTarget();
+}
+function updateCandleTarget(){
+  let best = null, bd = 1e9;
+  for (const c of PILGRIM.candles){
+    const d = Math.hypot(c[0] - player.pos.x, c[2] - player.pos.z);
+    if (d < bd){ bd = d; best = c; }
+  }
+  WAYFARE.candleTarget = best ? { n:'THE CANDLE', x:best[0], z:best[2] } : null;
+}
+function toggleCandle(){
+  for (let i = 0; i < PILGRIM.candles.length; i++){
+    const c = PILGRIM.candles[i];
+    if (Math.hypot(c[0] - player.pos.x, c[2] - player.pos.z) < 1.5){
+      PILGRIM.candles.splice(i, 1);
+      candlesRebuild(); pilgrimSave();
+      showInvite('The candle is taken up', 'its light goes with you', 2.5);
+      return;
+    }
+  }
+  const gH = groundAt(player.pos.x, player.pos.z);
+  const cy = (gH > -1e8) ? gH : (player.pos.y - 1.7);
+  if (PILGRIM.candles.length >= 12){
+    PILGRIM.candles.shift();
+    showInvite('A candle marks this place', 'the oldest yields its watch (twelve at most)', 3);
+  } else {
+    showInvite('A candle marks this place', `${PILGRIM.candles.length + 1} of twelve`, 2.5);
+  }
+  PILGRIM.candles.push([player.pos.x, cy, player.pos.z]);
+  candlesRebuild(); pilgrimSave();
+}
+/* restore on load; the LAST STAND is offered once the walk begins */
+{
+  const saved = pilgrimLoad();
+  if (saved){
+    PILGRIM.candles = saved.candles;
+    candlesRebuild();
+  }
+  const resumeEl = document.getElementById('resume');
+  let offered = false;
+  tickers.push(()=>{
+    if (offered || PILGRIM.resumed || PROVING) return;
+    if (!started || paused) return;
+    if (!APPROACH.crossed && APPROACH.active) return;   /* let the arrival finish */
+    offered = true;
+    if (!saved || !saved.pos) return;
+    const d = Math.hypot(saved.pos[0] - player.pos.x, saved.pos[2] - player.pos.z);
+    if (d < 10) return;
+    resumeEl.hidden = false;
+    requestAnimationFrame(()=> resumeEl.classList.add('show'));
+    setTimeout(()=>{ resumeEl.classList.remove('show');
+      setTimeout(()=> resumeEl.hidden = true, 600); }, 12000);
+  });
+  document.getElementById('resumeGo').addEventListener('click', ()=>{
+    if (saved && saved.pos){
+      player.pos.set(saved.pos[0], saved.pos[1], saved.pos[2]);
+      player.yaw = saved.yaw; player.pitch = saved.pitch; player.velY = 0;
+      PILGRIM.resumed = true;
+    }
+    resumeEl.classList.remove('show');
+    setTimeout(()=> resumeEl.hidden = true, 600);
+  });
+  document.getElementById('resumeStay').addEventListener('click', ()=>{
+    resumeEl.classList.remove('show');
+    setTimeout(()=> resumeEl.hidden = true, 600);
+  });
+}
+/* the feet are remembered every few seconds of true travel, and at parting */
+{
+  let lastX = 0, lastZ = 0, lastT = 0;
+  tickers.push((t)=>{
+    if (!started || t - lastT < 3) return;
+    lastT = t;
+    if (Math.hypot(player.pos.x - lastX, player.pos.z - lastZ) < 2) return;
+    lastX = player.pos.x; lastZ = player.pos.z;
+    pilgrimSave(); updateCandleTarget();
+  });
+  addEventListener('pagehide', pilgrimSave);
+  document.addEventListener('visibilitychange', ()=>{ if (document.hidden) pilgrimSave(); });
+}
 document.getElementById('lampBtn').addEventListener('click', openSeek);
 
 /* ---- THE SCROLL STATIONS (THE FULLNESS, Seer's Ruling R3) ----
@@ -7337,6 +7542,11 @@ window.__CITY = {
   walkThere(id){ return startWalkThere(id); },
   wayRoute(x0, z0, x1, z1){ return wayRoute(x0, z0, x1, z1); },
   wayBlocked(x, z){ return wayBlocked(x, z); },
+  get pilgrimage(){ return { candles: PILGRIM.candles.map(c=>c.slice()),
+    saved: pilgrimLoad(), resumed: PILGRIM.resumed }; },
+  setCandle(){ toggleCandle(); },
+  clearPilgrimage(){ try{ localStorage.removeItem(PILGRIM.key); }catch{}
+    PILGRIM.candles = []; candlesRebuild(); },
   census(){ /* per-mesh in-frustum tri census at the current pose (debug) */
     const fr = new THREE.Frustum(), mt = new THREE.Matrix4();
     camera.updateMatrixWorld();
