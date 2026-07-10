@@ -715,22 +715,41 @@ const bannerTex = canvasTex(256, (g,w,h)=>{
   g.fillStyle = '#f3d98b'; g.beginPath(); g.arc(w/2,h/2,12,0,TAU); g.fill();
 }, 128);
 
+/* LOOP 5 · PASS A — THE ROSES: jewel-toned stained glass (board 05).
+   Deep sapphire, emerald, amber, violet — NO red anywhere (blue-gold
+   law governs accents; the old #e88a6a salmon wedge retires with it). */
+const JEWELS = ['#1e3f8f','#1c7a4f','#e8a83c','#6a3fa0','#3f6fd0','#caa64a'];
 const roseTex = canvasTex(512, (g,w,h)=>{
   const cx=w/2, cy=h/2, R=w/2-6;
-  const cols = ['#ffd98f','#ffb87a','#ffe7b0','#e88a6a','#cfe0ff','#ffcf6e'];
+  /* outer petals — twelve jewel wedges */
   for (let i=0;i<12;i++){
     const a0 = i/12*TAU, a1 = (i+1)/12*TAU;
-    g.fillStyle = cols[i%cols.length];
+    g.fillStyle = JEWELS[i%JEWELS.length];
     g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,R,a0,a1); g.closePath(); g.fill();
   }
-  g.fillStyle = '#fff3cf'; g.beginPath(); g.arc(cx,cy,R*.3,0,TAU); g.fill();
+  /* inner ring — offset wedges, lighter kin of the outer jewels */
+  const inner = ['#4a6fd0','#3fa578','#f0c060','#9a6fd0','#6f9fe8','#e8cf7a'];
+  for (let i=0;i<12;i++){
+    const a0 = (i+.5)/12*TAU, a1 = (i+1.5)/12*TAU;
+    g.fillStyle = inner[i%inner.length];
+    g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,R*.58,a0,a1); g.closePath(); g.fill();
+  }
+  /* petal lights — pale glass eyes in each outer wedge */
+  for (let i=0;i<12;i++){
+    const a = (i+.5)/12*TAU;
+    g.fillStyle = 'rgba(255,244,214,.85)';
+    g.beginPath(); g.arc(cx+Math.cos(a)*R*.78, cy+Math.sin(a)*R*.78, R*.085, 0, TAU); g.fill();
+  }
+  g.fillStyle = '#fff3cf'; g.beginPath(); g.arc(cx,cy,R*.24,0,TAU); g.fill();
+  /* gold leading */
   g.strokeStyle = '#b8912f'; g.lineWidth = 8;
   for (let i=0;i<12;i++){
     const a = i/12*TAU;
     g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+Math.cos(a)*R, cy+Math.sin(a)*R); g.stroke();
   }
   g.lineWidth = 12; g.beginPath(); g.arc(cx,cy,R-6,0,TAU); g.stroke();
-  g.beginPath(); g.arc(cx,cy,R*.3,0,TAU); g.stroke();
+  g.beginPath(); g.arc(cx,cy,R*.58,0,TAU); g.stroke();
+  g.beginPath(); g.arc(cx,cy,R*.24,0,TAU); g.stroke();
 });
 
 /* THE PURGE (Seer's order, 2026-07-08): no cone souls, no lollipop
@@ -3205,12 +3224,46 @@ function addBuilding(x,z,ry,big){
   /* portal arch + pearl */
   pushArch(P.gold, 4.2, .45, 1.4, X0-.7, 5.2, CZ, -PI/2);
   P.pearl.push(xf(new THREE.SphereGeometry(.9,18,14), X0-.7, 10.3, CZ));
-  /* rose windows (outer + inner face) */
-  const roseMat = new THREE.MeshBasicMaterial({ map:roseTex, side:THREE.DoubleSide });
+  /* rose windows (outer + inner face) — PASS A: the glass is now a
+     glory emitter (emissive above the 1.8 bloom line where the amber
+     and pale eyes sit; the deep sapphire stays quiet — jewel contrast) */
+  const roseMat = new THREE.MeshStandardMaterial({ color:0x000000,
+    emissive:0xffffff, emissiveMap:roseTex, emissiveIntensity:2.3, side:THREE.DoubleSide });
   const rose = new THREE.Mesh(new THREE.CircleGeometry(3.6, 36), roseMat);
   rose.rotation.y = -PI/2; rose.position.set(X0-1.35, 14, CZ); scene.add(rose);
   const rose2 = rose.clone(); rose2.rotation.y = PI/2; rose2.position.x = X0+.75; scene.add(rose2);
   P.gold.push(xf(new THREE.TorusGeometry(3.7,.3,8,36).rotateY(PI/2), X0-1, 14, CZ));
+  /* PASS A — THE POOLS: the rose casts its colors onto the marble as
+     baked gradient decals (no lights, no shadows — budget first): one
+     inside the nave along the axis, one on the west approach. Both
+     planes merge into ONE mesh (+1 draw). */
+  {
+    const poolTex = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      for (let i=0;i<12;i++){
+        const a = i/12*TAU;
+        const px2 = w/2 + Math.cos(a)*w*.26, py2 = h/2 + Math.sin(a)*h*.26;
+        const rad = g.createRadialGradient(px2,py2,2, px2,py2,w*.20);
+        const c = JEWELS[i%JEWELS.length];
+        rad.addColorStop(0, c + 'e8'); rad.addColorStop(1, c + '00');
+        g.fillStyle = rad; g.beginPath(); g.arc(px2,py2,w*.20,0,TAU); g.fill();
+      }
+      const cg2 = g.createRadialGradient(w/2,h/2,2, w/2,h/2,w*.18);
+      cg2.addColorStop(0,'rgba(255,243,207,.9)'); cg2.addColorStop(1,'rgba(255,243,207,0)');
+      g.fillStyle = cg2; g.beginPath(); g.arc(w/2,h/2,w*.18,0,TAU); g.fill();
+    }, 256);
+    const poolMat = new THREE.MeshBasicMaterial({ map:poolTex, transparent:true,
+      opacity:.85, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 });
+    const poolParts = [
+      /* inner: just inside the portal, BEFORE the nave medallion */
+      xf(new THREE.PlaneGeometry(7.0, 5.8).rotateX(-PI/2), X0+3.4, .085, CZ, 0, 1.2, 1, 1),
+      /* outer: the west approach floor */
+      xf(new THREE.PlaneGeometry(6.6, 5.6).rotateX(-PI/2), X0-6.0, .085, CZ, 0, 1.2, 1, 1),
+    ];
+    const pools = new THREE.Mesh(
+      mergeGeometries(poolParts.map(g2=> g2.index ? g2.toNonIndexed() : g2)), poolMat);
+    scene.add(pools);
+  }
   /* roof */
   for (const s of [-1,1]){
     const g = new THREE.BoxGeometry(X1-X0+3, .5, 17.2);
