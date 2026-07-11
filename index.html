@@ -1790,18 +1790,25 @@ async function initTransfiguration(){
   const wallMat = MAT.white.clone();
   wallMat.onBeforeCompile = (sh)=>{
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vWallY;')
+      .replace('#include <common>', '#include <common>\nvarying float vWallY;\nvarying float vWallU;')
       .replace('#include <project_vertex>', `#include <project_vertex>
 #ifdef USE_INSTANCING
   vec4 wwp = modelMatrix * instanceMatrix * vec4(position, 1.0);
 #else
   vec4 wwp = modelMatrix * vec4(position, 1.0);
 #endif
-  vWallY = wwp.y;`);
+  vWallY = wwp.y;
+  vWallU = atan(wwp.x, wwp.z) * 118.5;`);   /* arc-length along the ring, seamless across segments */
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vWallY;')
+      .replace('#include <common>', '#include <common>\nvarying float vWallY;\nvarying float vWallU;\nfloat hash21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }')
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
+  /* LOOP 13-B — THE LIVING STONES (Rev 21:19-20): each course is no longer a
+     flat band but a masonry of INDIVIDUAL CUT STONES — running-bond cells with
+     recessed mortar, per-stone value/hue variation, a lit bevel, and a facet
+     glint per stone. All in the shader: zero geometry, zero draws. Red-family
+     stones (sardius/red jasper/chalcedony) stay OUT pending the Seer's ruling
+     (L29/L3) — the six courses are the non-red jewels of Loop 9-B. */
   vec3 jewels[6];
   jewels[0] = vec3(0.118, 0.247, 0.561);   /* sapphire   */
   jewels[1] = vec3(0.110, 0.478, 0.310);   /* emerald    */
@@ -1812,11 +1819,33 @@ async function initTransfiguration(){
   for (int k = 0; k < 6; k++){
     float b0 = 0.35 + float(k)*0.59;
     float inBand = step(b0, vWallY) * step(vWallY, b0 + 0.50);
-    diffuseColor.rgb = mix(diffuseColor.rgb, jewels[k]*0.48, inBand*0.95);
-    /* groove lip above each course + gilt separator */
-    float lip = step(b0 + 0.50, vWallY) * step(vWallY, b0 + 0.535);
-    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb*0.55, lip);
-    float gilt = step(b0 + 0.535, vWallY) * step(vWallY, b0 + 0.59);
+    if (inBand > 0.5){
+      float localY = vWallY - b0;
+      float stoneH = 0.25;
+      float row = floor(localY / stoneH);
+      float rowOff = mod(row, 2.0) * 0.6;               /* running bond */
+      float u = (vWallU + rowOff) / 1.2;                /* ~1.2m stones */
+      float colId = floor(u);
+      float fu = fract(u);
+      float fy = fract(localY / stoneH);
+      float edgeU = min(smoothstep(0.0, 0.05, fu), smoothstep(1.0, 0.95, fu));
+      float edgeY = min(smoothstep(0.0, 0.10, fy), smoothstep(1.0, 0.90, fy));
+      float stone = edgeU * edgeY;                      /* 1 stone face, 0 mortar */
+      float rnd = hash21(vec2(colId, row + float(k)*8.0));
+      vec3 jcol = jewels[k] * (0.40 + rnd*0.20);        /* per-stone value */
+      jcol = mix(jcol, jcol.gbr, rnd*0.10);             /* faint per-stone hue drift */
+      float bevel = (smoothstep(0.0,0.30,fy)-0.5)*0.5 + (0.5-smoothstep(0.70,1.0,fu))*0.5;
+      jcol *= 1.0 + bevel*0.30;                         /* lit upper-left, shadowed lower-right */
+      vec2 gp = vec2(0.30 + 0.40*rnd, 0.32 + 0.36*fract(rnd*7.0));
+      /* glint distance in WORLD units (stone is 1.2m wide x 0.25m tall) so the
+         catch is a small round facet, never a streak across the wide stone */
+      float gl = 1.0 - smoothstep(0.0, 0.11, distance(vec2((fu-gp.x)*1.2, (fy-gp.y)*0.25), vec2(0.0)));
+      jcol += vec3(0.95,0.95,0.85) * gl * (0.14 + 0.28*rnd);   /* subtle facet glint */
+      vec3 mortarCol = vec3(0.13,0.11,0.09);
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(mortarCol, jcol, stone), 0.96);
+    }
+    /* gilt separator above each course */
+    float gilt = step(b0 + 0.50, vWallY) * step(vWallY, b0 + 0.56);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.64, 0.24), gilt*0.95);
   }
 }`);
