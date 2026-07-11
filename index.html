@@ -1237,12 +1237,84 @@ const cloudSprites = [];
   }
 }
 
+/* ================================================================
+   LOOP 13-D — THE WORLD BEYOND (the eternal planet the city sits upon)
+   Beyond the walls and the distant city-spires, a CELESTIAL LANDSCAPE:
+   luminous cliffs and flat-topped tableland mesas rising out of the cloud
+   sea and receding to the horizon. Same impostor discipline as Loop 6-D —
+   painted billboard cards facing the city, merged (2 draws, ~100 tris),
+   renderOrder -1, haze BAKED into the texture so they fog-match by
+   construction. Bases dissolve into the sea; nothing walkable (set
+   dressing). Reads from the rampart horizon and through the open gates.
+================================================================ */
+{
+  const fr = mulberry32(13013);
+  const frr = (a,b)=> a + fr()*(b-a);
+  const mkFarCountry = (contrast, warm)=> canvasTex(256, (g,w,h)=>{
+    g.clearRect(0,0,w,h);
+    /* two layered ranges of flat-topped mesas (celestial tableland — the
+       flat crowns read as OTHER than the city's pointed spires) */
+    /* luminous gold-amber tableland — warm sunlit rock, distinct from the
+       pale-white city spires: a clear cliff FACE value under each flat crown */
+    const ranges = [
+      { base:h*.60, amp:h*.30, top:`rgb(${232+contrast*14},${196+contrast*12},${132+warm*14})`,
+                                face:`rgb(${176+contrast*10},${138+contrast*8},${86+warm*8})` },
+      { base:h*.82, amp:h*.44, top:`rgb(${216+contrast*12},${190+contrast*10},${146+warm*10})`,
+                                face:`rgb(${168+contrast*8},${140+contrast*6},${100+warm*6})` },
+    ];
+    for (const R of ranges){
+      g.beginPath(); g.moveTo(0, h);
+      let x = 0, y = R.base;
+      const tops = [];
+      g.lineTo(0, y);
+      while (x < w){
+        const seg = 26 + (x*13 % 48);                 /* plateau width */
+        y = Math.max(R.base - R.amp, Math.min(R.base, y + ((((x*7) % 5) - 2) * R.amp*.14)));
+        g.lineTo(x, y);                                /* vertical cliff face */
+        g.lineTo(x + seg, y);                          /* flat mesa crown */
+        tops.push([x, x + seg, y]);
+        x += seg;
+      }
+      g.lineTo(w, h); g.closePath();
+      g.fillStyle = R.face; g.fill();                  /* the land body = shadowed rock face */
+      /* a lit band just under each plateau crown — the dawn on the tableland */
+      g.fillStyle = R.top;
+      for (const [x0, x1, ty] of tops) g.fillRect(x0, ty, x1 - x0, R.amp*.30);
+    }
+    /* atmospheric base — the land dissolves into the cloud sea */
+    const fade = g.createLinearGradient(0, h*.52, 0, h);
+    fade.addColorStop(0, 'rgba(246,236,220,0)');
+    fade.addColorStop(1, 'rgba(246,236,220,.92)');
+    g.fillStyle = fade; g.fillRect(0, h*.5, w, h*.5);
+  }, 256);
+  const mkMat = (tex, op)=> new THREE.MeshBasicMaterial({
+    map:tex, transparent:true, opacity:op, alphaTest:.04, depthWrite:false, side:THREE.DoubleSide });
+  const ranges = [
+    { r0:250, r1:360, n:20, w:150, hgt:88,  yb:-22, tex:mkFarCountry(1, 1), op:.72 },   /* near cliffs */
+    { r0:440, r1:640, n:24, w:280, hgt:150, yb:-26, tex:mkFarCountry(0, 0), op:.44 },   /* far ranges */
+  ];
+  for (const R of ranges){
+    const parts = [];
+    for (let i = 0; i < R.n; i++){
+      const a = (i + fr()*.7)/R.n*TAU, r = frr(R.r0, R.r1);
+      const g2 = new THREE.PlaneGeometry(R.w*frr(.8,1.3), R.hgt*frr(.7,1.25));
+      xf(g2, Math.sin(a)*r, R.yb + R.hgt*.4, Math.cos(a)*r, a + PI);
+      parts.push(g2);
+    }
+    const m = new THREE.Mesh(
+      mergeGeometries(parts.map(g3=> g3.index ? g3.toNonIndexed() : g3)), mkMat(R.tex, R.op));
+    m.frustumCulled = false; m.renderOrder = -1;   /* distance-sorted among the horizon transparents */
+    m.userData.extOnly = true;
+    scene.add(m);
+  }
+}
+
 const seaMeshes = [];
 {
   const mat = (op, tint)=> new THREE.ShaderMaterial({
     transparent:true, depthWrite:false,
     uniforms:{ uTime:{value:0}, uTex:{value:noiseTex}, uOp:{value:op}, uTint:{value:new THREE.Color(tint)},
-               uFog:{value:new THREE.Color(0xffd9a4)} },
+               uFog:{value:new THREE.Color(0xd8bd94)} },   /* LOOP 13-D: match the deepened scene fog so the sea and the far country share one horizon */
     vertexShader:`varying vec2 vUv; varying float vD; varying vec3 vW;
       void main(){ vUv=uv;
         vec4 mv = modelViewMatrix*vec4(position,1.0); vD = -mv.z;
