@@ -2,6 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- THE PERIMETER (LOOP 12 Pass D) — Content Security Policy. Locks every
+     origin the city may reach: scripts/styles/fonts/images/connections. The
+     wide grants are load-bearing, not laziness:
+       • 'unsafe-inline' (script+style): the whole city is ONE hand-tuned inline
+         module + inline importmap + inline <style>; GitHub Pages is static and
+         cannot mint per-request nonces, and hashing a file that changes every
+         pass is a blank-screen footgun for the next builder. The reader renders
+         via textContent (L4), so there is no HTML-injection vector for it to guard.
+       • 'wasm-unsafe-eval' + worker/child blob: + jsdelivr in connect-src: the
+         DRACO/KTX2 GLB decoders run WebAssembly inside a Blob worker fetched from
+         jsdelivr — without these the throne/fountain/gate heroes never load.
+       • connect zionos-temple: THE SHIELD gate. img data:: the favicon.
+     NOTE (flagged): frame-ancestors / X-Frame-Options / nosniff / HSTS need a
+     real HTTP header, which GitHub Pages cannot set and <meta> cannot carry
+     (frame-ancestors in meta only warns). Clickjacking is unmitigated on Pages;
+     the city has no sensitive action to frame. A proxy/Vercel front could add them. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://zionos-temple.vercel.app https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="data:,">
@@ -346,6 +363,9 @@
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+},
+  "integrity": {
+  "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js": "sha384-61S/Nu32S3E5+n+KpCOTb2eRYps6fVKm+9Gz1QBvSePFthb46f063Aa/qe/lykFZ"
 } }
 </script>
 
