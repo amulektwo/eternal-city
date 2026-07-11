@@ -1869,7 +1869,7 @@ async function initTransfiguration(){
   const wallMat = MAT.white.clone();
   wallMat.onBeforeCompile = (sh)=>{
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vWallY;\nvarying float vWallU;')
+      .replace('#include <common>', '#include <common>\nvarying float vWallY;\nvarying float vWallU;\nvarying vec3 vWallP;')
       .replace('#include <project_vertex>', `#include <project_vertex>
 #ifdef USE_INSTANCING
   vec4 wwp = modelMatrix * instanceMatrix * vec4(position, 1.0);
@@ -1877,24 +1877,71 @@ async function initTransfiguration(){
   vec4 wwp = modelMatrix * vec4(position, 1.0);
 #endif
   vWallY = wwp.y;
-  vWallU = atan(wwp.x, wwp.z) * 118.5;`);   /* arc-length along the ring, seamless across segments */
+  vWallU = atan(wwp.x, wwp.z) * 118.5;
+  vWallP = wwp.xyz;`);   /* arc-length along the ring, seamless across segments */
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vWallY;\nvarying float vWallU;\nfloat hash21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }')
+      .replace('#include <common>', `#include <common>
+varying float vWallY;
+varying float vWallU;
+varying vec3 vWallP;
+float hash21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+vec2 hash22(vec2 p){ p=vec2(dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3))); return fract(sin(p)*43758.5453); }
+vec2 wallVoro(vec2 vp, out vec2 bid){
+  vec2 ip = floor(vp), fp = fract(vp);
+  float F1 = 8.0, F2 = 8.0; bid = vec2(0.0);
+  for (int oy = -1; oy <= 1; oy++)
+  for (int ox = -1; ox <= 1; ox++){
+    vec2 g = vec2(float(ox), float(oy));
+    vec2 r = g + hash22(ip + g) - fp;
+    float d = dot(r, r);
+    if (d < F1){ F2 = F1; F1 = d; bid = ip + g; }
+    else if (d < F2){ F2 = d; }
+  }
+  return vec2(sqrt(F1), sqrt(F2));
+}
+float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; float gWallAng = 0.0;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
-  /* LOOP 13-B — THE LIVING STONES (Rev 21:19-20): each course is no longer a
-     flat band but a masonry of INDIVIDUAL CUT STONES — running-bond cells with
-     recessed mortar, per-stone value/hue variation, a lit bevel, and a facet
-     glint per stone. All in the shader: zero geometry, zero draws. Red-family
-     stones (sardius/red jasper/chalcedony) stay OUT pending the Seer's ruling
-     (L29/L3) — the six courses are the non-red jewels of Loop 9-B. */
+  /* LOOP 14-A — THE GEMSTONE FOUNDATIONS (Rev 21:19-20, evolving 13-B's
+     painted masonry into RAW CRYSTAL): within each running-bond stone a
+     voronoi CLUSTER of facets — per-facet value + a per-facet normal tilt
+     handed to the lighting stage (the true sun and IBL catch each crystal
+     face differently), a view-parallax inner layer (light entering the
+     stone, not paint on a block), per-jewel-type character (glassy sapphire
+     depth · columnar emerald + aquamarine prisms · pointed amethyst geode
+     tips · waxy banded jade · clean topaz), facet-junction shadows with
+     selective bright catches, fresnel silhouette light, sparse facet
+     sparkle. Facet detail rests by 90m so the causeway keeps a clean deep
+     course read (no distant shimmer). Courses, bond, mortar, gilt kept —
+     a BUILT wall of living stones. Zero geometry, zero draws. Red-family
+     stones (sardius/red jasper/chalcedony) stay OUT pending the Seer's
+     ruling (L29/L3) — the six courses are the non-red jewels of Loop 9-B. */
   vec3 jewels[6];
   jewels[0] = vec3(0.118, 0.247, 0.561);   /* sapphire   */
   jewels[1] = vec3(0.110, 0.478, 0.310);   /* emerald    */
-  jewels[2] = vec3(0.851, 0.604, 0.204);   /* amber      */
-  jewels[3] = vec3(0.416, 0.247, 0.627);   /* violet     */
+  jewels[2] = vec3(0.851, 0.604, 0.204);   /* topaz      */
+  jewels[3] = vec3(0.416, 0.247, 0.627);   /* amethyst   */
   jewels[4] = vec3(0.247, 0.647, 0.471);   /* jade       */
   jewels[5] = vec3(0.310, 0.659, 0.753);   /* aquamarine */
+  /* per-jewel character: A=(cellsX, cellsY, facetContrast, roughness)
+     B=(normalTilt, innerDepth, glintFrac, geodeTip)
+     C=(edgeCatch, fresnel, banding, saturation) */
+  vec4 gemA[6]; vec4 gemB[6]; vec4 gemC[6];
+  gemA[0] = vec4( 7.0,  7.0, 0.50, 0.10); gemB[0] = vec4(0.30, 0.45, 0.30, 0.10); gemC[0] = vec4(0.35, 0.65, 0.00, 1.15);
+  gemA[1] = vec4(16.0,  4.2, 0.52, 0.16); gemB[1] = vec4(0.38, 0.25, 0.25, 0.10); gemC[1] = vec4(0.45, 0.55, 0.00, 1.10);
+  gemA[2] = vec4( 7.5,  7.5, 0.50, 0.14); gemB[2] = vec4(0.34, 0.35, 0.35, 0.15); gemC[2] = vec4(0.40, 0.55, 0.00, 1.10);
+  gemA[3] = vec4(13.0, 13.0, 0.58, 0.18); gemB[3] = vec4(0.48, 0.20, 0.40, 0.55); gemC[3] = vec4(0.50, 0.60, 0.00, 1.15);
+  gemA[4] = vec4( 5.0,  5.0, 0.16, 0.40); gemB[4] = vec4(0.10, 0.06, 0.06, 0.00); gemC[4] = vec4(0.12, 0.35, 0.14, 1.05);
+  gemA[5] = vec4(13.0,  5.5, 0.46, 0.12); gemB[5] = vec4(0.34, 0.40, 0.30, 0.12); gemC[5] = vec4(0.40, 0.60, 0.00, 1.08);
+  /* view geometry for parallax + fresnel — the wall is an analytic ring */
+  float wAng = vWallU / 118.5;
+  vec3 wNrm = vec3(sin(wAng), 0.0, cos(wAng));
+  vec3 wTan = vec3(cos(wAng), 0.0, -sin(wAng));
+  vec3 wView = normalize(cameraPosition - vWallP);
+  float vN = dot(wView, wNrm);
+  vec2 wPar = -vec2(dot(wView, wTan), wView.y) / (sign(vN + 0.0001) * max(abs(vN), 0.35));
+  float wDist = length(cameraPosition - vWallP);
+  float farFade = smoothstep(30.0, 90.0, wDist);
   for (int k = 0; k < 6; k++){
     float b0 = 0.35 + float(k)*0.59;
     float inBand = step(b0, vWallY) * step(vWallY, b0 + 0.50);
@@ -1907,27 +1954,71 @@ async function initTransfiguration(){
       float colId = floor(u);
       float fu = fract(u);
       float fy = fract(localY / stoneH);
-      float edgeU = min(smoothstep(0.0, 0.05, fu), smoothstep(1.0, 0.95, fu));
-      float edgeY = min(smoothstep(0.0, 0.10, fy), smoothstep(1.0, 0.90, fy));
+      float awU = max(0.018, fwidth(fu) * 1.4);         /* crisp joints near, AA far */
+      float awY = max(0.035, fwidth(fy) * 1.4);
+      float edgeU = min(smoothstep(0.0, awU, fu), smoothstep(1.0, 1.0 - awU, fu));
+      float edgeY = min(smoothstep(0.0, awY, fy), smoothstep(1.0, 1.0 - awY, fy));
       float stone = edgeU * edgeY;                      /* 1 stone face, 0 mortar */
       float rnd = hash21(vec2(colId, row + float(k)*8.0));
-      vec3 jcol = jewels[k] * (0.40 + rnd*0.20);        /* per-stone value */
-      jcol = mix(jcol, jcol.gbr, rnd*0.10);             /* faint per-stone hue drift */
+      /* THE CLUSTER — facets in the stone's own local frame: every stone a
+         distinct crystal cluster, and hash coords stay small (precision) */
+      vec2 fs = vec2(fu * 1.2, fy * 0.25);
+      vec2 sSeed = vec2(rnd * 29.7, fract(rnd * 7.77) * 23.3);
+      vec2 fid;
+      vec2 vr = wallVoro(fs * vec2(gemA[k].x, gemA[k].y) + sSeed, fid);
+      float fh = hash21(fid * 1.13 + vec2(colId * 3.7, row * 5.1) + float(k));
+      vec3 fcol = jewels[k] * (0.42 + gemA[k].z * (fh - 0.35));
+      fcol *= 0.85 + rnd * 0.30;                        /* whole-stone identity — the bond stays a masonry */
+      /* facet detail rests when cells go sub-pixel (grazing/afar) or by 90m */
+      float cellPix = fwidth(vWallU) * gemA[k].x;
+      float detailFade = max(farFade, smoothstep(0.30, 0.75, cellPix));
+      /* the inner layer, view-shifted — light entering the stone */
+      vec2 did;
+      vec2 dr = wallVoro((fs + wPar * gemB[k].y * 0.12) * vec2(gemA[k].x, gemA[k].y) * 0.55 + sSeed + 71.3, did);
+      float dh = hash21(did * 1.77 + float(k));
+      fcol *= mix(1.0, 0.80 + 0.42 * dh, gemB[k].y);
+      /* geode tips and sparse sparkle at facet hearts (max, never sum) */
+      float heart = 1.0 - smoothstep(0.0, 0.32, vr.x);
+      float gOn = step(1.0 - gemB[k].z, fract(fh * 9.37));
+      float spark = max(heart * gOn, heart * gemB[k].w * 0.9) * (1.0 - detailFade);
+      /* facet junctions: shadow lines + selective bright catches */
+      float ej = vr.y - vr.x;
+      float jShadow = 1.0 - smoothstep(0.0, 0.10, ej);
+      float jCatch = (1.0 - smoothstep(0.0, 0.045, ej)) * step(0.62, fract(fh * 7.31)) * gemC[k].x * (1.0 - detailFade);
+      fcol *= 1.0 - jShadow * 0.30;
+      fcol *= 1.0 + gemC[k].z * sin(localY * 34.0 + fh * 2.1 + fu * 3.0);   /* waxy banding */
+      fcol = mix(vec3(dot(fcol, vec3(0.333))), fcol, gemC[k].w);            /* body vs the IBL wash */
+      fcol += vec3(1.0, 0.98, 0.90) * jCatch * 0.45;
+      fcol += vec3(1.0, 0.97, 0.86) * spark * 0.50;
+      /* detail rests at range and at grazing: the causeway reads clean deep courses */
+      fcol = mix(fcol, jewels[k] * 0.52 * (0.85 + rnd * 0.30), detailFade * 0.85);
+      /* fresnel edge-light on the cluster silhouette — a jewel whisper, not a wash */
+      float fres = pow(1.0 - abs(vN), 4.0);
+      fcol += jewels[k] * fres * gemC[k].y * 0.45 * (1.0 - detailFade * 0.6);
       float bevel = (smoothstep(0.0,0.30,fy)-0.5)*0.5 + (0.5-smoothstep(0.70,1.0,fu))*0.5;
-      jcol *= 1.0 + bevel*0.30;                         /* lit upper-left, shadowed lower-right */
-      vec2 gp = vec2(0.30 + 0.40*rnd, 0.32 + 0.36*fract(rnd*7.0));
-      /* glint distance in WORLD units (stone is 1.2m wide x 0.25m tall) so the
-         catch is a small round facet, never a streak across the wide stone */
-      float gl = 1.0 - smoothstep(0.0, 0.11, distance(vec2((fu-gp.x)*1.2, (fy-gp.y)*0.25), vec2(0.0)));
-      jcol += vec3(0.95,0.95,0.85) * gl * (0.14 + 0.28*rnd);   /* subtle facet glint */
+      fcol *= 1.0 + bevel*0.20;                         /* the cut-block read stays */
+      fcol = min(fcol, vec3(1.35));                     /* bloom-safe ceiling */
       vec3 mortarCol = vec3(0.13,0.11,0.09);
-      diffuseColor.rgb = mix(diffuseColor.rgb, mix(mortarCol, jcol, stone), 0.96);
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(mortarCol, fcol, stone), 0.96);
+      /* hand the facet to the lighting stage: per-facet tilt + crystal gloss */
+      gWallStone = stone * (1.0 - detailFade);
+      gWallTilt = (hash22(fid * 3.3 + float(k)) - 0.5) * 2.0 * gemB[k].x * gWallStone;
+      gWallRough = gemA[k].w;
+      gWallAng = wAng;
     }
     /* gilt separator above each course */
     float gilt = step(b0 + 0.50, vWallY) * step(vWallY, b0 + 0.56);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.64, 0.24), gilt*0.95);
   }
-}`);
+}`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+  roughnessFactor = mix(roughnessFactor, gWallRough, gWallStone);`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+  if (gWallStone > 0.003){
+    vec3 wtV = normalize((viewMatrix * vec4(cos(gWallAng), 0.0, -sin(gWallAng), 0.0)).xyz);
+    vec3 wuV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+    normal = normalize(normal + wtV * gWallTilt.x + wuV * gWallTilt.y);
+  }`);
   };
   const wall = new THREE.InstancedMesh(new THREE.BoxGeometry(segLen, 8, 2.2), wallMat, keep.length);
   const trim = new THREE.InstancedMesh(new THREE.BoxGeometry(segLen, .5, 2.7), MAT.gold, keep.length);
