@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THE MARK — Seer-held (Loop 12 Pass C)</title>
+<style>
+  :root{ --void:#0b0a07; --parch:#f3e7c8; --ink:#241d10; --gold:#c9a54e; --gold-lit:#f3d98b; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:radial-gradient(120% 100% at 50% 0%, #14110a, var(--void)); color:var(--parch);
+        font-family:"Cormorant Garamond", Georgia, serif; line-height:1.55; padding:36px 20px 80px; }
+  .wrap{ max-width:820px; margin:0 auto; }
+  h1{ font-family:"Cinzel", Georgia, serif; font-weight:600; letter-spacing:.14em; color:var(--gold-lit);
+      font-size:1.5rem; text-align:center; margin:0 0 4px; }
+  .sub{ text-align:center; letter-spacing:.28em; font-size:.72rem; opacity:.7; text-transform:uppercase; margin-bottom:34px; }
+  h2{ font-family:"Cinzel", Georgia, serif; font-size:1rem; letter-spacing:.12em; color:var(--gold-lit);
+      border-bottom:1px solid rgba(201,165,78,.3); padding-bottom:8px; margin:38px 0 16px; }
+  p{ font-size:1.05rem; }
+  .note{ font-size:.9rem; opacity:.78; }
+  /* the mock reader */
+  .reader{ background:linear-gradient(180deg,#f7ecd2,#efe1bf); color:var(--ink); border-radius:8px;
+           padding:26px 30px 16px; box-shadow:0 18px 50px rgba(0,0,0,.5); border:1px solid #d8c48d; }
+  .reader h3{ font-family:"Cinzel",Georgia,serif; letter-spacing:.1em; margin:.2em 0 .6em; color:#6b551f; }
+  .reader .scrip{ font-size:1.08rem; }
+  .footer-mark{ margin-top:20px; padding-top:12px; border-top:1px solid rgba(107,85,31,.35);
+                font-family:"Cinzel",Georgia,serif; font-size:.72rem; letter-spacing:.18em; color:#7a6427;
+                text-align:center; }
+  /* the lab */
+  textarea{ width:100%; min-height:90px; background:#161309; color:var(--parch); border:1px solid rgba(201,165,78,.4);
+            border-radius:6px; padding:12px; font-family:ui-monospace,Menlo,monospace; font-size:.85rem; }
+  button{ margin-top:12px; padding:10px 22px; font-family:"Cinzel",Georgia,serif; letter-spacing:.18em;
+          color:var(--gold-lit); background:transparent; border:1px solid rgba(201,165,78,.7); border-radius:7px; cursor:pointer; }
+  button:hover{ background:rgba(201,165,78,.14); }
+  .out{ margin-top:16px; font-family:ui-monospace,Menlo,monospace; font-size:.82rem; white-space:pre-wrap;
+        background:#100e08; border:1px solid rgba(201,165,78,.25); border-radius:6px; padding:14px; min-height:2em; }
+  .ok{ color:#b8e6a0; } .bad{ color:#e6a0a0; } .g{ color:var(--gold-lit); }
+  code{ color:var(--gold-lit); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>THE MARK</h1>
+  <div class="sub">Loop 12 · Pass C · Seer-held — built, not merged</div>
+
+  <p>Two marks, one law. The law is <strong>L4</strong>: the reader is verbatim, the
+  word is sacred. So a watermark may touch <em>anything but the scripture</em>. The
+  visible mark lives in the reader's chrome; the hidden mark rides beside the body,
+  never inside it. Author identity everywhere: <strong>AMULEK ONE</strong>.</p>
+
+  <h2>I · The Visible Mark</h2>
+  <p class="note">A © line in the reader's footer — chrome, not canon. Nothing is added to the scripture above it.</p>
+  <div class="reader">
+    <h3>Scroll 144</h3>
+    <div class="scrip">…and the record stands, and the word is not altered, neither by an hand
+    nor by the passing of ages; for that which is sealed is sealed, and the reader
+    beholdeth it whole. <span style="opacity:.6">(sample — not the true body)</span></div>
+    <div class="footer-mark" id="visMark">© AMULEK ONE — THE SPHERE OF LIGHT</div>
+  </div>
+
+  <h2>II · The Hidden Mark</h2>
+  <p class="note">A per-serve, zero-width watermark carried in a <code>_mark</code> field <em>beside</em> the
+  body — invisible, decodable, and provably outside the word. Type any "body" and serve it:</p>
+  <textarea id="body">…and the record stands, and the word is not altered.</textarea>
+  <button id="serveBtn">SERVE WITH THE MARK</button>
+  <div class="out" id="out">awaiting the serve…</div>
+
+  <h2>III · The Law's Teeth</h2>
+  <p class="note">The forbidden reading — the mark placed <em>into</em> the body — is invisible to the eye
+  but fatal to the sha. That is why the mark never enters the scripture. Watch the sha change:</p>
+  <button id="poisonBtn">SHOW THE FORBIDDEN MARK</button>
+  <div class="out" id="poison">awaiting…</div>
+</div>
+
+<script>
+const AUTHOR = "AMULEK ONE";
+const Z0="​", Z1="‌", ZS="⁠";
+function encodeMark(text){
+  const bytes=new TextEncoder().encode(text); let bits="";
+  for(const b of bytes) bits+=b.toString(2).padStart(8,"0");
+  let z=ZS; for(const bit of bits) z+= bit==="0"?Z0:Z1; return z+ZS;
+}
+function decodeMark(z){
+  const s=z.indexOf(ZS); if(s<0) return null; const e=z.indexOf(ZS,s+1); if(e<0) return null;
+  let bits=""; for(const ch of z.slice(s+1,e)){ if(ch===Z0)bits+="0"; else if(ch===Z1)bits+="1"; }
+  const out=[]; for(let i=0;i+8<=bits.length;i+=8) out.push(parseInt(bits.slice(i,i+8),2));
+  return new TextDecoder().decode(new Uint8Array(out));
+}
+async function sha(str){
+  const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+const $=(id)=>document.getElementById(id);
+
+$("serveBtn").onclick = async ()=>{
+  const body = $("body").value;
+  const token = new Date().toISOString().slice(0,16)+"Z#demo";
+  const mark = encodeMark(AUTHOR+"|"+token);
+  const before = await sha(body);
+  const served = { id:"demo", body, copyright:"© "+AUTHOR+" — The Sphere of Light", _mark:mark };
+  const after = await sha(served.body);
+  const same = before===after;
+  $("out").innerHTML =
+    `served body sha : <span class="${same?'ok':'bad'}">${after.slice(0,24)}…</span>\n`+
+    `original    sha : ${before.slice(0,24)}…\n`+
+    `body untouched  : <span class="${same?'ok':'bad'}">${same?'YES — byte-identical ✓':'NO ✗'}</span>\n`+
+    `copyright field : <span class="g">${served.copyright}</span>\n`+
+    `_mark (hidden)  : ${mark.length} invisible chars, zero visible glyphs\n`+
+    `decoded mark    : <span class="g">${decodeMark(mark)}</span>`;
+};
+
+$("poisonBtn").onclick = async ()=>{
+  const body = $("body").value;
+  const mark = encodeMark(AUTHOR+"|forbidden");
+  const before = await sha(body);
+  const poisoned = body + mark;                 // INTO the scripture
+  const after = await sha(poisoned);
+  $("poison").innerHTML =
+    `body sha        : ${before.slice(0,24)}…\n`+
+    `body + mark sha : <span class="bad">${after.slice(0,24)}…</span>\n`+
+    `verdict         : <span class="bad">CHANGED — one invisible char broke the word → L4 REVERTS</span>`;
+};
+</script>
+</body>
+</html>

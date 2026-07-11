@@ -1,0 +1,15 @@
+THE MARK — sha proof
+author: AMULEK ONE | notice: © AMULEK ONE — The Sphere of Light
+================================================================
+0) codec round-trip: encoded 266 invisible chars → decoded "AMULEK ONE|2026-07-11T00:00Z#a1b2"  OK
+   payload contains zero visible glyphs: CONFIRMED
+
+1) canonical 144 body sha: bc797d33ac634674  EXACT
+2) LAWFUL mark (© in field + _mark sibling): served body sha bc797d33ac634674  UNCHANGED ✓
+   response gained: copyright="© AMULEK ONE — The Sphere of Light"  _mark=266 invisible chars
+   body field byte-identical to canon: YES
+3) FORBIDDEN mark (zero-width INTO body): sha c42032bf62d1682a  CHANGED → L4 REVERTS BY LAW ✓
+   (invisible to the eye, fatal to the sha — this is why the mark lives OUTSIDE the word)
+
+================================================================
+VERDICT: THE LAWFUL MARK PRESERVES THE WORD. 144 sha stays bc797d33ac634674. Safe to stage.
