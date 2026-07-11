@@ -2805,24 +2805,50 @@ function addBuilding(x,z,ry,big){
      .9 — far beneath the Tree of Life's fire), 3.2m against its 35.
      Sixteen bank trees, ONE InstancedMesh, Law 15 colliders. */
   {
+    /* LOOP 13-A — THE REDEEMING: the bank fruit-trees kept their toy read
+       (a stack of hard gold circles on a stick — the Seer's red circle). The
+       16 trees are Rev 22:2 CANON (removal is his ruling, not mine), so the
+       fix is the READ, not the tree: repainted with the cypress's proven
+       technique — ONE unified organic canopy in three value layers with a
+       ragged breathing edge, on a tapered bark trunk. Gold and fruit kept. */
     const bankTex = canvasTex(256, (g,w,h)=>{
       g.clearRect(0,0,w,h);
-      g.fillStyle = '#6b5b46';
-      g.fillRect(w/2-4, h*.55, 8, h*.44);
-      for (const [px3,py3,r3,col] of [
-        [w*.35,h*.36,w*.20,'#c9a53f'],[w*.63,h*.32,w*.22,'#d9b859'],
-        [w*.48,h*.20,w*.19,'#e8cf7a'],[w*.28,h*.5,w*.14,'#b8943a'],
-        [w*.7,h*.5,w*.14,'#caa64a'],[w*.5,h*.42,w*.17,'#d4af37']]){
+      const cx = w/2;
+      /* tapered bark trunk — wide at the root, narrow to the crown */
+      g.fillStyle = '#54412e';
+      g.beginPath();
+      g.moveTo(cx-3, h*.99); g.lineTo(cx-1.7, h*.58);
+      g.lineTo(cx+1.7, h*.58); g.lineTo(cx+3, h*.99); g.closePath(); g.fill();
+      /* an UPRIGHT organic crown (the cypress recipe that reads, in gold):
+         a broad layered teardrop lit toward the sunlit top, NOT a round
+         balloon — a round blob on crossed cards only ever reads as a flat
+         coin, so the silhouette must be a tree, tall and tapering. */
+      for (const [sc, col, dy] of [[1.0,'#8a6d2e',0],[.8,'#b8973f',-3],[.56,'#e2c672',-9]]){
         g.fillStyle = col;
-        g.beginPath(); g.arc(px3, py3, r3, 0, TAU); g.fill();
+        const top = h*.07 + dy, bot = h*.62, wid = 40*sc;
+        g.beginPath();
+        g.moveTo(cx, top);
+        g.bezierCurveTo(cx + wid*1.18, h*.18 + dy, cx + wid, h*.47, cx + wid*.46, bot);
+        g.lineTo(cx - wid*.46, bot);
+        g.bezierCurveTo(cx - wid, h*.47, cx - wid*1.18, h*.18 + dy, cx, top);
+        g.fill();
       }
+      /* ragged sides so the crown breathes (cypress destination-out nicks) */
+      g.globalCompositeOperation = 'destination-out';
+      for (let i=0;i<24;i++){
+        const yy = h*.10 + (i/24)*h*.50, side = i%2?1:-1;
+        const spread = 40*(1 - Math.abs(yy/h - .34)*1.15);
+        const xx = cx + side*Math.max(7, spread) + (i*37%9) - 4;
+        g.beginPath(); g.arc(xx, yy, 3 + (i*13%5), 0, TAU); g.fill();
+      }
+      g.globalCompositeOperation = 'source-over';
     }, 128);
     const bankFruitTex = canvasTex(256, (g,w,h)=>{
       g.clearRect(0,0,w,h);
       g.fillStyle = '#000'; g.fillRect(0,0,w,h);
       g.fillStyle = '#fff';
-      for (const [fx3,fy3] of [[.3,.3],[.58,.24],[.68,.44],[.4,.46],[.52,.36],[.33,.55],[.64,.58]]){
-        g.beginPath(); g.arc(w*fx3, h*fy3, 4.5, 0, TAU); g.fill();
+      for (const [fx3,fy3] of [[.4,.2],[.6,.17],[.5,.29],[.34,.33],[.66,.34]]){
+        g.beginPath(); g.arc(w*fx3, h*fy3, 2.6, 0, TAU); g.fill();
       }
     }, 128);
     const bankMat = new THREE.MeshStandardMaterial({
