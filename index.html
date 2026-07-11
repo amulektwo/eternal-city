@@ -466,7 +466,7 @@ renderer.info.autoReset = false;   /* reset once per frame in animate — else t
                                       composer's last pass masks the real call count */
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xffd9a4, 150, 780);   /* far is tier-managed in applyTier */
+scene.fog = new THREE.Fog(0xd8bd94, 165, 780);   /* LOOP 13-C: deepened from bright cream 0xffd9a4 — distant towers now keep value contrast against the sky instead of dissolving into milk; far is tier-managed in applyTier */
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.1, 2000);
 camera.position.set(0, 1.7, 108);
@@ -525,7 +525,7 @@ if (TIER === 2 && qs.get('ssao') === '1'){
    and must NOT bloom (that was the milk — it hazed every marble vantage); only
    genuine glory-emitters (fruit, windows, god-rays, the sun) are lifted above
    the threshold so the glow concentrates on them, not the stone. */
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.28, 0.55, 1.8);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.24, 0.55, 1.8);   /* LOOP 13-C: strength 0.28→0.24 — the glory-emitters still bloom, the blown halos on hot marble/water calm */
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
@@ -555,7 +555,7 @@ const gradePass = new ShaderPass({
          the city lives in the highlights, the body comes from
          pulling the mids DOWN, never lifting the whites */
       float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
-      float lc = 0.78 + (lum - 0.78)*1.16;
+      float lc = 0.74 + (lum - 0.74)*1.22;   /* LOOP 13-C: pivot 0.78→0.74, slope 1.16→1.22 — more body in the mids, whites still roll off (value contrast, luma-only, Law 30) */
       float l3 = clamp(lc, 0.0, 1.0);
       lc = mix(lc, l3*l3*(3.0 - 2.0*l3), 0.22);
       c *= lc / max(lum, 1e-4);
@@ -1064,7 +1064,7 @@ const skyUni = {
         float ray = 0.5 + 0.5*sin(ang*7.0 + uTime*0.07);
         ray *= 0.5 + 0.5*sin(ang*13.0 - uTime*0.045);
         float rad = acos(clamp(sd, 0.0, 1.0));
-        col += vec3(1.0,0.90,0.68) * ray * exp(-rad*2.4) * 0.18 * (1.0 - cover*0.55);
+        col += vec3(1.0,0.90,0.68) * ray * exp(-rad*3.2) * 0.11 * (1.0 - cover*0.55);   /* LOOP 13-C: 0.18→0.11 strength, tighter falloff — the rays crown the sun instead of striping the whole sky */
 
         /* below the rim the heaven stays warm, never dark */
         col = mix(col, vec3(1.0,0.90,0.72), smoothstep(0.10,-0.08,dir.y)*0.92);
@@ -1090,7 +1090,7 @@ scene.add(sunSprite);
 {
   const grMat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
-    uniforms:{ uOp:{value:.07}, uTime:{value:0}, uLen:{value:.45} },
+    uniforms:{ uOp:{value:.042}, uTime:{value:0}, uLen:{value:.45} },   /* LOOP 13-C: .07→.042 — the sky god-ray fan no longer stripes the whole frame at the bright hours */
     vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
       gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader:`uniform float uOp; uniform float uTime; uniform float uLen; varying vec2 vUv;
@@ -1125,7 +1125,7 @@ scene.add(sunSprite);
   rays.frustumCulled = false;           /* spans the sky; one cheap call */
   scene.add(rays);
   tickers.push(t => { grMat.uniforms.uTime.value = t; });
-  grMat.userData.baseOp = .07; TR.shafts.push(grMat);
+  grMat.userData.baseOp = .042; TR.shafts.push(grMat);
   HOUR.rayMat = grMat;   /* GOAL 5 — the hour drives this fan's uLen */
 
   /* LOOP 5 · PASS C — THE VESPER STARS: a fuller starfield that emerges
@@ -7312,7 +7312,7 @@ if (PROVING){
    ?mirror=1 forces on · ?mirror=0 forces off · default set by the
    battery verdict below. */
 const MIRROR = { on:false, near:false, rt:null, cam:null, meshes:[], mats:[],
-                 texMat:new THREE.Matrix4(), str:.5 };
+                 texMat:new THREE.Matrix4(), str:.32 };   /* LOOP 13-C: .5→.32 — the wet marble holds the city without becoming a white sheet of sky (the golden street ran too hot) */
 {
   const MIRROR_DEFAULT = true;    /* the battery kept it: 60fps ×7 HIGH with the
                                      mirror counted, worst 667.8k ≤ 700k (2026-07-08n) */
@@ -7480,7 +7480,7 @@ function animate(){
   sun.position.copy(_sd).multiplyScalar(320);
   sun.color.setHSL(.075 + .035*h - .018*v + .008*Math.sin(cyc), .62 - .24*h + .16*v, .72 + .12*h - .10*v);
   sunSprite.position.copy(_sd).multiplyScalar(780);
-  renderer.toneMappingExposure = Math.max(.88, 0.95 + .04*Math.sin(cyc*.5) + .03*h - .07*v);
+  renderer.toneMappingExposure = Math.max(.88, 0.93 + .04*Math.sin(cyc*.5) + .015*h - .07*v);   /* LOOP 13-C: base 0.95→0.93, noon boost .03→.015 — recovers highlight detail at the bright hours (value contrast, not darkness); floor stays .88 for LOOP 5's LEGIBLE WORD at vespers */
   gradePass.uniforms.uWarm.value = 1.35 - .8*h + .25*v;   /* warmth tracks the hour (Law 30 gate inside) */
   if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
   NACRE.t.value = t;
