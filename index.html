@@ -1213,12 +1213,16 @@ const cloudSprites = [];
     g.fillStyle = grd;
     let x = 6;
     while (x < w - 10){
-      const bw = 14 + (x*7 % 30), bh = h*(.28 + ((x*13) % 52)/100);
+      const bw = 12 + (x*7 % 24), bh = h*(.22 + ((x*13) % 56)/100);
       g.fillRect(x, h - bh, bw, bh);                        /* tower body */
       g.beginPath();                                        /* spire cap */
       g.moveTo(x, h - bh); g.lineTo(x + bw/2, h - bh - 22 - (x*11 % 26)); g.lineTo(x + bw, h - bh);
       g.closePath(); g.fill();
-      x += bw + 3 + (x*5 % 7);
+      /* LOOP 14-B: real AIR between the towers — tight 3-7px gaps packed
+         the cards into near-solid pale SLABS on the horizon (the card
+         bounds read, not the spires). Open, varied gaps let the sky
+         through and the cards vanish into a true skyline. */
+      x += bw + 9 + (x*5 % 19);
     }
   }, 256);
   const mkBandMat = (tex, op)=> new THREE.MeshBasicMaterial({
@@ -1288,11 +1292,17 @@ const cloudSprites = [];
       g.fillStyle = R.top;
       for (const [x0, x1, ty] of tops) g.fillRect(x0, ty, x1 - x0, R.amp*.30);
     }
-    /* atmospheric base — the land dissolves into the cloud sea */
-    const fade = g.createLinearGradient(0, h*.52, 0, h);
-    fade.addColorStop(0, 'rgba(246,236,220,0)');
-    fade.addColorStop(1, 'rgba(246,236,220,.92)');
+    /* atmospheric base — the land dissolves into the cloud sea. LOOP 14-B:
+       an ERASE (destination-out), never a painted wash — the old cream
+       overlay filled the card's whole lower half and showed the card
+       BOUNDS as pale slabs on the horizon; an erase leaves only land,
+       melting into the real sea behind it. */
+    g.save(); g.globalCompositeOperation = 'destination-out';
+    const fade = g.createLinearGradient(0, h*.55, 0, h);
+    fade.addColorStop(0, 'rgba(0,0,0,0)');
+    fade.addColorStop(1, 'rgba(0,0,0,.95)');
     g.fillStyle = fade; g.fillRect(0, h*.5, w, h*.5);
+    g.restore();
   }, 256);
   const mkMat = (tex, op)=> new THREE.MeshBasicMaterial({
     map:tex, transparent:true, opacity:op, alphaTest:.04, depthWrite:false, side:THREE.DoubleSide });
@@ -1314,6 +1324,204 @@ const cloudSprites = [];
     m.userData.extOnly = true;
     scene.add(m);
   }
+}
+
+/* ================================================================
+   LOOP 14-B — THE FAR CITIES (Rev 21:24 — the nations walk in her light)
+   Beyond the tableland and the mid ridges, distant CELESTIAL CITIES stand
+   on the eternal planet's horizon — luminous spires, domes and towers,
+   smaller, hazier, humbler than New Jerusalem. Impostor discipline
+   (Loop 6-D): whole-cluster-per-card, silhouette-first — TRUE alpha-cut
+   skylines (no card bounds ever), haze painted INSIDE the silhouette and
+   finished per-city in the shader toward the 13-C fog. Each city is TWO
+   crossed cards carrying two DIFFERENT skyline columns of the same city
+   (front district / back district — parallax depth, never a ghost).
+   Detail within silhouette: window pinpricks (brightest at vespers),
+   gilt spire-tips (catch the low dawn sun), a faint god-glow over every
+   city. THE LIVING HOUR threads it all (uHour, written by the hour
+   block). ONE merged mesh, ONE ShaderMaterial, two canvas atlases:
+   +1 draw, 20 tris. renderOrder -1, depthWrite off, extOnly, nothing
+   walkable. Untouched: the 6-D spire bands and 13-D tableland stand as
+   the nearer layers of the same horizon.
+================================================================ */
+const FARCITY = { u: null };
+{
+  const fr = mulberry32(14014);
+  const frr = (a, b)=> a + fr()*(b - a);
+  const COLS = 6, CW = 2048, CH = 512, colW = CW/COLS;
+  const FOG = { r: 0xd8, g: 0xbd, b: 0x94 };   /* the 13-C horizon family */
+  const mixc = (c, f, t)=> Math.round(c + (f - c)*t);
+  const rgb = (r, g, b)=> 'rgb(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ')';
+  const hazed = (r, g, b, t)=> rgb(mixc(r, FOG.r, t), mixc(g, FOG.g, t), mixc(b, FOG.b, t));
+
+  const bodyC = document.createElement('canvas'); bodyC.width = CW; bodyC.height = CH;
+  const glowC = document.createElement('canvas'); glowC.width = CW; glowC.height = CH;
+  const bg = bodyC.getContext('2d'), gg = glowC.getContext('2d');
+  bg.clearRect(0, 0, CW, CH);
+  gg.fillStyle = 'rgb(0,0,0)'; gg.fillRect(0, 0, CW, CH);   /* glow atlas: black = nothing */
+
+  for (let c = 0; c < COLS; c++){
+    const ox = c*colW + 10, w = colW - 20, base = CH*0.94;
+    const cx = ox + w/2;
+    /* three depth rows inside one city: back (hazed) -> mid -> front (lit) */
+    const rows = [
+      { n: 6 + (fr()*3|0), haze: .55, hMin: .34, hMax: .62, wMin: 14, wMax: 30, win: 0 },
+      { n: 6 + (fr()*3|0), haze: .30, hMin: .26, hMax: .78, wMin: 12, wMax: 26, win: .5 },
+      { n: 4 + (fr()*2|0), haze: .10, hMin: .18, hMax: .55, wMin: 14, wMax: 24, win: 1 },
+    ];
+    const tips = [];
+    for (const R of rows){
+      for (let t = 0; t < R.n; t++){
+        const spread = 0.10 + 0.80*(t + fr()*.8)/R.n;
+        const bx = ox + w*spread;
+        const bw = frr(R.wMin, R.wMax);
+        const bh = CH*frr(R.hMin, R.hMax);
+        const top = base - bh;
+        const v0 = 214 - R.haze*46, v1 = 238 - R.haze*40;  /* ivory of the nations */
+        const grd = bg.createLinearGradient(0, top, 0, base);
+        grd.addColorStop(0, hazed(v1, v1 - 8, v1 - 26, R.haze));
+        grd.addColorStop(1, hazed(v0 - 22, v0 - 26, v0 - 36, R.haze + .18));
+        bg.fillStyle = grd;
+        bg.fillRect(bx - bw/2, top, bw, bh);
+        bg.fillStyle = hazed(246, 236, 210, R.haze*.8);    /* sunlit ledge */
+        bg.fillRect(bx - bw/2, top, bw, 2.5);
+        const kind = fr();
+        if (kind < .38){                                    /* dome on a drum */
+          bg.beginPath(); bg.arc(bx, top, bw*.52, PI, 0); bg.fill();
+          tips.push([bx, top - bw*.52 - 2, R.haze]);
+        } else if (kind < .80){                             /* spire + needle */
+          bg.beginPath();
+          bg.moveTo(bx - bw/2, top); bg.lineTo(bx, top - frr(10, 26)); bg.lineTo(bx + bw/2, top);
+          bg.closePath(); bg.fill();
+          const ny = top - frr(22, 40);
+          bg.fillRect(bx - 1, ny, 2, top - ny);
+          tips.push([bx, ny, R.haze]);
+        } else {                                            /* flat crown + cornice */
+          bg.fillRect(bx - bw/2 - 2, top - 3, bw + 4, 3);
+          if (fr() < .5) tips.push([bx, top - 5, R.haze]);
+        }
+        /* windows into the glow mask (R channel): lit rooms of the nations */
+        if (R.win > 0){
+          gg.save(); gg.globalCompositeOperation = 'lighter';
+          const rowsY = Math.max(2, (bh/9)|0), colsX = Math.max(1, (bw/6)|0);
+          for (let wy = 1; wy < rowsY; wy++)
+            for (let wx = 0; wx < colsX; wx++){
+              if (fr() > .42*R.win) continue;
+              const px = bx - bw/2 + 3 + wx*6 + fr()*1.5;
+              const py = top + 4 + wy*9 + fr()*2;
+              if (py > base - 6) continue;
+              const br = 120 + fr()*135;
+              gg.fillStyle = 'rgb(' + (br|0) + ',0,0)';
+              gg.fillRect(px, py, fr() < .18 ? 2 : 1, fr() < .3 ? 2 : 1);
+            }
+          gg.restore();
+        }
+      }
+    }
+    /* gilt spire-tips (G channel) */
+    gg.save(); gg.globalCompositeOperation = 'lighter';
+    for (const tp of tips){
+      const g2 = gg.createRadialGradient(tp[0], tp[1], 0, tp[0], tp[1], 3.2);
+      g2.addColorStop(0, 'rgba(0,' + Math.round(235*(1 - tp[2]*.5)) + ',0,1)');
+      g2.addColorStop(1, 'rgba(0,0,0,0)');
+      gg.fillStyle = g2; gg.beginPath(); gg.arc(tp[0], tp[1], 3.2, 0, TAU); gg.fill();
+    }
+    /* the god-glow over the crown (B channel) */
+    const gy = base - CH*.52;
+    const g3 = gg.createRadialGradient(cx, gy, 4, cx, gy, w*.46);
+    g3.addColorStop(0, 'rgba(0,0,150,1)');
+    g3.addColorStop(1, 'rgba(0,0,0,0)');
+    gg.fillStyle = g3; gg.beginPath(); gg.arc(cx, gy, w*.46, 0, TAU); gg.fill();
+    gg.restore();
+    /* the base dissolves into the cloud sea */
+    bg.save(); bg.globalCompositeOperation = 'destination-out';
+    const fd = bg.createLinearGradient(0, base - CH*.10, 0, base + CH*.03);
+    fd.addColorStop(0, 'rgba(0,0,0,0)'); fd.addColorStop(1, 'rgba(0,0,0,1)');
+    bg.fillStyle = fd; bg.fillRect(c*colW, base - CH*.10, colW, CH*.16);
+    bg.restore();
+  }
+  const bodyTex = new THREE.CanvasTexture(bodyC); bodyTex.colorSpace = THREE.SRGBColorSpace; bodyTex.anisotropy = 4;
+  const glowTex = new THREE.CanvasTexture(glowC); glowTex.anisotropy = 4;
+
+  /* five sister cities BEYOND the mid ridges (the 13-D far ranges end
+     ~r640): bearings clear the bright causeway axis; farther = hazier.
+     Two crossed cards each, two different skylines = the city's own depth. */
+  const cities = [
+    { az:  33, r: 660, w: 210, hgt: 150, yb: -20, haze: .26, cols: [0, 1] },
+    { az:  96, r: 700, w: 230, hgt: 158, yb: -22, haze: .38, cols: [2, 3] },
+    { az: 152, r: 740, w: 235, hgt: 152, yb: -22, haze: .48, cols: [4, 5] },
+    { az: 218, r: 700, w: 225, hgt: 150, yb: -22, haze: .42, cols: [1, 4] },
+    { az: 327, r: 800, w: 260, hgt: 165, yb: -24, haze: .58, cols: [3, 0] },
+  ];
+  const uvCol = (geo, c, flip)=>{
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++){
+      let ux = uv.getX(i); if (flip) ux = 1 - ux;
+      uv.setX(i, (ux + c)/COLS);
+    }
+    return geo;
+  };
+  const parts = [], hazeArr = [];
+  for (const ct of cities){
+    const a = ct.az*D2R;
+    const px = Math.sin(a)*ct.r, pz = Math.cos(a)*ct.r;
+    const pair = [
+      { dy: 0,   col: ct.cols[0], s: 1.00, hz: ct.haze,       flip: false },
+      { dy: .96, col: ct.cols[1], s: 0.86, hz: ct.haze + .14, flip: true  },  /* the back district */
+    ];
+    for (const p of pair){
+      let g2 = new THREE.PlaneGeometry(ct.w*p.s, ct.hgt*p.s);
+      uvCol(g2, p.col, p.flip);
+      xf(g2, px, ct.yb + ct.hgt*p.s*0.5, pz, a + PI + p.dy);
+      if (g2.index) g2 = g2.toNonIndexed();
+      parts.push(g2);
+      const hz = Math.min(.85, p.hz);
+      for (let i = 0; i < g2.attributes.position.count; i++) hazeArr.push(hz);
+    }
+  }
+  const merged = mergeGeometries(parts);
+  merged.setAttribute('aHaze', new THREE.Float32BufferAttribute(hazeArr, 1));
+  const mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    uniforms: {
+      uBody: { value: bodyTex }, uGlow: { value: glowTex },
+      uHour: { value: new THREE.Vector2(.5, 0) },
+      uFog: { value: new THREE.Color(0xd8bd94) },
+    },
+    vertexShader: `varying vec2 vUv; varying float vHaze;
+      attribute float aHaze;
+      void main(){ vUv = uv; vHaze = aHaze;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform sampler2D uBody, uGlow; uniform vec2 uHour; uniform vec3 uFog;
+      varying vec2 vUv; varying float vHaze;
+      void main(){
+        vec4 b = texture2D(uBody, vUv);
+        if (b.a < 0.05) discard;
+        vec3 glow = texture2D(uGlow, vUv).rgb;
+        float h = uHour.x, v = uHour.y;
+        /* the hour: dawn-warm, noon-clear, vespers-deep */
+        vec3 tint = mix(vec3(1.10, 1.00, 0.87), vec3(1.0), h);
+        tint = mix(tint, vec3(0.80, 0.85, 1.06), v*0.75);
+        float hz = vHaze * (1.0 - 0.18*h + 0.10*v);
+        vec3 col = b.rgb * tint;
+        col = mix(col, uFog, hz);
+        /* windows wake at vespers, whisper by day */
+        float winAmp = 0.30 + 0.24*(1.0 - h) + 1.65*v;
+        col += vec3(1.0, 0.84, 0.55) * glow.r * winAmp * (1.0 - hz*0.45);
+        /* gilt tips catch the low sun */
+        float tipAmp = max(1.05 + 0.95*(1.0 - h) - 0.35*v, 0.30);
+        col += vec3(1.0, 0.85, 0.46) * glow.g * tipAmp * (1.0 - hz*0.5);
+        /* the god-glow over every city */
+        float gAmp = 0.5 + 0.5*(1.0 - h) + 0.85*v;
+        col += vec3(1.0, 0.93, 0.74) * glow.b * gAmp * 0.48;
+        gl_FragColor = vec4(col, b.a * (1.0 - hz*0.30));
+      }`,
+  });
+  const mesh = new THREE.Mesh(merged, mat);
+  mesh.frustumCulled = false; mesh.renderOrder = -1;
+  mesh.userData.extOnly = true;
+  scene.add(mesh);
+  FARCITY.u = mat.uniforms;
 }
 
 const seaMeshes = [];
@@ -7657,6 +7865,7 @@ function animate(){
   RIVER.time.value = t;
   RIVER.tint.value.setRGB(1 + .05*(1-h) - .05*v, 1 + .012*(1-h) + .01*v, 1 - .04*(1-h) + .09*v);
   NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
+  if (FARCITY.u) FARCITY.u.uHour.value.set(h, v);   /* LOOP 14-B: the far cities keep the hour */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
   /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
