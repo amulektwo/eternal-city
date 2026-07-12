@@ -2121,26 +2121,39 @@ float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; floa
      selective bright catches, fresnel silhouette light, sparse facet
      sparkle. Facet detail rests by 90m so the causeway keeps a clean deep
      course read (no distant shimmer). Courses, bond, mortar, gilt kept —
-     a BUILT wall of living stones. Zero geometry, zero draws. Red-family
-     stones (sardius/red jasper/chalcedony) stay OUT pending the Seer's
-     ruling (L29/L3) — the six courses are the non-red jewels of Loop 9-B. */
-  vec3 jewels[6];
-  jewels[0] = vec3(0.118, 0.247, 0.561);   /* sapphire   */
-  jewels[1] = vec3(0.110, 0.478, 0.310);   /* emerald    */
-  jewels[2] = vec3(0.851, 0.604, 0.204);   /* topaz      */
-  jewels[3] = vec3(0.416, 0.247, 0.627);   /* amethyst   */
-  jewels[4] = vec3(0.247, 0.647, 0.471);   /* jade       */
-  jewels[5] = vec3(0.310, 0.659, 0.753);   /* aquamarine */
+     a BUILT wall of living stones. Zero geometry, zero draws.
+     LOOP 15 — THE RED SEATED (the Seer's ruling, 2026-07-11): the red-family
+     stones (jasper/sardius/chalcedony) now ENTER — nine courses in Rev 21:19-20
+     order, jasper the first foundation at the base. Red on the outer wall is
+     lawful architecture; L29 zero-red binds the Tree and fruit only. */
+  /* LOOP 15 — THE RED SEATED (the Seer's ruling, 2026-07-11): the red-family
+     foundation stones enter in Revelation's own order — jasper the FIRST
+     foundation grounds the base, sardius (carnelian) mid-wall, chalcedony a
+     warm rose between the cool jewels. Nine courses now (was six). Red on the
+     outer wall is lawful architecture — L29 binds the Tree and fruit only. */
+  vec3 jewels[9];
+  jewels[0] = vec3(0.545, 0.149, 0.118);   /* jasper (RED, 1st foundation) */
+  jewels[1] = vec3(0.118, 0.247, 0.561);   /* sapphire   */
+  jewels[2] = vec3(0.741, 0.451, 0.404);   /* chalcedony (warm rose)       */
+  jewels[3] = vec3(0.110, 0.478, 0.310);   /* emerald    */
+  jewels[4] = vec3(0.706, 0.220, 0.110);   /* sardius (RED carnelian)      */
+  jewels[5] = vec3(0.851, 0.604, 0.204);   /* topaz      */
+  jewels[6] = vec3(0.247, 0.647, 0.471);   /* jade       */
+  jewels[7] = vec3(0.310, 0.659, 0.753);   /* aquamarine */
+  jewels[8] = vec3(0.416, 0.247, 0.627);   /* amethyst (12th, crowns)      */
   /* per-jewel character: A=(cellsX, cellsY, facetContrast, roughness)
      B=(normalTilt, innerDepth, glintFrac, geodeTip)
      C=(edgeCatch, fresnel, banding, saturation) */
-  vec4 gemA[6]; vec4 gemB[6]; vec4 gemC[6];
-  gemA[0] = vec4( 7.0,  7.0, 0.50, 0.10); gemB[0] = vec4(0.30, 0.45, 0.30, 0.10); gemC[0] = vec4(0.35, 0.65, 0.00, 1.15);
-  gemA[1] = vec4(16.0,  4.2, 0.52, 0.16); gemB[1] = vec4(0.38, 0.25, 0.25, 0.10); gemC[1] = vec4(0.45, 0.55, 0.00, 1.10);
-  gemA[2] = vec4( 7.5,  7.5, 0.50, 0.14); gemB[2] = vec4(0.34, 0.35, 0.35, 0.15); gemC[2] = vec4(0.40, 0.55, 0.00, 1.10);
-  gemA[3] = vec4(13.0, 13.0, 0.58, 0.18); gemB[3] = vec4(0.48, 0.20, 0.40, 0.55); gemC[3] = vec4(0.50, 0.60, 0.00, 1.15);
-  gemA[4] = vec4( 5.0,  5.0, 0.16, 0.40); gemB[4] = vec4(0.10, 0.06, 0.06, 0.00); gemC[4] = vec4(0.12, 0.35, 0.14, 1.05);
-  gemA[5] = vec4(13.0,  5.5, 0.46, 0.12); gemB[5] = vec4(0.34, 0.40, 0.30, 0.12); gemC[5] = vec4(0.40, 0.60, 0.00, 1.08);
+  vec4 gemA[9]; vec4 gemB[9]; vec4 gemC[9];
+  gemA[0] = vec4( 5.0,  5.0, 0.18, 0.42); gemB[0] = vec4(0.10, 0.06, 0.05, 0.00); gemC[0] = vec4(0.12, 0.35, 0.16, 1.00);  /* jasper: opaque, waxy, banded */
+  gemA[1] = vec4( 7.0,  7.0, 0.50, 0.10); gemB[1] = vec4(0.30, 0.45, 0.30, 0.10); gemC[1] = vec4(0.35, 0.65, 0.00, 1.15);  /* sapphire */
+  gemA[2] = vec4( 6.0,  6.0, 0.30, 0.24); gemB[2] = vec4(0.20, 0.30, 0.14, 0.05); gemC[2] = vec4(0.25, 0.45, 0.20, 0.90);  /* chalcedony: translucent, banded agate */
+  gemA[3] = vec4(16.0,  4.2, 0.52, 0.16); gemB[3] = vec4(0.38, 0.25, 0.25, 0.10); gemC[3] = vec4(0.45, 0.55, 0.00, 1.10);  /* emerald */
+  gemA[4] = vec4( 8.0,  6.0, 0.46, 0.16); gemB[4] = vec4(0.30, 0.40, 0.24, 0.10); gemC[4] = vec4(0.38, 0.55, 0.06, 1.05);  /* sardius: glassy carnelian, inner depth */
+  gemA[5] = vec4( 7.5,  7.5, 0.50, 0.14); gemB[5] = vec4(0.34, 0.35, 0.35, 0.15); gemC[5] = vec4(0.40, 0.55, 0.00, 1.10);  /* topaz */
+  gemA[6] = vec4( 5.0,  5.0, 0.16, 0.40); gemB[6] = vec4(0.10, 0.06, 0.06, 0.00); gemC[6] = vec4(0.12, 0.35, 0.14, 1.05);  /* jade */
+  gemA[7] = vec4(13.0,  5.5, 0.46, 0.12); gemB[7] = vec4(0.34, 0.40, 0.30, 0.12); gemC[7] = vec4(0.40, 0.60, 0.00, 1.08);  /* aquamarine */
+  gemA[8] = vec4(13.0, 13.0, 0.58, 0.18); gemB[8] = vec4(0.48, 0.20, 0.40, 0.55); gemC[8] = vec4(0.50, 0.60, 0.00, 1.15);  /* amethyst */
   /* view geometry for parallax + fresnel — the wall is an analytic ring */
   float wAng = vWallU / 118.5;
   vec3 wNrm = vec3(sin(wAng), 0.0, cos(wAng));
@@ -2150,7 +2163,7 @@ float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; floa
   vec2 wPar = -vec2(dot(wView, wTan), wView.y) / (sign(vN + 0.0001) * max(abs(vN), 0.35));
   float wDist = length(cameraPosition - vWallP);
   float farFade = smoothstep(30.0, 90.0, wDist);
-  for (int k = 0; k < 6; k++){
+  for (int k = 0; k < 9; k++){
     float b0 = 0.35 + float(k)*0.59;
     float inBand = step(b0, vWallY) * step(vWallY, b0 + 0.50);
     if (inBand > 0.5){
