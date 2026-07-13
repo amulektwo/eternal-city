@@ -2200,7 +2200,8 @@ vec2 wallVoro(vec2 vp, out vec2 bid){
   }
   return vec2(sqrt(F1), sqrt(F2));
 }
-float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; float gWallAng = 0.0;`)
+float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; float gWallAng = 0.0;
+vec3 gWallFire = vec3(0.0);`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   /* LOOP 14-A — THE GEMSTONE FOUNDATIONS (Rev 21:19-20, evolving 13-B's
@@ -2326,6 +2327,10 @@ float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; floa
       gWallTilt = (hash22(fid * 3.3 + float(k)) - 0.5) * 2.0 * gemB[k].x * gWallStone;
       gWallRough = gemA[k].w;
       gWallAng = wAng;
+      /* L-1 rev 2 — THE INNER FIRE: a precious stone is never dead in
+         shadow. A quiet self-luminance floor in the stone's own color
+         keeps the shadowed faces alive (far beneath the 1.8 bloom line). */
+      gWallFire = fcol * stone * 0.26;
     }
     /* gilt separator above each course */
     float gilt = step(b0 + 0.50, vWallY) * step(vWallY, b0 + 0.56);
@@ -2334,6 +2339,8 @@ float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; floa
 }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
   roughnessFactor = mix(roughnessFactor, gWallRough, gWallStone);`)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+  totalEmissiveRadiance += gWallFire;`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
   if (gWallStone > 0.003){
     vec3 wtV = normalize((viewMatrix * vec4(cos(gWallAng), 0.0, -sin(gWallAng), 0.0)).xyz);
