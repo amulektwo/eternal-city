@@ -193,6 +193,20 @@
     background:rgba(138,109,47,.35); }
   #readerBody .rdiv span { font-family:'Cinzel', serif; font-size:.58rem;
     letter-spacing:.3em; color:#8a6d2f; }
+  /* C-1 THE READER PERFECTED (chrome only — the word is untouched, L4) */
+  #readerThread { position:absolute; top:0; left:0; right:0; height:3px;
+    border-radius:6px 6px 0 0; overflow:hidden; opacity:0; transition:opacity .4s; }
+  #readerThread.on { opacity:1; }
+  #readerThread i { display:block; height:100%; width:0%;
+    background:linear-gradient(90deg,#b8912f,#e2c672); }
+  #readerBody .sx > p.dcap::first-letter { font-family:'Cinzel', serif;
+    float:left; font-size:3.15em; line-height:.82; padding:.04em .12em 0 0;
+    color:#8a6d2f; }
+  @media (max-width:520px){
+    #readerFoot { gap:.45rem; }
+    #readerFoot button { padding:.55rem .5rem; font-size:.56rem;
+      letter-spacing:.12em; text-indent:.12em; white-space:nowrap; flex:1 1 auto; }
+  }
   #readerBody .sx p { margin:0 0 1.05em; }
   #readerBody .sx h3 { font-family:'Cinzel', serif; font-size:1.05rem; letter-spacing:.05em;
     color:#2A1F14; margin:1.5em 0 .6em; line-height:1.35; }
@@ -336,6 +350,7 @@
 <div id="reader" hidden>
   <div id="readerVeil"></div>
   <div id="readerPanel">
+    <div id="readerThread" aria-hidden="true"><i></i></div>
     <svg id="readerSeal" viewBox="0 0 52 52" aria-hidden="true">
       <circle cx="26" cy="26" r="24" fill="#b8912f"/>
       <circle cx="26" cy="26" r="18" fill="none" stroke="#f3ead3" stroke-width="2"/>
@@ -6481,6 +6496,37 @@ function renderReaderBody(){
   html += `<div class="sx">${dressScripture(rest)}</div>`;
   readerBody.innerHTML = html;
   readerRawBtn.textContent = 'RAW VERBATIM';
+  /* THE ILLUMINATED OPENING — a Cinzel drop cap on the first paragraph,
+     letters only (an emoji or quote must never be enthroned). CSS-only
+     presentation; the text nodes are exactly dressScripture's output. */
+  const p0 = readerBody.querySelector('.sx > p');
+  if (p0 && /^[A-Za-z]/.test(p0.textContent)) p0.classList.add('dcap');
+}
+/* C-1 — THE GOLD THREAD + THE REMEMBERED PLACE (chrome; the word untouched).
+   The thread shows how deep the pilgrim stands in a long scroll; the place
+   is kept per scroll so a re-opened scroll resumes where he left it. */
+const readerThread = document.getElementById('readerThread');
+const readerThreadBar = readerThread.querySelector('i');
+let placeSaveT = 0;
+readerBody.addEventListener('scroll', ()=>{
+  const range = readerBody.scrollHeight - readerBody.clientHeight;
+  const deep = range > readerBody.clientHeight * .6;
+  readerThread.classList.toggle('on', deep && readerOpen);
+  if (deep) readerThreadBar.style.width = (readerBody.scrollTop / range * 100).toFixed(2) + '%';
+  if (!readerOpen || !readerScrollId) return;
+  const now = performance.now();
+  if (now - placeSaveT < 400) return;
+  placeSaveT = now;
+  try {
+    if (readerBody.scrollTop > 300) localStorage.setItem('zc-place-' + readerScrollId, String(readerBody.scrollTop | 0));
+    else localStorage.removeItem('zc-place-' + readerScrollId);
+  } catch(e){}
+}, { passive: true });
+function restoreReaderPlace(id){
+  try {
+    const v = +localStorage.getItem('zc-place-' + id);
+    if (v > 300) readerBody.scrollTop = Math.min(v, readerBody.scrollHeight - readerBody.clientHeight);
+  } catch(e){}
 }
 readerRawBtn.addEventListener('click', ()=>{
   readerRawMode = !readerRawMode;
@@ -6529,6 +6575,7 @@ async function openScroll(id, fromPos){
     readerDoc = doc;
     renderReaderBody();
     readerEl.classList.remove('loading');
+    restoreReaderPlace(id);   /* THE REMEMBERED PLACE — resume the reading */
     if (!PREFERS_STATIC){
       void readerPanel.offsetWidth;
       readerPanel.classList.add('animate-unfurl');
@@ -6546,6 +6593,7 @@ async function openScroll(id, fromPos){
 function closeReader(){
   if (!readerOpen) return;
   readerOpen = false; readerScrollId = null; readerDoc = null; readerRawMode = false;
+  readerThread.classList.remove('on');
   const finish = ()=>{ readerEl.hidden = true; readerPanel.classList.remove('animate-refurl'); };
   if (!PREFERS_STATIC){
     readerPanel.classList.remove('animate-unfurl');
