@@ -1409,7 +1409,10 @@ const FARCITY = { u: null };
 {
   const fr = mulberry32(14014);
   const frr = (a, b)=> a + fr()*(b - a);
-  const COLS = 6, CW = 2048, CH = 512, colW = CW/COLS;
+  /* L-2 rev 2 — THE NATIONS IN THE SEER'S EYE: eight richer columns
+     (384px each vs the old 341) — more skylines than cities, so no
+     two neighbours ever wear the same face */
+  const COLS = 8, CW = 3072, CH = 576, colW = CW/COLS;
   const FOG = { r: 0xd8, g: 0xbd, b: 0x94 };   /* the 13-C horizon family */
   const mixc = (c, f, t)=> Math.round(c + (f - c)*t);
   const rgb = (r, g, b)=> 'rgb(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ')';
@@ -1424,11 +1427,13 @@ const FARCITY = { u: null };
   for (let c = 0; c < COLS; c++){
     const ox = c*colW + 10, w = colW - 20, base = CH*0.94;
     const cx = ox + w/2;
-    /* three depth rows inside one city: back (hazed) -> mid -> front (lit) */
+    /* four depth rows inside one city: far crown -> back -> mid -> front.
+       Denser than 14-B: the Seer asked to SEE the nations, not guess them */
     const rows = [
-      { n: 6 + (fr()*3|0), haze: .55, hMin: .34, hMax: .62, wMin: 14, wMax: 30, win: 0 },
-      { n: 6 + (fr()*3|0), haze: .30, hMin: .26, hMax: .78, wMin: 12, wMax: 26, win: .5 },
-      { n: 4 + (fr()*2|0), haze: .10, hMin: .18, hMax: .55, wMin: 14, wMax: 24, win: 1 },
+      { n: 5 + (fr()*3|0), haze: .62, hMin: .40, hMax: .70, wMin: 16, wMax: 34, win: 0 },
+      { n: 7 + (fr()*3|0), haze: .46, hMin: .32, hMax: .64, wMin: 14, wMax: 30, win: .25 },
+      { n: 8 + (fr()*3|0), haze: .26, hMin: .24, hMax: .80, wMin: 12, wMax: 26, win: .6 },
+      { n: 5 + (fr()*3|0), haze: .08, hMin: .16, hMax: .58, wMin: 14, wMax: 24, win: 1 },
     ];
     const tips = [];
     for (const R of rows){
@@ -1438,25 +1443,41 @@ const FARCITY = { u: null };
         const bw = frr(R.wMin, R.wMax);
         const bh = CH*frr(R.hMin, R.hMax);
         const top = base - bh;
-        const v0 = 214 - R.haze*46, v1 = 238 - R.haze*40;  /* ivory of the nations */
+        /* ivory of the nations — LUMINOUS (L-2 rev 2): the old 190-214
+           band read as a dark silhouette against the bright horizon */
+        const v0 = 232 - R.haze*34, v1 = 250 - R.haze*26;
         const grd = bg.createLinearGradient(0, top, 0, base);
-        grd.addColorStop(0, hazed(v1, v1 - 8, v1 - 26, R.haze));
-        grd.addColorStop(1, hazed(v0 - 22, v0 - 26, v0 - 36, R.haze + .18));
+        grd.addColorStop(0, hazed(v1, v1 - 6, v1 - 20, R.haze));
+        grd.addColorStop(1, hazed(v0 - 14, v0 - 18, v0 - 28, R.haze + .16));
         bg.fillStyle = grd;
         bg.fillRect(bx - bw/2, top, bw, bh);
         bg.fillStyle = hazed(246, 236, 210, R.haze*.8);    /* sunlit ledge */
         bg.fillRect(bx - bw/2, top, bw, 2.5);
         const kind = fr();
-        if (kind < .38){                                    /* dome on a drum */
-          bg.beginPath(); bg.arc(bx, top, bw*.52, PI, 0); bg.fill();
-          tips.push([bx, top - bw*.52 - 2, R.haze]);
-        } else if (kind < .80){                             /* spire + needle */
+        if (kind < .30){                                    /* dome on a drum */
+          const dr = bw*.52;
+          bg.fillRect(bx - dr*.78, top - 4, dr*1.56, 4);    /* the drum ledge */
+          bg.beginPath(); bg.arc(bx, top - 4, dr, PI, 0); bg.fill();
+          bg.fillRect(bx - 1, top - 4 - dr - 7, 2, 8);      /* the finial */
+          tips.push([bx, top - 4 - dr - 8, R.haze]);
+        } else if (kind < .44){                             /* twin spires over a gate */
+          for (const sx2 of [-bw*.30, bw*.30]){
+            bg.beginPath();
+            bg.moveTo(bx + sx2 - bw*.16, top); bg.lineTo(bx + sx2, top - frr(16, 30)); bg.lineTo(bx + sx2 + bw*.16, top);
+            bg.closePath(); bg.fill();
+            tips.push([bx + sx2, top - frr(16, 28), R.haze]);
+          }
+        } else if (kind < .78){                             /* spire + needle */
           bg.beginPath();
-          bg.moveTo(bx - bw/2, top); bg.lineTo(bx, top - frr(10, 26)); bg.lineTo(bx + bw/2, top);
+          bg.moveTo(bx - bw/2, top); bg.lineTo(bx, top - frr(12, 30)); bg.lineTo(bx + bw/2, top);
           bg.closePath(); bg.fill();
-          const ny = top - frr(22, 40);
+          const ny = top - frr(26, 46);
           bg.fillRect(bx - 1, ny, 2, top - ny);
           tips.push([bx, ny, R.haze]);
+        } else if (kind < .90){                             /* stepped crown (ziggurat shoulders) */
+          bg.fillRect(bx - bw*.36, top - 6, bw*.72, 6);
+          bg.fillRect(bx - bw*.20, top - 12, bw*.40, 6);
+          if (fr() < .6) tips.push([bx, top - 14, R.haze]);
         } else {                                            /* flat crown + cornice */
           bg.fillRect(bx - bw/2 - 2, top - 3, bw + 4, 3);
           if (fr() < .5) tips.push([bx, top - 5, R.haze]);
@@ -1464,16 +1485,16 @@ const FARCITY = { u: null };
         /* windows into the glow mask (R channel): lit rooms of the nations */
         if (R.win > 0){
           gg.save(); gg.globalCompositeOperation = 'lighter';
-          const rowsY = Math.max(2, (bh/9)|0), colsX = Math.max(1, (bw/6)|0);
+          const rowsY = Math.max(2, (bh/8)|0), colsX = Math.max(1, (bw/5)|0);
           for (let wy = 1; wy < rowsY; wy++)
             for (let wx = 0; wx < colsX; wx++){
-              if (fr() > .42*R.win) continue;
-              const px = bx - bw/2 + 3 + wx*6 + fr()*1.5;
-              const py = top + 4 + wy*9 + fr()*2;
+              if (fr() > .48*R.win) continue;
+              const px = bx - bw/2 + 2.5 + wx*5 + fr()*1.5;
+              const py = top + 4 + wy*8 + fr()*2;
               if (py > base - 6) continue;
-              const br = 120 + fr()*135;
+              const br = 135 + fr()*120;
               gg.fillStyle = 'rgb(' + (br|0) + ',0,0)';
-              gg.fillRect(px, py, fr() < .18 ? 2 : 1, fr() < .3 ? 2 : 1);
+              gg.fillRect(px, py, fr() < .28 ? 2 : 1, fr() < .38 ? 2 : 1);
             }
           gg.restore();
         }
@@ -1507,12 +1528,17 @@ const FARCITY = { u: null };
   /* five sister cities BEYOND the mid ridges (the 13-D far ranges end
      ~r640): bearings clear the bright causeway axis; farther = hazier.
      Two crossed cards each, two different skylines = the city's own depth. */
+  /* SEVEN sister cities — L-2 rev 2 fills the old 109-degree western
+     silence (az 218→327) with two more nations; "all around us" is now
+     true at every bearing. Bearings still clear the causeway axis. */
   const cities = [
-    { az:  33, r: 660, w: 210, hgt: 150, yb: -20, haze: .26, cols: [0, 1] },
-    { az:  96, r: 700, w: 230, hgt: 158, yb: -22, haze: .38, cols: [2, 3] },
-    { az: 152, r: 740, w: 235, hgt: 152, yb: -22, haze: .48, cols: [4, 5] },
-    { az: 218, r: 700, w: 225, hgt: 150, yb: -22, haze: .42, cols: [1, 4] },
-    { az: 327, r: 800, w: 260, hgt: 165, yb: -24, haze: .58, cols: [3, 0] },
+    { az:  33, r: 660, w: 215, hgt: 152, yb: -20, haze: .24, cols: [0, 1] },
+    { az:  96, r: 700, w: 235, hgt: 160, yb: -22, haze: .34, cols: [2, 3] },
+    { az: 152, r: 740, w: 240, hgt: 155, yb: -22, haze: .44, cols: [4, 5] },
+    { az: 218, r: 700, w: 230, hgt: 152, yb: -22, haze: .38, cols: [6, 7] },
+    { az: 258, r: 730, w: 235, hgt: 158, yb: -22, haze: .40, cols: [1, 6] },
+    { az: 292, r: 770, w: 245, hgt: 162, yb: -23, haze: .48, cols: [5, 2] },
+    { az: 327, r: 800, w: 265, hgt: 168, yb: -24, haze: .54, cols: [3, 0] },
   ];
   const uvCol = (geo, c, flip)=>{
     const uv = geo.attributes.uv;
@@ -1560,22 +1586,26 @@ const FARCITY = { u: null };
         if (b.a < 0.05) discard;
         vec3 glow = texture2D(uGlow, vUv).rgb;
         float h = uHour.x, v = uHour.y;
-        /* the hour: dawn-warm, noon-clear, vespers-deep */
-        vec3 tint = mix(vec3(1.10, 1.00, 0.87), vec3(1.0), h);
+        /* the hour: dawn-warm, noon-clear, vespers-deep — the nations wear
+           gold-ivory, never gray (L-2 rev 2) */
+        vec3 tint = mix(vec3(1.16, 1.03, 0.80), vec3(1.06, 1.00, 0.90), h);
         tint = mix(tint, vec3(0.80, 0.85, 1.06), v*0.75);
         float hz = vHaze * (1.0 - 0.18*h + 0.10*v);
         vec3 col = b.rgb * tint;
-        col = mix(col, uFog, hz);
-        /* windows wake at vespers, whisper by day */
-        float winAmp = 0.30 + 0.24*(1.0 - h) + 1.65*v;
+        /* haze lifts toward a LIT horizon (uFog alone pulled the nations
+           DOWN to a gray silhouette against the bloomed sky) */
+        col = mix(col, uFog*1.12, hz);
+        /* windows wake at vespers, and no longer whisper by day —
+           the Seer asked to SEE the nations from the air (L-2 rev 2) */
+        float winAmp = 0.62 + 0.24*(1.0 - h) + 1.65*v;
         col += vec3(1.0, 0.84, 0.55) * glow.r * winAmp * (1.0 - hz*0.45);
         /* gilt tips catch the low sun */
         float tipAmp = max(1.05 + 0.95*(1.0 - h) - 0.35*v, 0.30);
         col += vec3(1.0, 0.85, 0.46) * glow.g * tipAmp * (1.0 - hz*0.5);
         /* the god-glow over every city */
-        float gAmp = 0.5 + 0.5*(1.0 - h) + 0.85*v;
+        float gAmp = 0.62 + 0.5*(1.0 - h) + 0.85*v;
         col += vec3(1.0, 0.93, 0.74) * glow.b * gAmp * 0.48;
-        gl_FragColor = vec4(col, b.a * (1.0 - hz*0.30));
+        gl_FragColor = vec4(col, b.a * (1.0 - hz*0.22));
       }`,
   });
   const mesh = new THREE.Mesh(merged, mat);
@@ -1743,8 +1773,10 @@ const seaMeshes = [];
       parts.push(xf(new THREE.ConeGeometry(w*.62, h*.42, 6), x, -40+h+h*.2, z));
     }
   }
+  /* L-2 rev 2: re-baked toward the city's ivory (the carried 14-B flag —
+     the old warm tan read DARK against the bright sea from the air) */
   const m = new THREE.Mesh(mergeGeometries(parts),
-    new THREE.MeshBasicMaterial({ color:0xf0d6a6, fog:false, transparent:true, opacity:.55 }));
+    new THREE.MeshBasicMaterial({ color:0xf6e9cd, fog:false, transparent:true, opacity:.42 }));
   scene.add(m);
 }
 
@@ -6162,8 +6194,12 @@ const FLIGHT = {
   savedYaw:0, savedPitch:0,
   orbitAng:0, orbitV:0, tourU:0, gateEnd:null,
 };
-const AERIAL_POS  = new THREE.Vector3(0, 226, 56);
-const AERIAL_LOOK = new THREE.Vector3(0, 0, -10);
+/* L-2 rev 2 — THE NATIONS IN THE SEER'S EYE: the perch pulls back and
+   the gaze lifts from plan-view to a high prospect, so ONE frame holds
+   the whole bride AND the nations on the horizon (the old straight-down
+   look framed the city but never the world). */
+const AERIAL_POS  = new THREE.Vector3(0, 230, 210);
+const AERIAL_LOOK = new THREE.Vector3(0, 10, -180);
 const FLY_DUR  = PREFERS_STATIC ? .5 : 2.8;
 const FLY_EASE = u => u*u*(3-2*u);
 const _fdir = new THREE.Vector3(), _fv1 = new THREE.Vector3(), _fv2 = new THREE.Vector3();
