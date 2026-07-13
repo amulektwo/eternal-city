@@ -5407,6 +5407,25 @@ const laceGold = new THREE.MeshStandardMaterial({
   const LS = [], LG2 = [];   /* stone trim parts, gold trim parts */
   /* — sanctuary cornices + portal pilaster bands — */
   const SX0=42, SX1=86, SZ0=-21, SZ1=9, SCZ=-6;
+  /* LOOP 14-B — THE SIX NEEDLES OF THE SANCTUARY (Washington DC temple crown):
+     three tapering square shafts at each end, the centre of each trio tallest,
+     each crowned by a long thin gold needle — a clean point, NO statue (Seer).
+     All merged into the city pools — zero new draw calls. */
+  for (const nx of [46, 82]){
+    let j = 0;
+    for (const nz of [SCZ-9, SCZ, SCZ+9]){
+      const tall = (j === 1);                       /* centre shaft tallest */
+      const shaftH = tall ? 16.5 : 12.0;
+      const needleH = tall ? 12.5 : 8.5;
+      const y0 = 15.5;                               /* grows out of the roof mass */
+      P.white.push(xf(new THREE.CylinderGeometry(1.55, 1.78, 1.6, 4), nx, y0+.8, nz, PI/4));           /* stepped base */
+      P.white.push(xf(new THREE.CylinderGeometry(1.02, 1.46, shaftH, 4), nx, y0+1.6+shaftH/2, nz, PI/4)); /* tapering shaft */
+      const topY = y0+1.6+shaftH;
+      P.ivory.push(xf(new THREE.CylinderGeometry(.86, 1.14, 1.1, 4), nx, topY+.55, nz, PI/4));         /* collar under needle */
+      P.gold.push(xf(new THREE.ConeGeometry(.17, needleH, 6), nx, topY+1.1+needleH/2, nz, PI/4));      /* the gold needle */
+      j++;
+    }
+  }
   for (const zz of [SZ0-1.35, SZ1+1.35])
     LS.push(tileUV(xf(new THREE.BoxGeometry(SX1-SX0+2, .55, .5), (SX0+SX1)/2, 17.65, zz), 22));
   for (const zz of [SCZ-4.6, SCZ+4.6])
