@@ -87,6 +87,44 @@
     cursor:pointer; transition:all .3s; }
   #lampBtn:hover { border-color:var(--gold); box-shadow:0 0 22px rgba(212,175,55,.4); }
   #lampBtn svg { width:22px; height:22px; }
+  /* THE SEER'S WINGS — aerial eye · flight controller · the gate index */
+  #aerialBtn, #gateBtn { position:fixed; top:18px; z-index:12; width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+    color:var(--gold); background:rgba(12,8,2,.4); border:1px solid rgba(212,175,55,.45);
+    cursor:pointer; transition:all .3s; }
+  #aerialBtn { right:70px; }
+  #gateBtn { right:122px; }
+  #aerialBtn:hover, #gateBtn:hover { border-color:var(--gold); box-shadow:0 0 22px rgba(212,175,55,.4); }
+  #aerialBtn svg, #gateBtn svg { width:22px; height:22px; }
+  #aerialBtn.on { background:rgba(212,175,55,.88); color:#1a1206; border-color:var(--gold); }
+  #flightCtl { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(14px);
+    z-index:12; display:flex; gap:10px; opacity:0; pointer-events:none;
+    transition:opacity .45s, transform .45s; }
+  #flightCtl.show { opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
+  #flightCtl button { font-family:'Cinzel',serif; font-size:.66rem; letter-spacing:.22em;
+    color:var(--gold); background:rgba(12,8,2,.55); border:1px solid rgba(212,175,55,.45);
+    border-radius:22px; padding:.62rem 1.5rem .55rem; cursor:pointer; transition:all .3s; }
+  #flightCtl button:hover { border-color:var(--gold); box-shadow:0 0 18px rgba(212,175,55,.35); }
+  #flightCtl button.on { background:rgba(212,175,55,.88); color:#1a1206; }
+  @media (pointer:coarse){ #flightCtl { bottom:112px; } }
+  #gatePanel { position:fixed; inset:0; z-index:32; display:flex; align-items:flex-start;
+    justify-content:center; padding-top:11vh; }
+  #gatePanel[hidden] { display:none; }
+  #gateVeil { position:absolute; inset:0; background:rgba(12,8,2,.78); cursor:pointer; }
+  #gateBox { position:relative; width:min(430px, 92vw); background:rgba(16,11,3,.96);
+    border:1px solid rgba(212,175,55,.5); box-shadow:0 0 60px rgba(0,0,0,.6);
+    max-height:74vh; overflow-y:auto; }
+  #gateBox h3 { font-family:'Cinzel',serif; font-weight:400; color:rgba(212,175,55,.85);
+    font-size:.72rem; letter-spacing:.3em; margin:0; padding:1.1rem 1.4rem .7rem;
+    border-bottom:1px solid rgba(212,175,55,.18); }
+  .gateRow { display:flex; align-items:baseline; gap:.9rem; width:100%; text-align:left;
+    background:none; border:none; cursor:pointer; padding:.6rem 1.4rem;
+    font-family:'Cinzel',serif; }
+  .gateRow:hover { background:rgba(212,175,55,.1); }
+  .gateRow .gn { color:var(--gold); font-size:.7rem; letter-spacing:.14em; min-width:2.4em; }
+  .gateRow .gt { color:#f3ead3; font-size:.98rem; letter-spacing:.12em; }
+  #gateFoot { padding:.55rem 1.4rem .8rem; text-align:center; color:rgba(200,175,120,.4);
+    font-size:.62rem; letter-spacing:.22em; border-top:1px solid rgba(212,175,55,.18); }
   #seek { position:fixed; inset:0; z-index:32; display:flex; align-items:flex-start;
     justify-content:center; padding-top:11vh; }
   #seek[hidden] { display:none; }
@@ -335,6 +373,29 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
     <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
 </button>
+<button id="aerialBtn" aria-label="Aerial view" title="Aerial view ( V )">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+    <rect x="4.5" y="4.5" width="15" height="15" rx="2.4"/>
+    <circle cx="12" cy="12" r="2.6"/>
+    <path d="M12 4.5v2.6M12 16.9v2.6M4.5 12h2.6M16.9 12h2.6"/></svg>
+</button>
+<button id="gateBtn" aria-label="The twelve gates" title="The twelve gates">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+    <path d="M5.5 20v-7.2a6.5 6.5 0 0 1 13 0V20"/><path d="M3 20h18"/></svg>
+</button>
+<div id="flightCtl">
+  <button id="flyTour">TOUR</button>
+  <button id="flyOrbit">ORBIT</button>
+  <button id="flyReturn">RETURN</button>
+</div>
+<div id="gatePanel" hidden>
+  <div id="gateVeil"></div>
+  <div id="gateBox">
+    <h3>THE TWELVE GATES</h3>
+    <div id="gateList"></div>
+    <div id="gateFoot">choose a gate — the city carries you there</div>
+  </div>
+</div>
 <div id="seek" hidden>
   <div id="seekVeil"></div>
   <div id="seekBox">
@@ -6264,6 +6325,7 @@ function scanScrollTarget(ndcX, ndcY){
   return best;
 }
 function tryFruitTap(cx, cy, useCenter = (document.pointerLockElement === canvasEl)){
+  if (FLIGHT.mode !== 'none'){ flightTap(); return false; }   /* a tap in the air stills the wing */
   if (!started || paused || readerOpen || seekOpen) return false;
   const best = useCenter ? scanScrollTarget(0, 0)
     : scanScrollTarget(cx/innerWidth*2 - 1, -(cy/innerHeight)*2 + 1);
@@ -6379,6 +6441,230 @@ function applyGlide(t){
     }
   }
 }
+
+/* ================================================================
+   18.4  THE SEER'S WINGS — aerial eye · tour · orbit · gate flights
+   One tap of the wing lifts the eye above the whole city; TOUR flies
+   the avenue, rounds the Tree and passes the east arch hands-free;
+   ORBIT turns the city slowly beneath the watcher; RETURN sets the
+   eye back exactly where the feet stood. Any stick, key or tap
+   during tour/orbit eases the flight to a still hover — the pilgrim
+   is never trapped in a cutscene. The camera is driven directly
+   while flying (stepPlayer stands out — the same law as the scroll
+   glide); the feet never move, except by a GATE flight, which lands
+   them before the chosen gate. All eases are dt-accumulated so the
+   pause veil freezes the wing mid-air instead of skipping it.
+================================================================ */
+const FLIGHT = {
+  mode:'none', next:null,               /* none | blend | hover | orbit | tour */
+  bu:0, dur:2.8,                        /* blend progress + duration (dt-driven) */
+  a:new THREE.Vector3(), b:new THREE.Vector3(),
+  la:new THREE.Vector3(), lb:new THREE.Vector3(),
+  mid:new THREE.Vector3(), useArc:false,
+  hp:new THREE.Vector3(), hl:new THREE.Vector3(),      /* current hover perch */
+  savedYaw:0, savedPitch:0,
+  orbitAng:0, orbitV:0, tourU:0, gateEnd:null,
+};
+const AERIAL_POS  = new THREE.Vector3(0, 226, 56);
+const AERIAL_LOOK = new THREE.Vector3(0, 0, -10);
+const FLY_DUR  = PREFERS_STATIC ? .5 : 2.8;
+const FLY_EASE = u => u*u*(3-2*u);
+const _fdir = new THREE.Vector3(), _fv1 = new THREE.Vector3(), _fv2 = new THREE.Vector3();
+const aerialBtnEl = document.getElementById('aerialBtn');
+const flightCtlEl = document.getElementById('flightCtl');
+const flyTourBtn  = document.getElementById('flyTour');
+const flyOrbitBtn = document.getElementById('flyOrbit');
+
+/* the tour road — dives from the sky to the causeway, through the
+   great south gate, down the avenue, once around the Tree plaza
+   (skirting the hall drum by >22m), back over the avenue, out
+   through the east arch, up the outer wall and home to the perch */
+const TOUR_CURVE = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(   0, 226,  56),
+  new THREE.Vector3(   0,  64, 172),
+  new THREE.Vector3(   0,   8, 150),
+  new THREE.Vector3(   0,   5.5, 122),
+  new THREE.Vector3(   0,   4.5,  82),
+  new THREE.Vector3(   2,   4.5,  40),
+  new THREE.Vector3(  26,   7,   16),
+  new THREE.Vector3(  37,  10,  -14),
+  new THREE.Vector3(  18,  12,  -44),
+  new THREE.Vector3( -10,  16,  -50),
+  new THREE.Vector3( -32,  11,  -30),
+  new THREE.Vector3( -38,   9,    6),
+  new THREE.Vector3( -24,   7,   28),
+  new THREE.Vector3(   2,  11,   46),
+  new THREE.Vector3(  52,  22,   62),
+  new THREE.Vector3(  96,  12,   26),
+  new THREE.Vector3( 110,   6,    6),
+  new THREE.Vector3( 112,   5.5,  0),
+  new THREE.Vector3( 128,   6,   -2),
+  new THREE.Vector3( 152,  34,  -46),
+  new THREE.Vector3( 110, 120,  -90),
+  new THREE.Vector3(  30, 210,  -30),
+  new THREE.Vector3(   0, 226,   56),
+], false, 'catmullrom', .12);
+const TOUR_DUR = PREFERS_STATIC ? 42 : 95;
+
+function setFlightChips(){
+  flyTourBtn.classList.toggle('on',  FLIGHT.mode==='tour'  || FLIGHT.next==='tour');
+  flyOrbitBtn.classList.toggle('on', FLIGHT.mode==='orbit' || FLIGHT.next==='orbit');
+  flightCtlEl.classList.toggle('show',
+    FLIGHT.mode!=='none' && FLIGHT.next!=='landed' && FLIGHT.next!=='gate');
+}
+function flightBlendTo(next, pos, look, dur){
+  FLIGHT.a.copy(camera.position);
+  camera.getWorldDirection(_fdir);
+  FLIGHT.la.copy(camera.position).addScaledVector(_fdir, 40);
+  FLIGHT.b.copy(pos); FLIGHT.lb.copy(look);
+  FLIGHT.useArc = false; FLIGHT.bu = 0; FLIGHT.dur = dur;
+  FLIGHT.next = next; FLIGHT.mode = 'blend';
+  setFlightChips();
+}
+function enterAerial(){
+  if (!started || readerOpen || seekOpen || glide.active) return;
+  if (FLIGHT.mode !== 'none'){ startFlightReturn(); return; }   /* the wing is a toggle */
+  FLIGHT.savedYaw = player.yaw; FLIGHT.savedPitch = player.pitch;
+  WAYWALK.active = false;
+  aerialBtnEl.classList.add('on');
+  dotEl.style.display = 'none';
+  flightBlendTo('hover', AERIAL_POS, AERIAL_LOOK, FLY_DUR);
+}
+function startFlightReturn(){
+  if (FLIGHT.mode === 'none') return;
+  const cp = Math.cos(FLIGHT.savedPitch);
+  _fdir.set(-Math.sin(FLIGHT.savedYaw)*cp, Math.sin(FLIGHT.savedPitch), -Math.cos(FLIGHT.savedYaw)*cp);
+  _fv1.copy(player.pos).addScaledVector(_fdir, 40);
+  flightBlendTo('landed', player.pos, _fv1, FLY_DUR);
+  aerialBtnEl.classList.remove('on');
+  flightCtlEl.classList.remove('show');
+}
+function landFlight(){
+  FLIGHT.mode = 'none'; FLIGHT.next = null;
+  player.yaw = FLIGHT.savedYaw; player.pitch = FLIGHT.savedPitch;
+  if (started && !paused) dotEl.style.display = 'block';
+  setFlightChips();
+}
+function flightPauseHere(){
+  FLIGHT.mode = 'hover'; FLIGHT.next = null;
+  FLIGHT.hp.copy(camera.position);
+  camera.getWorldDirection(_fdir);
+  FLIGHT.hl.copy(camera.position).addScaledVector(_fdir, 60);
+  setFlightChips();
+}
+function flightTap(){
+  if (FLIGHT.mode==='tour' || FLIGHT.mode==='orbit' ||
+      (FLIGHT.mode==='blend' && (FLIGHT.next==='tour'||FLIGHT.next==='orbit'))) flightPauseHere();
+}
+function applyFlight(t, dt){
+  if (FLIGHT.mode === 'none' || paused) return;
+  const userIn = keys['KeyW']||keys['KeyS']||keys['KeyA']||keys['KeyD']||
+    keys['ArrowUp']||keys['ArrowDown']||keys['ArrowLeft']||keys['ArrowRight']||
+    Math.hypot(touchMove.x, touchMove.y) > .08;
+  if (userIn) flightTap();                        /* the pilgrim's hand is sovereign */
+  switch (FLIGHT.mode){
+    case 'blend': {
+      FLIGHT.bu = Math.min(1, FLIGHT.bu + dt/FLIGHT.dur);
+      const s = FLY_EASE(FLIGHT.bu);
+      if (FLIGHT.useArc){
+        _fv1.lerpVectors(FLIGHT.a, FLIGHT.mid, s);
+        _fv2.lerpVectors(FLIGHT.mid, FLIGHT.b, s);
+        camera.position.lerpVectors(_fv1, _fv2, s);
+      } else camera.position.lerpVectors(FLIGHT.a, FLIGHT.b, s);
+      _fv1.lerpVectors(FLIGHT.la, FLIGHT.lb, s);
+      camera.lookAt(_fv1);
+      if (FLIGHT.bu >= 1){
+        const nx = FLIGHT.next; FLIGHT.next = null; FLIGHT.useArc = false;
+        if (nx === 'hover'){ FLIGHT.mode='hover'; FLIGHT.hp.copy(FLIGHT.b); FLIGHT.hl.copy(FLIGHT.lb); }
+        else if (nx === 'orbit'){ FLIGHT.mode='orbit'; }
+        else if (nx === 'tour'){ FLIGHT.mode='tour'; FLIGHT.tourU=0; }
+        else if (nx === 'landed'){ landFlight(); }
+        else if (nx === 'gate'){ landGate(); }
+        setFlightChips();
+      }
+      break; }
+    case 'hover':
+      camera.position.copy(FLIGHT.hp);
+      if (!PREFERS_STATIC) camera.position.y += Math.sin(t*.45)*1.1;   /* the wing breathes */
+      camera.lookAt(FLIGHT.hl);
+      break;
+    case 'orbit': {
+      FLIGHT.orbitV += ((PREFERS_STATIC ? .02 : .05) - FLIGHT.orbitV) * Math.min(1, dt*.8);
+      FLIGHT.orbitAng += FLIGHT.orbitV * dt;
+      camera.position.set(Math.sin(FLIGHT.orbitAng)*158, 172, Math.cos(FLIGHT.orbitAng)*158);
+      camera.lookAt(0, 22, 0);
+      break; }
+    case 'tour': {
+      FLIGHT.tourU = Math.min(1, FLIGHT.tourU + dt/TOUR_DUR);
+      TOUR_CURVE.getPointAt(FLIGHT.tourU, camera.position);
+      TOUR_CURVE.getPointAt(Math.min(1, FLIGHT.tourU + .008), _fv1);
+      camera.lookAt(_fv1);
+      if (FLIGHT.tourU >= 1) flightBlendTo('hover', AERIAL_POS, AERIAL_LOOK, FLY_DUR*.8);
+      break; }
+  }
+}
+
+/* THE TWELVE GATES — the index panel; a tap flies the pilgrim in a
+   high arc and lands the feet 12.5m before the chosen arch, facing it */
+const ROMAN12 = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const gatePanelEl = document.getElementById('gatePanel');
+document.getElementById('gateList').innerHTML = TRIBES.map((n,k)=>
+  `<button class="gateRow" data-k="${k}"><span class="gn">${ROMAN12[k]}</span><span class="gt">THE GATE OF ${n}</span></button>`).join('');
+function openGatePanel(){ if (!started || readerOpen || seekOpen) return; gatePanelEl.hidden = false; }
+function closeGatePanel(){ gatePanelEl.hidden = true; }
+function flyToGate(k){
+  closeGatePanel();
+  if (!started || readerOpen || seekOpen || glide.active) return;
+  const a = k*PI/6, gx = Math.sin(a), gz = Math.cos(a);
+  if (FLIGHT.mode === 'none'){ FLIGHT.savedYaw = player.yaw; FLIGHT.savedPitch = player.pitch; }
+  WAYWALK.active = false;
+  FLIGHT.gateEnd = { x:gx*106, z:gz*106, yaw:a+PI };
+  FLIGHT.a.copy(camera.position);
+  camera.getWorldDirection(_fdir);
+  FLIGHT.la.copy(camera.position).addScaledVector(_fdir, 40);
+  FLIGHT.b.set(gx*106, 1.7, gz*106);
+  FLIGHT.lb.set(gx*118.5, 9.5, gz*118.5);
+  FLIGHT.mid.lerpVectors(FLIGHT.a, FLIGHT.b, .5);
+  FLIGHT.mid.y = Math.max(FLIGHT.a.y, 64);
+  FLIGHT.useArc = true; FLIGHT.bu = 0;
+  FLIGHT.dur = PREFERS_STATIC ? .6 : Math.min(6, 2.2 + FLIGHT.a.distanceTo(FLIGHT.b)*.014);
+  FLIGHT.next = 'gate'; FLIGHT.mode = 'blend';
+  aerialBtnEl.classList.remove('on');
+  flightCtlEl.classList.remove('show');
+  dotEl.style.display = 'none';
+}
+function landGate(){
+  FLIGHT.mode = 'none'; FLIGHT.next = null;
+  player.pos.set(FLIGHT.gateEnd.x, 1.7, FLIGHT.gateEnd.z);
+  player.yaw = FLIGHT.gateEnd.yaw; player.pitch = .12;   /* eyes lifted to the arch */
+  player.velY = 0; player.onGround = true;
+  if (started && !paused) dotEl.style.display = 'block';
+  setFlightChips();
+}
+aerialBtnEl.addEventListener('click', enterAerial);
+document.getElementById('gateBtn').addEventListener('click', ()=>{
+  gatePanelEl.hidden ? openGatePanel() : closeGatePanel(); });
+document.getElementById('gateVeil').addEventListener('click', closeGatePanel);
+document.getElementById('gateList').addEventListener('click', e=>{
+  const b = e.target.closest('.gateRow'); if (b) flyToGate(+b.dataset.k); });
+flyTourBtn.addEventListener('click', ()=>{
+  if (FLIGHT.mode==='tour' || FLIGHT.next==='tour'){ flightPauseHere(); return; }
+  TOUR_CURVE.getPointAt(0, _fv1); TOUR_CURVE.getPointAt(.012, _fv2);
+  flightBlendTo('tour', _fv1, _fv2, FLY_DUR*.7); });
+flyOrbitBtn.addEventListener('click', ()=>{
+  if (FLIGHT.mode==='orbit' || FLIGHT.next==='orbit'){ flightPauseHere(); return; }
+  const ang = Math.atan2(camera.position.x, camera.position.z || 1e-4);
+  FLIGHT.orbitAng = ang; FLIGHT.orbitV = 0;
+  _fv1.set(Math.sin(ang)*158, 172, Math.cos(ang)*158);
+  _fv2.set(0, 22, 0);
+  flightBlendTo('orbit', _fv1, _fv2, FLY_DUR*.8); });
+document.getElementById('flyReturn').addEventListener('click', startFlightReturn);
+addEventListener('keydown', e=>{
+  if (e.code==='Escape' && !gatePanelEl.hidden){ closeGatePanel(); e.stopImmediatePropagation(); return; }
+  if (e.code==='Escape' && FLIGHT.mode!=='none' && FLIGHT.next!=='landed'){
+    startFlightReturn(); e.stopImmediatePropagation(); return; }
+  if (e.code==='KeyV' && started && !readerOpen && !seekOpen) enterAerial();
+}, true);
 
 /* THE READER REFORGED (Seer's Ruling R1, 2026-07-05) — plate above,
    scripture below. The canon DATA is never altered: doc.body stays the
@@ -7439,7 +7725,7 @@ if (IS_TOUCH){
 
 function stepPlayer(dt){
   if (!started || paused) return;
-  if (readerOpen || glide.active) return;   /* the world holds still while a scroll is open */
+  if (readerOpen || glide.active || FLIGHT.mode !== 'none') return;   /* the world holds still while a scroll is open or the wing is aloft */
   const run = keys['ShiftLeft']||keys['ShiftRight'];
   const sp = (run?11.5:6) * dt;
   let mx=0, mz=0;
@@ -7852,6 +8138,7 @@ function animate(){
 
   stepPlayer(dt);
   applyGlide(t);
+  applyFlight(t, dt);
 
   /* GOAL 5 — THE LIVING HOUR: a sun that never leaves golden hour, but
      the hour itself now LIVES — a slow 10-minute arc between deep-gold
@@ -7982,6 +8269,9 @@ renderer.setAnimationLoop(animate);
 ================================================================ */
 window.__CITY = {
   THREE, scene, camera, player, keys, fruits,
+  flight: FLIGHT, enterAerial, startFlightReturn, flyToGate,   /* THE SEER'S WINGS — test handles */
+  get flightMode(){ return FLIGHT.mode + (FLIGHT.next ? '→'+FLIGHT.next : ''); },
+  get paused(){ return paused; }, set paused(v){ paused = !!v; },
   get pos(){ return [player.pos.x, player.pos.y, player.pos.z]; },
   setPos(x,y,z){ player.pos.set(x,y,z); },
   setYaw(a){ player.yaw = a; },
