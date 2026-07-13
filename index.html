@@ -4737,6 +4737,85 @@ function addBuilding(x,z,ry,big){
     const ia = i*PI/6;
     P.goldSt.push(xf(new THREE.BoxGeometry(.14,.02,.86), DX+Math.sin(ia)*3.14, 1.815, DZ+Math.cos(ia)*3.14, ia));
   }
+  /* ========== LOOP S-1 — THE HOLY OF HOLIES (Rev 4) ==========
+     The vision of the throne enters the hall the pilgrim stands in.
+     Interior-priced: 2 new draws (sea, bow); lamps and seats ride the
+     P merges. No figure sits any seat — architecture and light only. */
+  {
+    /* THE SEA OF GLASS (Rev 4:6) — "before the throne a sea of glass
+       like unto crystal": a still crystal annulus around the dais foot;
+       the carpet and rill read THROUGH it — glass, not paint. */
+    const seaG = new THREE.RingGeometry(4.7, 8.3, 64, 1).rotateX(-PI/2);
+    const seaM = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false,
+      uniforms:{ uTime:{value:0}, uTex:{value:noiseTex} },
+      vertexShader:`varying vec2 vUv; varying vec3 vW;
+        void main(){ vUv=uv; vW=(modelMatrix*vec4(position,1.0)).xyz;
+          gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; uniform sampler2D uTex;
+        varying vec2 vUv; varying vec3 vW;
+        void main(){
+          float n1 = texture2D(uTex, vW.xz*.16 + vec2(uTime*.006,0.)).a;
+          float n2 = texture2D(uTex, vW.xz*.31 - vec2(0.,uTime*.008)).a;
+          float shard = smoothstep(.46,.54,abs(n1-n2));          /* crystal seams */
+          float rad = length(vUv-.5)*2.0;
+          float edge = smoothstep(1.0,.78,rad)*smoothstep(.0,.22,rad);
+          vec3 col = mix(vec3(.78,.90,.97), vec3(1.0,.98,.92), n1*.5);
+          col += vec3(.9,.97,1.0)*shard*.35;
+          gl_FragColor = vec4(col, (.16 + shard*.14) * edge);
+        }`});
+    const sea = new THREE.Mesh(seaG, seaM);
+    sea.position.set(DX, .06, DZ);
+    scene.add(sea);
+    tickers.push(t=>{ seaM.uniforms.uTime.value = t; });
+    /* THE RAINBOW ROUND ABOUT THE THRONE (Rev 4:3) — "like unto an
+       emerald": a standing bow over the thrones, emerald-cored. */
+    const bowG = new THREE.TorusGeometry(5.7, .62, 8, 48, PI);
+    const bowM = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, side:THREE.DoubleSide,
+      blending:THREE.AdditiveBlending,
+      uniforms:{ uTime:{value:0} },
+      vertexShader:`varying vec3 vP;
+        void main(){ vP=position;
+          gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime; varying vec3 vP;
+        void main(){
+          float r = length(vP.xy);                    /* across the bow's width */
+          float t = clamp((r-5.08)/1.24, 0., 1.);
+          vec3 col = mix(vec3(.16,.52,.30), vec3(.10,.44,.62), smoothstep(.0,.34,t));   /* emerald heart -> sea-blue */
+          col = mix(col, vec3(.72,.58,.20), smoothstep(.42,.72,t));                     /* -> old gold */
+          col = mix(col, vec3(.62,.30,.30), smoothstep(.78,1.,t));                      /* -> quiet rose rim */
+          float breathe = .82 + .18*sin(uTime*.7);
+          float ends = smoothstep(.02,.14,abs(atan(vP.y,vP.x))) ;
+          gl_FragColor = vec4(col, .30 * breathe * ends);
+        }`});
+    const bow = new THREE.Mesh(bowG, bowM);
+    bow.position.set(DX, 3.1, DZ - 4.6);
+    scene.add(bow);
+    tickers.push(t=>{ bowM.uniforms.uTime.value = t; });
+    /* THE SEVEN LAMPS OF FIRE (Rev 4:5) — burning before the throne.
+       Stands ride P.gold, flames ride P.glow — ZERO new draws. */
+    for (let i=0;i<7;i++){
+      const la = (i-3)*18*D2R;
+      const lx = DX + Math.sin(la)*7.1, lz = DZ + Math.cos(la)*7.1;
+      P.gold.push(xf(new THREE.CylinderGeometry(.07,.11,1.5,8), lx,.75,lz));
+      P.gold.push(xf(new THREE.CylinderGeometry(.2,.09,.24,8), lx,1.6,lz));
+      P.glow.push(xf(new THREE.PlaneGeometry(.3,.58), lx,1.98,lz, la));
+      P.glow.push(xf(new THREE.PlaneGeometry(.3,.58), lx,1.98,lz, la+PI/2));
+      addCircle(lx,lz,.3);
+    }
+    /* THE FOUR AND TWENTY SEATS (Rev 4:4) — a ring of elder seats about
+       the throne, EMPTY (no figure by primitive — the Seer's law). White
+       stone, gold-crowned backs; merged, zero new draws. */
+    for (let i=0;i<24;i++){
+      const sa = (32 + i*(296/23))*D2R;
+      const sx2 = CX + Math.sin(sa)*12.6, sz2 = CZ + Math.cos(sa)*12.6;
+      P.white.push(xf(new THREE.BoxGeometry(.95,.52,.62), sx2,.26,sz2, sa+PI));
+      P.white.push(xf(new THREE.BoxGeometry(.95,1.15,.13), sx2 - Math.sin(sa)*.34, .95, sz2 - Math.cos(sa)*.34, sa+PI));
+      P.gold.push(xf(new THREE.BoxGeometry(.99,.09,.16), sx2 - Math.sin(sa)*.34, 1.56, sz2 - Math.cos(sa)*.34, sa+PI));
+      addCircle(sx2,sz2,.55);
+    }
+  }
   /* ---- HERO: the two thrones  (slot: throne) ----
      lathe pedestals + cushions, extruded arched backs — full gold, deep-red seats */
   const heroThrone = new THREE.Group(); scene.add(heroThrone);
