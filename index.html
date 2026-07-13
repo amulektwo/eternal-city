@@ -5426,6 +5426,43 @@ const laceGold = new THREE.MeshStandardMaterial({
       j++;
     }
   }
+  /* LOOP 14-C — THE LACE PARAPETS (San Diego pierced fretwork): a diamond-
+     lattice crenellation crowns the sanctuary roofline and the throne-hall
+     ring — pierced white stone reading against the SKY. Silhouette reads
+     where wall-surface detail washes out (the fluting lesson, Law 16).
+     Alpha-tested cards, one merged mesh (+1 draw). */
+  {
+    const latTex = canvasTex(64, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      g.fillStyle = '#fff';
+      g.fillRect(0, h*.80, w, h*.20);              /* base rail */
+      g.fillRect(0, 0, w, h*.12);                  /* top rail */
+      g.strokeStyle = '#fff'; g.lineWidth = Math.max(2, h*.07);
+      const n = 4;                                  /* diamonds per tile */
+      for (let i=0;i<=n;i++){
+        g.beginPath(); g.moveTo(i*w/n, h*.80); g.lineTo((i+.5)*w/n, h*.12); g.stroke();
+        g.beginPath(); g.moveTo(i*w/n, h*.80); g.lineTo((i-.5)*w/n, h*.12); g.stroke();
+      }
+    }, 128);
+    latTex.wrapS = latTex.wrapT = THREE.RepeatWrapping;
+    const latMat = new THREE.MeshStandardMaterial({
+      map:latTex, alphaTest:.5, side:THREE.DoubleSide,
+      color:0xf3ead3, roughness:.58, metalness:.05, envMapIntensity:.7 });
+    const lp = [], PARH = 1.7, py = 18.5;
+    for (const zc of [SZ0-1.35, SZ1+1.35])
+      lp.push(tileUV(xf(new THREE.PlaneGeometry(SX1-SX0+3, PARH), (SX0+SX1)/2, py, zc), (SX1-SX0+3)/2.2));
+    for (const xc of [SX0-1.35, SX1+1.35])
+      lp.push(tileUV(xf(new THREE.PlaneGeometry(SZ1-SZ0+3, PARH), xc, py, (SZ0+SZ1)/2, PI/2), (SZ1-SZ0+3)/2.2));
+    const TRR = 18.1, thY = 14.2, segs = 36;
+    for (let i=0;i<segs;i++){
+      const am = (i+.5)*TAU/segs;
+      const segLen = 2*TRR*Math.sin(PI/segs)*1.04;
+      lp.push(tileUV(xf(new THREE.PlaneGeometry(segLen, PARH), Math.sin(am)*TRR, thY, -72+Math.cos(am)*TRR, am), Math.max(1, segLen/2.2)));
+    }
+    const latMesh = new THREE.Mesh(mergeGeometries(lp.map(g=> g.index? g.toNonIndexed():g)), latMat);
+    latMesh.castShadow = false; latMesh.receiveShadow = false;
+    scene.add(latMesh);
+  }
   for (const zz of [SZ0-1.35, SZ1+1.35])
     LS.push(tileUV(xf(new THREE.BoxGeometry(SX1-SX0+2, .55, .5), (SX0+SX1)/2, 17.65, zz), 22));
   for (const zz of [SCZ-4.6, SCZ+4.6])
