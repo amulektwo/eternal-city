@@ -2610,28 +2610,31 @@ function addBuilding(x,z,ry,big){
   const roofH = h*.42, roofBase = Math.max(w,dpt)*.74;
   const rtype = Math.abs(Math.floor(x/26)*7 + Math.floor(z/26)*13) % 4;
   let apexY;
-  if (rtype === 1){                 /* SPIRE — tall thin octagonal steeple */
-    const sH = roofH*1.95;
-    P.ivory.push(xf(new THREE.ConeGeometry(roofBase*.60, sH, 8), x, h+sH/2, z, ry));
-    apexY = h + sH;
-    P.gold.push(xf(new THREE.ConeGeometry(.4, 2.4, 6), x, apexY+1.1, z));
-    apexY += 1.8;
+  if (rtype === 1){                 /* SPIRE — San Diego crystalline stepped steeple */
+    const t1 = 1.5, t2 = 1.15;      /* two inward-stepping octagonal tiers (LOOP 14-A) */
+    P.ivory.push(xf(new THREE.CylinderGeometry(roofBase*.72, roofBase*.88, t1, 8), x, h+t1/2, z, ry));
+    P.ivory.push(xf(new THREE.CylinderGeometry(roofBase*.52, roofBase*.66, t2, 8), x, h+t1+t2/2, z, ry));
+    const sH = roofH*2.0;
+    P.ivory.push(xf(new THREE.ConeGeometry(roofBase*.48, sH, 8), x, h+t1+t2+sH/2, z, ry));
+    apexY = h + t1 + t2 + sH;
+    P.gold.push(xf(new THREE.ConeGeometry(.14, 3.4, 6), x, apexY+1.5, z));   /* thin needle, not fat cone */
+    apexY += 2.9;
   } else if (rtype === 2){          /* DOME — pearl cupola on a short drum */
     const drumH = 1.3, domeR = Math.min(w,dpt)*.54;
     P.ivory.push(xf(new THREE.CylinderGeometry(domeR*1.04, domeR*1.08, drumH, 14), x, h+drumH/2, z));
     P.pearl.push(xf(new THREE.SphereGeometry(domeR, 16, 10, 0, TAU, 0, PI/2), x, h+drumH, z));
     apexY = h + drumH + domeR;
-    P.gold.push(xf(new THREE.ConeGeometry(.42, 1.9, 8), x, apexY+.9, z));
+    P.gold.push(xf(new THREE.ConeGeometry(.14, 2.6, 8), x, apexY+1.3, z));
     apexY += 1.5;
   } else if (rtype === 3){          /* HIP — elongated ridge, not a square cap */
     P.ivory.push(xf(new THREE.ConeGeometry(roofBase, roofH, 4), x, h+roofH/2, z, ry+PI/4, 1, 1, 1.75));
     apexY = h + roofH;
-    P.gold.push(xf(new THREE.ConeGeometry(.5, 1.6, 4), x, apexY+.7, z, ry));
+    P.gold.push(xf(new THREE.ConeGeometry(.15, 2.5, 6), x, apexY+1.2, z, ry));
     apexY += 1.4;
   } else {                          /* PYRAMID — the classic square cap */
     P.ivory.push(xf(new THREE.ConeGeometry(roofBase, roofH, 4), x, h+roofH/2, z, ry+PI/4));
     apexY = h + roofH;
-    P.gold.push(xf(new THREE.ConeGeometry(.5, 1.6, 4), x, apexY+.7, z, ry));
+    P.gold.push(xf(new THREE.ConeGeometry(.15, 2.5, 6), x, apexY+1.2, z, ry));
     apexY += 1.4;
   }
   /* THE LACE: every roof apex joins the skyline forest (deterministic scale — no rng, layout law) */
@@ -2675,13 +2678,16 @@ function addBuilding(x,z,ry,big){
     const h = 34 + (deg%3)*5;
     P.white.push(xf(new THREE.CylinderGeometry(2.4,3.6,h,8), x, h/2, z));
     P.gold.push(xf(new THREE.TorusGeometry(3.0,.28,6,16).rotateX(PI/2), x, h*.72, z));
-    P.ivory.push(xf(new THREE.ConeGeometry(3.2,13,8), x, h+6.5, z));
-    P.gold.push(xf(new THREE.ConeGeometry(.8,4,6), x, h+14.5, z));
+    /* LOOP 14-A: stepped crystalline crown + thin needle (San Diego tongue) */
+    P.ivory.push(xf(new THREE.CylinderGeometry(2.7, 3.3, 2.0, 8), x, h+1.0, z));   /* buttressed tier */
+    P.ivory.push(xf(new THREE.ConeGeometry(2.6, 14, 8), x, h+2.0+7, z));           /* steep needle-cone */
+    P.gold.push(xf(new THREE.ConeGeometry(.22, 6.5, 8), x, h+2.0+14+2.5, z));      /* thin gold needle */
     for (let k=0;k<4;k++){
       const b = k*PI/2;
       const px = x+Math.sin(b)*3.4, pz = z+Math.cos(b)*3.4;
-      P.white.push(xf(new THREE.CylinderGeometry(.5,.7,h*.5,5), px, h*.25, pz));
-      P.gold.push(xf(new THREE.ConeGeometry(.6,2.4,5), px, h*.5+1.1, pz));
+      P.white.push(xf(new THREE.CylinderGeometry(.5,.7,h*.5,6), px, h*.25, pz));
+      P.ivory.push(xf(new THREE.ConeGeometry(.62, 3.6, 6), px, h*.5+1.8, pz));     /* corner spirelet */
+      P.gold.push(xf(new THREE.ConeGeometry(.16, 2.4, 6), px, h*.5+4.2, pz));      /* spirelet needle */
     }
     addCircle(x,z,4.4);
   }
@@ -5653,19 +5659,23 @@ const laceGold = new THREE.MeshStandardMaterial({
      against stone or under the spire) + a leaner tip sphere — 144→76
      tris per pinnacle, silhouette identical beyond arm's length.
      289 instances → ~19.7k reclaimed. */
+  /* LOOP 14-A — THE CRYSTALLINE SPIRES (San Diego temple tongue): a stepped
+     octagonal collar in two inward tiers, a THIN steep needle, and four
+     corner spirelets shouldering the base — the quartz-point silhouette,
+     not a fat gothic crocket-cone. No statue, needle-tips only (Seer's law). */
+  /* THE QUARRY discipline: leaner than the old crocket-cone (76 tris) yet the
+     San Diego silhouette — clean needle point (no ball finial, temple-true),
+     6-seg collars, single-cone spirelets. ~52 tris/instance. */
   const pinParts = [
-    xf(new THREE.CylinderGeometry(.40, .48, .35, 6, 1, true), 0, .18, 0),
-    xf(new THREE.ConeGeometry(.30, 3.4, 6, 1, true), 0, 2.05, 0),
-    xf(new THREE.SphereGeometry(.11, 4, 3), 0, 3.85, 0),
+    xf(new THREE.CylinderGeometry(.46, .54, .26, 6, 1, true), 0, .13, 0),   /* lower tier */
+    xf(new THREE.CylinderGeometry(.32, .44, .28, 6, 1, true), 0, .40, 0),   /* upper tier (steps in) */
+    xf(new THREE.ConeGeometry(.23, 4.1, 8, 1, true), 0, 2.65, 0),           /* the needle — clean point */
   ];
-  for (let ring = 0; ring < 2; ring++){
-    const ry2 = .9 + ring*1.0, rr2 = .30 - ring*.09;
-    for (let k = 0; k < 3; k++){
-      const b = k*TAU/3 + ring*TAU/6;
-      const cg = new THREE.ConeGeometry(.08, .30, 3, 1, true);
-      xf(cg, Math.sin(b)*rr2, ry2, Math.cos(b)*rr2, 0, 1, 1, 1, .6*Math.cos(b), -.6*Math.sin(b));
-      pinParts.push(cg);
-    }
+  /* four corner spirelets — miniatures of the main, at the collar corners */
+  for (let k = 0; k < 4; k++){
+    const b = k*TAU/4 + PI/4, rr2 = .44;
+    const cx = Math.sin(b)*rr2, cz = Math.cos(b)*rr2;
+    pinParts.push(xf(new THREE.ConeGeometry(.11, 1.55, 5, 1, true), cx, .92, cz));  /* spirelet needle */
   }
   const pinGeo = mergeGeometries(pinParts.map(g=> g.index ? g.toNonIndexed() : g));
   const pinMesh = new THREE.InstancedMesh(pinGeo, laceGold, lacePinnacles.length);
