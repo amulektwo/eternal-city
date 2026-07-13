@@ -6241,8 +6241,9 @@ const canvasEl = renderer.domElement;
 let dragLook = false, lastX=0, lastY=0;
 document.addEventListener('pointerlockchange', ()=>{
   const locked = document.pointerLockElement === canvasEl;
-  /* losing lock while a scroll or the lamp is open is expected — they own the screen */
-  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen){ paused = true; showOverlay(true); }
+  /* losing lock while a scroll or the lamp is open is expected — they own the
+     screen; so is losing it aloft — the wing frees the cursor for its chips */
+  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen && FLIGHT.mode === 'none'){ paused = true; showOverlay(true); }
 });
 addEventListener('mousemove', e=>{
   if (!started || paused || readerOpen || seekOpen) return;
@@ -6260,8 +6261,9 @@ canvasEl.addEventListener('mousedown', e=>{
   if (!started || paused) return;
   if (document.pointerLockElement !== canvasEl){
     dragLook = true; lastX=e.clientX; lastY=e.clientY;
-    /* retry the lock — covers Chrome's post-ESC cooldown rejection */
-    if (!IS_TOUCH){
+    /* retry the lock — covers Chrome's post-ESC cooldown rejection;
+       never while aloft — the wing needs the cursor free for its chips */
+    if (!IS_TOUCH && FLIGHT.mode === 'none'){
       try {
         const r = canvasEl.requestPointerLock();
         if (r && r.catch) r.catch(()=>{});
@@ -6529,6 +6531,8 @@ function enterAerial(){
   aerialBtnEl.classList.add('on');
   dotEl.style.display = 'none';
   flightBlendTo('hover', AERIAL_POS, AERIAL_LOOK, FLY_DUR);
+  /* the air frees the hand — a captive cursor can never press TOUR/ORBIT/RETURN */
+  if (document.pointerLockElement) document.exitPointerLock();
 }
 function startFlightReturn(){
   if (FLIGHT.mode === 'none') return;
@@ -7663,26 +7667,34 @@ const touchMove = {x:0, y:0};
 let moveTouchId = null, lookTouchId = null, lookLX=0, lookLY=0, stickCX=0, stickCY=0,
     lookT0=0, lookMoved=0, moveT0=0, moveMoved=0;
 if (IS_TOUCH){
+  /* the HUD chrome keeps its taps — a global preventDefault on touchstart
+     suppresses the synthetic click, so every fixed button dies to the finger
+     (THE FREED HAND: the Seer's iPad found lamp/aerial/gates all dead) */
+  const UI_CHROME = '#lampBtn,#aerialBtn,#gateBtn,#flightCtl,#gatePanel,#proving';
   addEventListener('touchstart', e=>{
     if (!started || readerOpen || seekOpen) return;   /* the reader (or the lamp) owns the screen */
+    let claimed = false;
     for (const t of e.changedTouches){
+      if (t.target && t.target.closest && t.target.closest(UI_CHROME)) continue;
       if (t.clientX < innerWidth*.45 && moveTouchId===null){
         moveTouchId = t.identifier;
         stickCX = t.clientX; stickCY = t.clientY;
         stick.style.left = (stickCX-60)+'px'; stick.style.top = (stickCY-60)+'px';
         stick.style.bottom = 'auto';
-        moveT0 = performance.now(); moveMoved = 0;
+        moveT0 = performance.now(); moveMoved = 0; claimed = true;
       } else if (lookTouchId===null){
         lookTouchId = t.identifier; lookLX = t.clientX; lookLY = t.clientY;
-        lookT0 = performance.now(); lookMoved = 0;
+        lookT0 = performance.now(); lookMoved = 0; claimed = true;
       }
     }
-    e.preventDefault();
+    if (claimed) e.preventDefault();
   }, {passive:false});
   addEventListener('touchmove', e=>{
     if (readerOpen || seekOpen) return;   /* the scroll must SCROLL — the city stands still (the iPad wound, 2026-07-08) */
+    let claimed = false;
     for (const t of e.changedTouches){
       if (t.identifier === moveTouchId){
+        claimed = true;
         moveMoved += Math.abs(t.clientX-stickCX) + Math.abs(t.clientY-stickCY);
         let dx = (t.clientX-stickCX)/48, dy = (t.clientY-stickCY)/48;
         const m = Math.hypot(dx,dy);
@@ -7690,6 +7702,7 @@ if (IS_TOUCH){
         touchMove.x = dx; touchMove.y = dy;
         knob.style.transform = `translate(${dx*34}px,${dy*34}px)`;
       } else if (t.identifier === lookTouchId){
+        claimed = true;
         lookMoved += Math.abs(t.clientX-lookLX) + Math.abs(t.clientY-lookLY);
         player.yaw   -= (t.clientX-lookLX)*.005;
         player.pitch -= (t.clientY-lookLY)*.005;
@@ -7697,7 +7710,7 @@ if (IS_TOUCH){
         lookLX = t.clientX; lookLY = t.clientY;
       }
     }
-    e.preventDefault();
+    if (claimed) e.preventDefault();
   }, {passive:false});
   const endTouches = (e, canceled)=>{
     for (const t of e.changedTouches){
