@@ -593,3 +593,30 @@ Light made visible in the nave. **Built on the RECONCILED base:** merged the oth
 - **THE LIVING HOUR** — both glory and pavement swell at dawn AND vespers (`×(1 + .5·(1-h) + .4·v)`), reading HOUR.h/HOUR.v (multiple readers lawful; his emissive term untouched). Verified at vespers: the central column falls to a bright landing pool, the apse sunburst reading behind the altar.
 - **PRICE:** +4 draws, small tris (cones/planes merged). Sanctuary-worst 523.8k / 700k ✓, 266 draws. Zero console/page errors day and vespers.
 - **PROVEN:** boards at nave (glory falling to the pool + apse) and vespers (the swell); reader + nav regression green, 144 sha EXACT. **Sealed on branch — main is now the other builder's deployed HEAD + my merge; the reconcile of my four loops (C-1/S-1/S-3/S-2) to main is the deliberate act awaiting the Seer's word.**
+
+## THE PROVING OF THE GLASS — WO-20260714-01 — 2026-07-14 · **THE LOOP 18-25 BATTERY DEBT IS PAID**
+Audit-only pass, ZERO code changes. The standing GPU battery had not run on real glass since THE FREED HAND (18) / THE UPROOTING (19) / THE NATIONS (20) / THE INNER FIRE (21) / the TWELVE ASCENTS architecture four (14-A…D) / the interior four (22-25) all landed. Run in full on the Seer's MacBook: GPU lock held, python http.server **:8180** (the gate's exact origin), visible Chrome via Playwright (channel:chrome, headless:false, 1280×828), fresh cold loads, the ?proving method (4s settle + 6×1s fpsAvg samples, median), poses from index.html's own PV table. Baseline re-verified first: main == `369afb1` (Loop 25 reconciled), live md5 `473c6a6a` == HEAD.
+
+**THE TWELVE-POSE TABLE (HIGH tier 2, floor 50 — ALL PASS):**
+| pose | fps (min) | tris | draws |
+|---|---|---|---|
+| TREE | 60 (60) | 623.7k | 342 |
+| FOUNTAIN | 60 (60) | 592.5k | 293 |
+| SANCTUARY | 60 (59.9) | 535.1k | 257 |
+| TERRACE | 60 (60) | 433.2k | 311 |
+| AERIAL PROSPECT (NEW pose 12, first real-glass number) | 60 (59.9) | 415.5k | 341 |
+| CAUSEWAY | 60 (60) | 415.0k | 306 |
+| STREET | 60 (60) | 330.3k | 177 |
+| HALL DAIS (int) | 60 (60) | 320.3k | 243 |
+| THRONE (int) | 60 (60) | 309.0k | 121 |
+| GATE | 60 (60) | 305.6k | 134 |
+| RAMPART | 60 (60) | 299.9k | 129 |
+| THRESHOLD CROSSING (walked, real feet) | min 59.9 | toggle 0ms in / 0ms out (<8ms) · 74 culled | — |
+
+Exterior worst 623.7k ≤700k ✓ (76.3k headroom — the UPROOTING's return visible: Tree was 641.2k at Loop 16) · interior worst 320.3k ≤350k ✓ (29.7k headroom). **MEDIUM ×3 (?q=med, floor 25): Tree 60fps/345.9k/189d · Fountain 60/325.0k/160d · Street 60/300.9k/173d.**
+
+**PROOFS:** zero console/page errors across 3 cold loads (?skip battery load · ?q=med load · ?scroll=144 load) · **144 sha `bc797d33ac634674` EXACT through the live SHIELD gate** (fetched from :8180 origin, crypto.subtle) + reader deep-link served the 160,201-char body · **Tree red-scan by COMPOSITOR screenshot (Loop 24 scar honored — never in-page getImageData): 1085/100k at hour-frozen .5**, green-mask-proven — every mark on lawful gold trim (trunk inlay veins, dais ring, pavement seams, distant gilt), ZERO on Tree flesh or fruit; the lift vs Loop 16's 865 is Loop 24's transfigured Tree changing the frame, not new red — **L3 HOLDS** (mask shot in session ledger). · **FLIGHT ON REAL GLASS:** aerial→hover 60fps; **TOUR full ride 95s: median 60, min 57.9 (floor 50 held through the heaviest sweeps)**; ORBIT min 59.9; RETURN landed (0,1.7,60) EXACT; Twelve Gates flight landed JOSEPH (−91.8,1.7,53) EXACT. · **VESPERS WINDOW-BLAZE (setHour(−1), Street forest): 60fps flat (min 60)** — 14-D's blaze costs nothing.
+
+**Harness scar for the record:** the city's own CSP (12-D THE PERIMETER) forbids `unsafe-eval` — Playwright `waitForFunction` STRING predicates die in-page (`page.evaluate` strings survive; they compile outside the page). Function predicates only. The part-1 harness died on this AFTER its 11 poses completed; poses stand as printed, the remaining proofs ran in part 2.
+
+**VERDICT: DEBT PAID.** Every pose above floor, both budgets held, every proof green. The battery gate is OPEN for new builds. The aerial prospect is now a first-class battery pose (12) — future batteries include it. F-4 THE ATLAS rescue NOT needed — no failure map exists.
