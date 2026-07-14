@@ -1339,34 +1339,76 @@ const cloudSprites = [];
   const frr = (a,b)=> a + fr()*(b-a);
   const mkFarCountry = (contrast, warm)=> canvasTex(256, (g,w,h)=>{
     g.clearRect(0,0,w,h);
-    /* two layered ranges of flat-topped mesas (celestial tableland — the
-       flat crowns read as OTHER than the city's pointed spires) */
-    /* luminous gold-amber tableland — warm sunlit rock, distinct from the
-       pale-white city spires: a clear cliff FACE value under each flat crown */
+    /* PASS A — THE MESAS RE-CARVED (the carried 13-D flag, WO-20260714-03):
+       the old profile was lineTo verticals under dead-flat crowns — right
+       angles that read as boxy slabs from the rampart and the prospect.
+       The tableland is now CARVED: an eased plateau profile with worn,
+       rounded shoulders and a gentle crown undulation (no right angle
+       anywhere against the sky), horizontally-continuous sedimentary
+       STRATA banding clipped inside the silhouette (layers running
+       through every mesa, as tableland truly weathers), ledge-shadow
+       lines at the strata edges, and a crown light that FOLLOWS the
+       profile curve instead of a flat rect. Texture-only — same two
+       merged meshes, same tris; the painter consumes ZERO global fr()
+       draws (local rng only), so every card keeps its exact place. */
+    const lr = mulberry32(40713 + ((contrast*7 + warm*13)|0));
     const ranges = [
-      { base:h*.60, amp:h*.30, top:`rgb(${232+contrast*14},${196+contrast*12},${132+warm*14})`,
-                                face:`rgb(${176+contrast*10},${138+contrast*8},${86+warm*8})` },
-      { base:h*.82, amp:h*.44, top:`rgb(${216+contrast*12},${190+contrast*10},${146+warm*10})`,
-                                face:`rgb(${168+contrast*8},${140+contrast*6},${100+warm*6})` },
+      { base:h*.60, amp:h*.30, fr:176+contrast*10, fg:138+contrast*8, fb:86+warm*8,
+        top:`rgb(${232+contrast*14},${196+contrast*12},${132+warm*14})` },
+      { base:h*.82, amp:h*.44, fr:168+contrast*8, fg:140+contrast*6, fb:100+warm*6,
+        top:`rgb(${216+contrast*12},${190+contrast*10},${146+warm*10})` },
     ];
     for (const R of ranges){
-      g.beginPath(); g.moveTo(0, h);
-      let x = 0, y = R.base;
-      const tops = [];
-      g.lineTo(0, y);
-      while (x < w){
-        const seg = 26 + (x*13 % 48);                 /* plateau width */
-        y = Math.max(R.base - R.amp, Math.min(R.base, y + ((((x*7) % 5) - 2) * R.amp*.14)));
-        g.lineTo(x, y);                                /* vertical cliff face */
-        g.lineTo(x + seg, y);                          /* flat mesa crown */
-        tops.push([x, x + seg, y]);
-        x += seg;
+      /* 1 · the carved profile: plateau levels joined by worn shoulders */
+      const segs = [];
+      let xx = -40, lvl = .40 + lr()*.55;
+      while (xx < w + 80){
+        const sw = w*.10 + lr()*w*.24;                /* broad tableland masses */
+        lvl = Math.max(.14, Math.min(1, lvl + (lr()-.5)*1.30));
+        segs.push([xx, sw, lvl]);
+        xx += sw;
       }
+      const ph1 = lr()*6.28, ph2 = lr()*6.28;
+      const prof = new Float32Array(w+1);
+      for (let x = 0; x <= w; x++){
+        let si = 0; while (si < segs.length-1 && segs[si+1][0] <= x) si++;
+        const [sx, sw, sl] = segs[si];
+        const nl = segs[Math.min(si+1, segs.length-1)][2];
+        const tw = Math.min(w*.045, sw*.28);          /* shoulder span — worn, not noodled */
+        let t = (x - sx - (sw - tw)) / tw;
+        t = Math.max(0, Math.min(1, t));
+        t = t*t*(3-2*t);                              /* smooth = worn rock */
+        let lv = sl + (nl - sl)*t;
+        lv += .022*Math.sin(x*44/w + ph1) + .014*Math.sin(x*13/w + ph2);   /* crowns stay TABLELAND-flat */
+        prof[x] = R.base - R.amp*Math.max(.06, Math.min(1.04, lv));
+      }
+      /* 2 · the silhouette */
+      g.beginPath(); g.moveTo(0, h); g.lineTo(0, prof[0]);
+      for (let x = 1; x <= w; x++) g.lineTo(x, prof[x]);
       g.lineTo(w, h); g.closePath();
-      g.fillStyle = R.face; g.fill();                  /* the land body = shadowed rock face */
-      /* a lit band just under each plateau crown — the dawn on the tableland */
-      g.fillStyle = R.top;
-      for (const [x0, x1, ty] of tops) g.fillRect(x0, ty, x1 - x0, R.amp*.30);
+      g.fillStyle = `rgb(${R.fr},${R.fg},${R.fb})`; g.fill();
+      /* 3 · strata banding, clipped inside the rock (layers run THROUGH
+         every mesa — the tableland read) + ledge shadows at the edges */
+      g.save(); g.clip();
+      let yy = R.base - R.amp - 4, bi = 0;
+      while (yy < h){
+        const bh = 3 + lr()*4.5;
+        const dv = (lr() - .42) * 22;
+        g.fillStyle = `rgba(${R.fr+dv|0},${R.fg+dv*.8|0},${R.fb+dv*.6|0},.55)`;
+        g.fillRect(0, yy, w, bh);
+        if ((bi & 3) === 3){
+          g.fillStyle = 'rgba(58,40,22,.26)';
+          g.fillRect(0, yy + bh - 1, w, 1.4);
+        }
+        yy += bh; bi++;
+      }
+      /* 4 · the crown light follows every shoulder — dawn on the rim */
+      g.strokeStyle = R.top; g.lineWidth = Math.max(3, R.amp*.14);
+      g.lineJoin = 'round'; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(0, prof[0] + R.amp*.055);
+      for (let x = 1; x <= w; x++) g.lineTo(x, prof[x] + R.amp*.055);
+      g.stroke();
+      g.restore();
     }
     /* atmospheric base — the land dissolves into the cloud sea. LOOP 14-B:
        an ERASE (destination-out), never a painted wash — the old cream
@@ -1379,7 +1421,7 @@ const cloudSprites = [];
     fade.addColorStop(1, 'rgba(0,0,0,.95)');
     g.fillStyle = fade; g.fillRect(0, h*.5, w, h*.5);
     g.restore();
-  }, 256);
+  }, 1024);   /* PASS A: 256→1024 wide — the carved shoulders need the pixels */
   const mkMat = (tex, op)=> new THREE.MeshBasicMaterial({
     map:tex, transparent:true, opacity:op, alphaTest:.04, depthWrite:false, side:THREE.DoubleSide });
   const ranges = [
