@@ -5030,6 +5030,113 @@ function addBuilding(x,z,ry,big){
 }
 
 /* ================================================================
+   14.5  C-2 — THE VAULTS ILLUMINED (WO-20260714-02)
+   The eye that looks UP finds the same glory. Light, never surface
+   relief (Law 44 — the LACE coffers wash out on this dome; the
+   BEFORE boards prove a flat beige void). Three works, all quiet
+   additive luminance, all registered in TR.shafts so THE LIVING
+   HOUR's single writer drives them (tier × hour × approach — the
+   glory columns' own family; MAT.glowArch untouched, that line is
+   the other builder's GLASS THAT BURNS).
+   W1 THE JEWEL VAULT — each clerestory lancet's jewel-light climbs
+      the dome panel above it and fades toward the crown (12 washes
+      at the lancets' own azimuths, their own glassJewels hues).
+   W2 THE CROWN OF STARS — a circlet of 24 star-points around the
+      oculus and a soft glory disc beneath it: a quiet celestial
+      motif in luminance alone.
+   W3 THE VAULT-EDGE LIGHT — a soft gilt line where wall meets
+      vault: the hall's spring ring, the nave's two eave lines and
+      its ridge spine — the volume reads at every hour.
+   +3 draws, ~1.2k tris (interior headroom 29.7k at last battery).
+================================================================ */
+{
+  const CX=0, CZ=-72, DY=11.5, GAP=24*D2R;
+  const mkVaultMat = (baseOp, frag) => {
+    const m = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      side:THREE.DoubleSide, uniforms:{ uOp:{value:baseOp} },
+      vertexShader:`varying vec2 vUv; varying vec3 vCol;
+        attribute vec3 color;
+        void main(){ vUv=uv; vCol=color;
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uOp; varying vec2 vUv; varying vec3 vCol;
+        void main(){ ${frag} }`
+    });
+    m.userData.baseOp = baseOp; TR.shafts.push(m);
+    return m;
+  };
+  const tintV = (g, hex, s=1)=>{
+    const c = new THREE.Color(hex), n = g.attributes.position.count, arr = new Float32Array(n*3);
+    for (let k=0;k<n;k++){ arr[k*3]=c.r*s; arr[k*3+1]=c.g*s; arr[k*3+2]=c.b*s; }
+    g.setAttribute('color', new THREE.BufferAttribute(arr,3)); return g;
+  };
+  const nonIdx = g => g.index ? g.toNonIndexed() : g;
+
+  /* W1 — THE JEWEL VAULT: sphere panels hugging the dome interior
+     (r16.45 < coffer shell 16.6), one per surviving lancet, phi
+     centred on the lancet azimuth (sphere phi = a + PI/2 by the
+     x=-cos/z=sin convention), spring theta 1.455 up to .72. Alpha
+     peaks at the spring (uv.y=1 is the segment's low edge) and dies
+     toward the crown; soft horizontal edges keep the ribs clean. */
+  {
+    const jewels = [0x2a55b8, 0x1f8f5c, 0xf0b040, 0x7a4fc0];   /* the lancets' own glassJewels */
+    const parts = []; let ji = 0;
+    for (let i=0;i<12;i++){
+      const a = i*PI/6 + PI/12;
+      if (angDiff(a, 0) < GAP + .1) continue;      /* the portal gap keeps its lancet-less panels dark */
+      const g = new THREE.SphereGeometry(16.45, 5, 7, a + PI/2 - .18, .36, .60, .855);
+      xf(g, CX, DY, CZ);
+      parts.push(tintV(nonIdx(g), jewels[ji++ % jewels.length], 1.35));
+    }
+    const m = new THREE.Mesh(mergeGeometries(parts), mkVaultMat(.26,
+      `float a = uOp * pow(clamp(vUv.y,0.0,1.0), 1.15)
+               * smoothstep(0.0,0.30,vUv.x) * smoothstep(1.0,0.70,vUv.x);
+       gl_FragColor = vec4(vCol, a);`));
+    m.frustumCulled = false; scene.add(m);
+  }
+
+  /* W2 — THE CROWN OF STARS: 24 points ringing the oculus on the
+     dome surface + a glory disc beneath the eye of heaven. Radial
+     alpha from each part's own uv centre — luminance, no texture. */
+  {
+    const parts = [];
+    for (let k=0;k<24;k++){
+      const az = k*TAU/24, th = .40;
+      const q = new THREE.PlaneGeometry(.62,.62).rotateX(PI/2);
+      xf(q, CX + Math.sin(az)*16.45*Math.sin(th), DY + 16.45*Math.cos(th) - .12,
+            CZ + Math.cos(az)*16.45*Math.sin(th));
+      parts.push(tintV(nonIdx(q), 0xffe9b8, 1.0));
+    }
+    const disc = new THREE.CircleGeometry(3.1, 24).rotateX(PI/2);
+    xf(disc, CX, DY + 16.45*Math.cos(.32) - .25, CZ);
+    parts.push(tintV(nonIdx(disc), 0xfff3d0, .42));
+    const m = new THREE.Mesh(mergeGeometries(parts), mkVaultMat(.55,
+      `float d = distance(vUv, vec2(0.5));
+       float a = uOp * pow(clamp(1.0-2.0*d,0.0,1.0), 2.0);
+       gl_FragColor = vec4(vCol, a);`));
+    m.frustumCulled = false; scene.add(m);
+  }
+
+  /* W3 — THE VAULT-EDGE LIGHT: hall spring ring + nave eaves + the
+     nave's ridge spine, one merged band mesh, soft vertical falloff. */
+  {
+    const parts = [];
+    const ring = new THREE.CylinderGeometry(16.8, 16.8, .50, 64, 1, true);
+    parts.push(tintV(nonIdx(xf(ring, CX, 13.62, CZ)), 0xffdf9a));
+    for (const z of [-20.35, 8.35]){
+      const cove = new THREE.PlaneGeometry(41.4,.62).rotateX(PI/2);   /* faces the floor — a cove of light along each eave */
+      parts.push(tintV(nonIdx(xf(cove, 64, 17.5, z)), 0xffdf9a));
+    }
+    const spine = new THREE.PlaneGeometry(41.4,.44).rotateX(PI/2);
+    parts.push(tintV(nonIdx(xf(spine, 64, 23.55, -6.4)), 0xffe6ae));
+    const m = new THREE.Mesh(mergeGeometries(parts), mkVaultMat(.46,
+      `float a = uOp * sin(3.14159*clamp(vUv.y,0.0,1.0));
+       gl_FragColor = vec4(vCol, a);`));
+    m.frustumCulled = false; scene.add(m);
+  }
+}
+
+/* ================================================================
    15. THE WATERFALL TERRACE   sector at 225°
 ================================================================ */
 {
