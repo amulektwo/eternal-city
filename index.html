@@ -6737,12 +6737,14 @@ const GRAND_TOURS = [
   const TG = GRAND_TOURS.find(t=> t.key === 'gates');
   for (let k = 0; k < 12; k++){
     const a = k*PI/6, m = a - PI/12;
-    TG.pts.push([Math.sin(m)*134, 12, Math.cos(m)*134]);   /* the wide swing */
-    TG.pts.push([Math.sin(a)*127, 8.5, Math.cos(a)*127]);  /* before the pearl */
+    TG.pts.push([Math.sin(m)*129, 12.5, Math.cos(m)*129]); /* in along the wall */
+    TG.pts.push([Math.sin(a)*141, 10, Math.cos(a)*141]);   /* the pearl portrait —
+       ~22m standoff: the arch porch reaches past r127, and a portrait
+       from inside its mouth reads as blank facets (screenshot-proven) */
     const uk = (2*k + 1)/24;
     TG.gaze.push({ a:uk - .021, b:uk + .021,
-      x:Math.sin(a)*118.5, y:10, z:Math.cos(a)*118.5 });
-    TG.caps.push({ x:Math.sin(a)*127, z:Math.cos(a)*127, r:24,
+      x:Math.sin(a)*118.5, y:11, z:Math.cos(a)*118.5 });
+    TG.caps.push({ x:Math.sin(a)*141, z:Math.cos(a)*141, r:26,
       n:`THE GATE OF ${TRIBES[k]}`, l:`the ${ORD[k]} pearl of the twelve` });
   }
   /* THE RAMPARTS WATCH ring — same generator discipline: parapet
