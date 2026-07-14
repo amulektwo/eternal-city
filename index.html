@@ -4856,6 +4856,71 @@ function addBuilding(x,z,ry,big){
       new THREE.PlaneGeometry(.42, 17.2).rotateX(-PI/2), riverMat(0, .55, .34));
     rill.position.set(2.12, .085, -64.1);
     scene.add(rill);
+    /* ===== LOOP 28 · F-1 — THE LIVING WATERS WITHIN =====
+       "A pure river of water of life, clear as crystal, proceeding out of
+       the throne" (Rev 22:1). The rill and spring flow; F-1 makes them GIVE
+       LIGHT — a world-anchored caustic web cast on the hall marble beside
+       the channel and at the spring-mouth, so the living water reads as
+       luminous ON the stone (the S-2 pavement-of-light lesson carried to
+       water — additive light lands bright where flat relief washes, L44).
+       Interior only: nowhere near the west grate — the outward river is not
+       mine. ONE additive mesh (nave band + spring pool) = +1 draw, tinted
+       with the water family (RIVER.tint) and swelling at dawn and vespers. */
+    {
+      /* (1) the channel dances — a caustic web kept NARROW so it rides the
+         living water, not the gold-and-blue mosaic beside it; crisp filaments
+         only (no broad wash), falling off fast to the banks. */
+      const caustMat = new THREE.ShaderMaterial({
+        transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+        polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-3,
+        uniforms:{ uTime:{value:0}, uOp:{value:.55}, uWTint:RIVER.tint },
+        vertexShader:`varying vec2 vUv; varying vec2 vXZ;
+          void main(){ vUv=uv; vec4 w=modelMatrix*vec4(position,1.0); vXZ=w.xz;
+            gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+        fragmentShader:`uniform float uTime,uOp; uniform vec3 uWTint;
+          varying vec2 vUv; varying vec2 vXZ;
+          float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+          float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+            return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
+          void main(){
+            vec2 q = vXZ*0.9 + vec2(sin(uTime*.30 + vXZ.y*2.2), cos(uTime*.26 + vXZ.x*2.2))*.20;
+            float a = n2(q*1.9 + uTime*.10);
+            float b = n2(q*3.0 - uTime*.08);
+            float web = pow(1.0 - abs(a-b), 7.0);            /* thin bright caustic filaments */
+            float across = 1.0 - abs(vUv.x*2.0-1.0);
+            float ends = smoothstep(0.0,.06,vUv.y)*smoothstep(1.0,.94,vUv.y);
+            vec3 col = mix(vec3(.55,.74,.95), vec3(1.0,.97,.86), web) * uWTint;
+            gl_FragColor = vec4(col, uOp * web * across * (0.30+0.70*across) * ends);
+          }`
+      });
+      const band = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 17.6).rotateX(-PI/2), caustMat);
+      band.position.set(2.12, .05, -64.1); band.frustumCulled = false;
+      scene.add(band);
+      /* (2) the spring wells — the SOURCE at the dais foot rises with rings,
+         the proven Tree-pool welling carried into the hall (Rev 22:1). */
+      const springMat = new THREE.ShaderMaterial({
+        transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+        polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-3,
+        uniforms:{ uTime:{value:0}, uOp:{value:.70}, uWTint:RIVER.tint },
+        vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+        fragmentShader:`uniform float uTime,uOp; uniform vec3 uWTint; varying vec2 vUv;
+          void main(){
+            vec2 c = vUv-.5; float R = length(c)*2.0; if (R>1.0) discard;
+            /* concentric rings RISING from the source, faster and brighter */
+            float well = smoothstep(.05,.0, abs(fract(R*2.8 - uTime*.40)-.5)*2.0 - .80) * smoothstep(1.0,.08,R);
+            float well2 = smoothstep(.05,.0, abs(fract(R*2.8 - uTime*.40 + .5)-.5)*2.0 - .80) * smoothstep(1.0,.08,R);
+            float core = smoothstep(.42,.0,R)*(.72 + .20*sin(uTime*1.8));   /* the luminous mouth */
+            vec3 col = mix(vec3(.66,.82,1.0), vec3(1.0,.98,.90), core) * uWTint;
+            gl_FragColor = vec4(col, uOp * ((well+well2)*.6 + core) * smoothstep(1.0,.84,R));
+          }`
+      });
+      const spring = new THREE.Mesh(new THREE.CircleGeometry(2.7, 40).rotateX(-PI/2), springMat);
+      spring.position.set(2.12, .06, -72.6); spring.frustumCulled = false;
+      scene.add(spring);
+      tickers.push(t=>{ const sw = (1 + .4*(1 - HOUR.h) + .5*HOUR.v);   /* swell at dawn & vespers */
+        caustMat.uniforms.uTime.value = t;  caustMat.uniforms.uOp.value = .55*sw;
+        springMat.uniforms.uTime.value = t; springMat.uniforms.uOp.value = .95*sw; });
+    }
   }
   /* dais — three marble steps */
   const DX=0, DZ=-79.5;
