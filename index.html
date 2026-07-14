@@ -2258,7 +2258,8 @@ vec2 wallVoro(vec2 vp, out vec2 bid){
   return vec2(sqrt(F1), sqrt(F2));
 }
 float gWallStone = 0.0; vec2 gWallTilt = vec2(0.0); float gWallRough = 1.0; float gWallAng = 0.0;
-vec3 gWallFire = vec3(0.0);`)
+vec3 gWallFire = vec3(0.0);
+float gWallRest = 0.0; float gWallFadeG = 0.0;   /* PASS B: stone presence + fade that SURVIVE the detail rest */`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   /* LOOP 14-A — THE GEMSTONE FOUNDATIONS (Rev 21:19-20, evolving 13-B's
@@ -2371,6 +2372,43 @@ vec3 gWallFire = vec3(0.0);`)
       fcol += vec3(1.0, 0.97, 0.86) * spark * 0.50;
       /* detail rests at range and at grazing: the causeway reads clean deep courses */
       fcol = mix(fcol, jewels[k] * 0.52 * (0.85 + rnd * 0.30), detailFade * 0.85);
+      /* PASS B — THE STRATA OF THE STONES (L-1 rev 3, WO-20260714-03):
+         walking ALONG the wall the courses compressed to flat candy
+         stripes — the detail rest retires facets rightly but left pure
+         banding (per-stone rnd averages out across a grazing pixel).
+         Each course now carries a LOW-FREQUENCY value flow along the
+         arc — two octaves (~9.2m and ~2.7m wavelengths), per-course
+         phase and scale drift so neighbours never align — plus a soft
+         vertical gradient within the course (heavier foot, lighter
+         crown). Applied AFTER the rest mix, so grazing reads as banded
+         stone strata; wavelengths sit far above any pixel footprint
+         (the short octave is footprint-gated besides), so the flow can
+         never alias where the facets rest. The INNER FIRE inherits it
+         (gWallFire reads fcol below) — the strata live in shadow too. */
+      float ck2 = float(k);
+      float flowPix = fwidth(vWallU);
+      /* meso STRATA BLOCKS — long segments (~3-4.5m, per-course length and
+         offset) with a per-block hash value, edges AA'd by the pixel
+         footprint; when a block falls under a pixel the value converges
+         to the mean and the flow retires itself (alias-proof by law) */
+      float mw = 3.2 + 1.3*fract(ck2*0.53);
+      float mu = (vWallU + ck2*7.7) / mw;
+      float mid0 = floor(mu);
+      float mf = fract(mu);
+      float maw = clamp(flowPix / mw * 1.5, 0.02, 0.5);
+      float h0b = hash21(vec2(mid0, ck2*3.1));
+      float h1b = hash21(vec2(mid0 + 1.0, ck2*3.1));
+      float mh = mix(h0b, h1b, smoothstep(1.0 - maw, 1.0, mf));
+      /* one long sine breath under the blocks */
+      float fqA = 0.68 + 0.11*fract(ck2*0.618);
+      float flowA = sin(vWallU * fqA + ck2*2.39) * (0.72 + 0.28*sin(vWallU * fqA * 0.373 + ck2*4.1));
+      float flowB = sin(vWallU * (2.30 + 0.40*fract(ck2*0.381)) + ck2*5.71);
+      float flowBFade = 1.0 - smoothstep(0.4, 1.1, flowPix * 2.3);
+      float strataFlow = 1.0 + 0.26*(mh - 0.5)*2.0 + 0.08*flowA;
+      strataFlow *= 0.94 + 0.12*smoothstep(0.0, 0.50, localY);
+      fcol *= strataFlow;
+      gWallRest = stone;
+      gWallFadeG = detailFade;
       /* fresnel edge-light on the cluster silhouette — a jewel whisper, not a wash */
       float fres = pow(1.0 - abs(vN), 4.0);
       fcol += jewels[k] * fres * gemC[k].y * 0.45 * (1.0 - detailFade * 0.6);
@@ -2381,7 +2419,11 @@ vec3 gWallFire = vec3(0.0);`)
       diffuseColor.rgb = mix(diffuseColor.rgb, mix(mortarCol, fcol, stone), 0.96);
       /* hand the facet to the lighting stage: per-facet tilt + crystal gloss */
       gWallStone = stone * (1.0 - detailFade);
-      gWallTilt = (hash22(fid * 3.3 + float(k)) - 0.5) * 2.0 * gemB[k].x * gWallStone;
+      gWallTilt = (hash22(fid * 3.3 + float(k)) - 0.5) * 2.0 * gemB[k].x * gWallStone
+        /* PASS B: at the rest a per-BLOCK tilt takes over — each strata
+           segment catches the light its own way, breaking the long vinyl
+           specular streak into stone (block values are alias-safe) */
+        + vec2((mh - 0.5)*0.85, flowB*0.15*flowBFade) * stone * detailFade;
       gWallRough = gemA[k].w;
       gWallAng = wAng;
       /* L-1 rev 2 — THE INNER FIRE: a precious stone is never dead in
@@ -2395,11 +2437,13 @@ vec3 gWallFire = vec3(0.0);`)
   }
 }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
-  roughnessFactor = mix(roughnessFactor, gWallRough, gWallStone);`)
+  /* PASS B: the crystal gloss rests to ROUGH STONE as the facets rest —
+     a grazing course reads as banded strata, never a glossy vinyl tube */
+  roughnessFactor = mix(roughnessFactor, mix(gWallRough, 0.70, gWallFadeG), gWallRest);`)
       .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
   totalEmissiveRadiance += gWallFire;`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-  if (gWallStone > 0.003){
+  if (gWallRest > 0.003){
     vec3 wtV = normalize((viewMatrix * vec4(cos(gWallAng), 0.0, -sin(gWallAng), 0.0)).xyz);
     vec3 wuV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
     normal = normalize(normal + wtV * gWallTilt.x + wuV * gWallTilt.y);
