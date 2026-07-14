@@ -3702,11 +3702,38 @@ function addBuilding(x,z,ry,big){
   heroTree.add(trunkM, goldM);
   addCircle(0,0,3.4);
 
+  /* S-3 — THE LEAVES FOR HEALING (Rev 22:2): the canopy BREATHES — a slow
+     living sway per leaf-mass (whole-cluster, phase from each instance's
+     own place). GPU-only, zero draws; anchored on project_vertex (NaN law). */
+  const breathU = { value: 0 };
+  tickers.push(t=>{ breathU.value = t; });
+  const addBreath = (mat, amp)=>{
+    const prev = mat.onBeforeCompile;
+    mat.onBeforeCompile = (sh)=>{
+      if (prev) prev(sh);
+      sh.uniforms.uBreath = breathU;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uBreath;')
+        /* the sway is applied AFTER instanceMatrix, in the tree's own frame —
+           applied before it, each cluster's random rotation and small scale
+           crushed the motion to sub-pixel (probe-caught, 2026-07-14) */
+        .replace('#include <project_vertex>', `
+        vec4 mvPosition = vec4( transformed, 1.0 );
+        #ifdef USE_INSTANCING
+          mvPosition = instanceMatrix * mvPosition;
+          float bph = instanceMatrix[3][0]*1.7 + instanceMatrix[3][2]*2.3;
+          mvPosition.xyz += vec3(sin(uBreath*.55+bph), sin(uBreath*.42+bph*1.3)*.6, cos(uBreath*.48+bph)) * ${amp.toFixed(3)};
+        #endif
+        mvPosition = modelViewMatrix * mvPosition;
+        gl_Position = projectionMatrix * mvPosition;`);
+    };
+  };
   /* luminous canopy — instanced emissive-gold leaf clusters forming a dome */
   {
     const leafN = 620;   /* full buffer — the tier trims via InstancedMesh.count */
     const leafMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
       emissiveIntensity:.55, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+    addBreath(leafMat, .14);
     const leafI = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), leafMat, leafN);
     const ld = new THREE.Object3D();
     for (let i=0;i<leafN;i++){
@@ -3737,6 +3764,7 @@ function addBuilding(x,z,ry,big){
     const cr = mulberry32(303);
     const crownMat = new THREE.MeshStandardMaterial({ color:0xf0c96a, emissive:0xcf8f1e,
       emissiveIntensity:.55, roughness:.42, metalness:.35, envMapIntensity:1.0 });
+    addBreath(crownMat, .16);   /* S-3 — the spreading crown breathes with the dome */
     const spots = [];
     /* the skirt: ten clumps with air between them */
     for (let cl = 0; cl < 10; cl++){
@@ -4005,6 +4033,12 @@ function addBuilding(x,z,ry,big){
             ring += smoothstep(.03,.0,abs(fract(d*7.0 - uTime*.5) - .5)*2.0 - .82) * smoothstep(.30,.05,d);
           }
           col += vec3(.9,.95,1.0)*min(ring,1.0)*.18;
+          /* S-3 — THE WELLING (Rev 22:1): the pure river of water of life
+             RISES at the Tree's heart — rings born at the center spreading
+             outward, over a softly breathing white-gold spring. */
+          float well = smoothstep(.035,.0,abs(fract(R*4.5 - uTime*.32) - .5)*2.0 - .84) * smoothstep(.55,.05,R);
+          col += vec3(.85,.95,1.0)*well*.22;
+          col += vec3(1.0,.97,.88)*smoothstep(.12,.0,R)*(.30 + .12*sin(uTime*1.7));
           float edge = smoothstep(1.0,.86,R);
           gl_FragColor = vec4(col, (.62 + dap*.18) * edge);
         }`
@@ -4198,6 +4232,13 @@ function addBuilding(x,z,ry,big){
       top: new THREE.Vector3(Math.sin(a)*r, y+2.1, Math.cos(a)*r),
       pos: new THREE.Vector3(Math.sin(a)*r, y-.25, Math.cos(a)*r),
       ph: i*1.31, flashT: -9, glow: g,
+      /* S-3 — THE TWELVE MANNER OF FRUITS (Rev 22:2): twelve treasures,
+         not twelve copies — each fruit its own size, weight of light and
+         sway period. BRIGHTNESS AND SIZE ONLY: the white-gold hue ratio
+         is never touched (L3 zero-red stands by construction). */
+      sz:    [1.06,.90,1.12,.88,1.00,1.09,.94,1.03,.86,1.10,.96,1.05][i],
+      bOff:  [.06,-.05,.10,-.08,0,.08,-.03,.02,-.09,.09,-.02,.04][i],
+      swayK: [.70,.58,.76,.52,.64,.72,.56,.66,.50,.74,.60,.68][i],
     });
   }
   {
@@ -4207,12 +4248,15 @@ function addBuilding(x,z,ry,big){
       /* THE SEEKER'S HAND — distance from the seeker to the Tree's heart */
       const _seekerDist = Math.hypot(player.pos.x, player.pos.z);
       for (const fr of fruits){
-        /* pendulum sway about the cord's canopy anchor */
-        _fe.set(Math.sin(t*.7 + fr.ph)*.055, 0, Math.cos(t*.55 + fr.ph)*.055);
+        /* pendulum sway about the cord's canopy anchor — each fruit its
+           own period (S-3: twelve treasures, never a metronome) */
+        _fe.set(Math.sin(t*fr.swayK + fr.ph)*.055, 0, Math.cos(t*fr.swayK*.8 + fr.ph)*.055);
         _fq.setFromEuler(_fe);
         _fv.set(0,-2.35,0).applyQuaternion(_fq).add(fr.top);
         fr.pos.copy(_fv);
+        _fs.setScalar(fr.sz);
         _fm.compose(_fv, _fq, _fs);
+        _fs.setScalar(1);
         fruitMesh.setMatrixAt(fr.i, _fm);
         _fv.set(0,-1.05,0).applyQuaternion(_fq).add(fr.top);
         _fm.compose(_fv, _fq, _fs);
@@ -4226,14 +4270,14 @@ function addBuilding(x,z,ry,big){
         const near = fr.lit ? Math.min(1, Math.max(0, (26 - _seekerDist)/13)) : 0;
         const hov  = fr.lit && (t - (fr.hoverT || -9)) < .12 ? 1 : 0;
         const b = fr.lit
-          ? (.85 + .25*Math.sin(t*1.35 + fr.ph) + .9*flash
+          ? (.85 + fr.bOff + .25*Math.sin(t*1.35 + fr.ph) + .9*flash
              + near*(.28 + .22*Math.sin(t*2.3 + fr.ph)) + .55*hov)
           : .16;
         fruitMesh.setColorAt(fr.i, _fc.setScalar(b));
         fr.glow.position.copy(fr.pos);
         /* 2.6→3.05 base: the lanterns read in the opened air under the
            spreading crown (ASCENT PASS 1·II) — glow only, targets & hue law-fixed */
-        fr.glow.scale.set(3.05 + near*.5 + hov*.6, 3.05 + near*.5 + hov*.6, 1);
+        fr.glow.scale.set((3.05 + near*.5 + hov*.6)*fr.sz, (3.05 + near*.5 + hov*.6)*fr.sz, 1);
         fr.glow.material.opacity = fr.lit
           ? .3 + .14*Math.sin(t*1.35 + fr.ph) + .3*flash + near*.16 + hov*.22
           : .08;
