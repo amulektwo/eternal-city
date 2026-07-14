@@ -334,12 +334,23 @@
     background:transparent; color:#f3d98b; border:1px solid rgba(243,217,139,.55);
     border-radius:6px; }
   #resume button:hover { background:#b8912f; color:#fff; }
+  /* LOOP 27 — C-3 THE SEEKER'S PATH: the marks are buttons (tap to walk the road).
+     #petal stays pointer-events:none so the ring never eats a canvas click; only
+     the marks take pointer events, and they join UI_CHROME (L43) for touch. */
   .pmark { position:absolute; left:50%; top:50%; font-family:'Cinzel', serif;
     font-size:.6rem; letter-spacing:.14em; color:#f3d98b; white-space:nowrap;
     text-shadow:0 1px 2px rgba(10,7,2,.95), 0 0 8px rgba(10,7,2,.6);
-    transform:translate(-50%,-50%); }
+    transform:translate(-50%,-50%); pointer-events:auto; cursor:pointer;
+    background:none; border:0; line-height:1.15; padding:7px 9px;
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+    transition:color .18s; }
+  .pmark:hover, .pmark:active { color:#fff7e4; }
   .pmark::before { content:''; display:block; width:7px; height:7px; margin:0 auto 3px;
-    border-radius:50%; background:#d4af37; box-shadow:0 0 5px rgba(212,175,55,.8), 0 1px 2px rgba(10,7,2,.9); }
+    border-radius:50%; background:#d4af37; box-shadow:0 0 5px rgba(212,175,55,.8), 0 1px 2px rgba(10,7,2,.9);
+    transition:box-shadow .18s; }
+  .pmark:hover::before, .pmark:active::before { box-shadow:0 0 10px rgba(212,175,55,1), 0 1px 2px rgba(10,7,2,.9); }
+  .pdist { font-family:'EB Garamond','Cormorant Garamond',serif; font-size:.56rem;
+    letter-spacing:.08em; color:#caa96b; opacity:.9; }
 </style>
 </head>
 <body>
@@ -6366,7 +6377,7 @@ document.addEventListener('pointerlockchange', ()=>{
   const locked = document.pointerLockElement === canvasEl;
   /* losing lock while a scroll or the lamp is open is expected — they own the
      screen; so is losing it aloft — the wing frees the cursor for its chips */
-  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen && FLIGHT.mode === 'none'){ paused = true; showOverlay(true); }
+  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen && !WAYFARE.compassOn && FLIGHT.mode === 'none'){ paused = true; showOverlay(true); }
 });
 addEventListener('mousemove', e=>{
   if (!started || paused || readerOpen || seekOpen) return;
@@ -6385,8 +6396,9 @@ canvasEl.addEventListener('mousedown', e=>{
   if (document.pointerLockElement !== canvasEl){
     dragLook = true; lastX=e.clientX; lastY=e.clientY;
     /* retry the lock — covers Chrome's post-ESC cooldown rejection;
-       never while aloft — the wing needs the cursor free for its chips */
-    if (!IS_TOUCH && FLIGHT.mode === 'none'){
+       never while aloft — the wing needs the cursor free for its chips;
+       never while the compass is open — its marks need the free cursor (C-3) */
+    if (!IS_TOUCH && FLIGHT.mode === 'none' && !WAYFARE.compassOn){
       try {
         const r = canvasEl.requestPointerLock();
         if (r && r.catch) r.catch(()=>{});
@@ -7252,7 +7264,9 @@ function finishWayWalk(){
   WAYWALK.active = false;
   player.yaw = Math.atan2(-(WAYWALK.ax - player.pos.x), -(WAYWALK.az - player.pos.z));
   player.pitch = 0;
-  openScroll(WAYWALK.id, new THREE.Vector3(WAYWALK.ax, 2.4, WAYWALK.az));
+  /* a scroll walk opens the scroll on arrival; a landmark walk (C-3, id=null)
+     simply lands and faces the place */
+  if (WAYWALK.id != null) openScroll(WAYWALK.id, new THREE.Vector3(WAYWALK.ax, 2.4, WAYWALK.az));
 }
 function skipWayWalk(){
   if (!WAYWALK.active) return;
@@ -7290,6 +7304,32 @@ readerWalkBtn.addEventListener('click', ()=>{
   closeReader();
   startWalkThere(id);
 });
+/* LOOP 27 · C-3 THE SEEKER'S PATH — the compass leads, not only points.
+   A tapped bearing lays the SAME A* road (wayRoute) to the landmark and the
+   pilgrim's feet follow it; their own input cancels it (sovereign feet,
+   stepPlayer). No scroll opens (WAYWALK.id = null). The arrival point is the
+   first free cell stepping from the target toward the pilgrim — so the Tree is
+   walked TO, not THROUGH (its r<16 core is never entered), and any blocked core
+   is met on its near side. Reduced motion / no road → the honest carry. */
+function walkToLandmark(tx, tz){
+  const px = player.pos.x, pz = player.pos.z;
+  let vx = px - tx, vz = pz - tz; const L = Math.hypot(vx, vz) || 1; vx /= L; vz /= L;
+  let gx = px, gz = pz;
+  for (let s = 0; s <= Math.min(L, 40); s += 1.5){
+    const cx = tx + vx*s, cz = tz + vz*s;
+    if (!wayBlocked(cx, cz)){ gx = cx; gz = cz; break; }
+  }
+  WAYWALK.id = null; WAYWALK.ax = tx; WAYWALK.az = tz;
+  const pts = PREFERS_STATIC ? null : wayRoute(px, pz, gx, gz);
+  if (!pts){
+    player.pos.x = gx; player.pos.z = gz;
+    const gH = groundAt(gx, gz);
+    if (gH > -1e8){ player.pos.y = gH + 1.7; player.velY = 0; }
+    finishWayWalk();
+    return;
+  }
+  WAYWALK.pts = pts; WAYWALK.i = 0; WAYWALK.active = true;
+}
 /* a quick single-finger tap during the walk skips to arrival
    (drag/joystick cancels instead — handled in stepPlayer);
    a STILL long-press (850ms, <12px) sets or lifts a candle */
@@ -7724,9 +7764,21 @@ function buildGateVaults(index){
     const petal = document.getElementById('petal');
     const showPetal = (on)=>{
       WAYFARE.compassOn = on;
-      if (on){ petal.style.display = 'block'; requestAnimationFrame(()=> petal.classList.add('show')); }
+      if (on){
+        /* C-3 / L43: a mode that shows clickable chrome must free the cursor,
+           or a captive pointer cannot press what it displays (desktop) */
+        if (!IS_TOUCH && document.pointerLockElement) document.exitPointerLock();
+        petal.style.display = 'block'; requestAnimationFrame(()=> petal.classList.add('show'));
+      }
       else { petal.classList.remove('show'); setTimeout(()=>{ if (!WAYFARE.compassOn) petal.style.display = 'none'; }, 380); }
     };
+    /* C-3 THE SEEKER'S PATH — a tapped bearing walks the road there. Delegated
+       on the container so it survives the per-tick innerHTML rebuild. */
+    petal.addEventListener('click', (e)=>{
+      const b = e.target.closest('.pmark'); if (!b) return;
+      showPetal(false);
+      walkToLandmark(+b.dataset.tx, +b.dataset.tz);
+    });
     addEventListener('keydown', (e)=>{
       if (e.code !== 'KeyM' || !started || readerOpen || seekOpen) return;
       showPetal(!WAYFARE.compassOn);
@@ -7771,10 +7823,12 @@ function buildGateVaults(index){
       if (best) targets.push({ n: (best.label || 'THE VAULT').toUpperCase().split('—')[0].trim(), x: best.anchor.x, z: best.anchor.z });
       if (WAYFARE.candleTarget) targets.push(WAYFARE.candleTarget);
       petal.innerHTML = targets.map(tg=>{
-        const bearing = Math.atan2(-(tg.x - camera.position.x), -(tg.z - camera.position.z)) - player.yaw;
+        const dx = tg.x - camera.position.x, dz = tg.z - camera.position.z;
+        const dist = Math.hypot(dx, dz);
+        const bearing = Math.atan2(-dx, -dz) - player.yaw;
         const R2 = petal.clientWidth/2 - 16;
         const px3 = Math.sin(-bearing)*R2, py3 = -Math.cos(bearing)*R2;
-        return `<div class="pmark" style="transform:translate(calc(-50% + ${px3.toFixed(0)}px), calc(-50% + ${py3.toFixed(0)}px))">${tg.n}</div>`;
+        return `<button class="pmark" data-tx="${tg.x.toFixed(2)}" data-tz="${tg.z.toFixed(2)}" style="transform:translate(calc(-50% + ${px3.toFixed(0)}px), calc(-50% + ${py3.toFixed(0)}px))">${tg.n}<span class="pdist">${Math.round(dist)}m</span></button>`;
       }).join('');
     });
   }
@@ -7830,7 +7884,7 @@ if (IS_TOUCH){
   /* the HUD chrome keeps its taps — a global preventDefault on touchstart
      suppresses the synthetic click, so every fixed button dies to the finger
      (THE FREED HAND: the Seer's iPad found lamp/aerial/gates all dead) */
-  const UI_CHROME = '#lampBtn,#aerialBtn,#gateBtn,#flightCtl,#gatePanel,#proving';
+  const UI_CHROME = '#lampBtn,#aerialBtn,#gateBtn,#flightCtl,#gatePanel,#proving,#petal';
   addEventListener('touchstart', e=>{
     if (!started || readerOpen || seekOpen) return;   /* the reader (or the lamp) owns the screen */
     let claimed = false;
