@@ -7990,6 +7990,7 @@ function animate(){
   RIVER.tint.value.setRGB(1 + .05*(1-h) - .05*v, 1 + .012*(1-h) + .01*v, 1 - .04*(1-h) + .09*v);
   NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
   if (FARCITY.u) FARCITY.u.uHour.value.set(h, v);   /* LOOP 14-B: the far cities keep the hour */
+  MAT.glowArch.emissiveIntensity = 2.1 + 1.2*v;      /* LOOP 14-D THE GLASS THAT BURNS: windows hold by day, blaze at Vespers (DC dusk) */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
   /* SINGLE WRITER of shaft opacity: tier × hour × approach-swell */
