@@ -4485,6 +4485,84 @@ function addBuilding(x,z,ry,big){
   });
   scene.add(new THREE.Mesh(mergeGeometries(shaftParts), shaftMat));
   shaftMat.userData.baseOp = .12; TR.shafts.push(shaftMat);
+
+  /* ========== LOOP S-2 — THE SANCTUARY WITHIN (light made visible) ==========
+     The clerestory light FALLS: broad columns of glory descend the nave
+     and LAND as warm pools on the pale floor (the read the thin shafts
+     lacked — additive light reads where surface relief washes out, Law 44).
+     THE LECTERN sits in its own column. TR.shafts-registered; the pools
+     deepen with THE LIVING HOUR (dawn/vespers), never touching the window
+     material (his GLASS THAT BURNS owns MAT.glowArch — no shared line). */
+  {
+    /* THE GLORY COLUMNS — five broad shafts down the nave axis, each a
+       tall soft cone of light from the high south windows to the floor. */
+    const gloryParts = [];
+    const landX = [];
+    for (let wx = 51; wx <= 78; wx += 6.75){
+      const g = new THREE.CylinderGeometry(.7, 3.4, 16.2, 14, 1, true);
+      xf(g, wx, 8.2, CZ + 1.0);
+      gloryParts.push(g);
+      landX.push(wx);
+    }
+    const gloryMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ uOp:{value:.14}, uTime:{value:0} },
+      vertexShader:`varying vec2 vUv; varying float vY;
+        void main(){ vUv=uv; vY=position.y;
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uOp,uTime; varying vec2 vUv; varying float vY;
+        void main(){
+          float fall = smoothstep(-8.1,8.1,vY);           /* brightest aloft, fading down */
+          float rim  = 1.0 - abs(vUv.x*2.0-1.0);          /* soft round column */
+          float shimmer = 0.86 + 0.14*sin(uTime*.5 + vUv.y*5.0);
+          float a = uOp * rim * (0.35 + 0.65*fall) * shimmer;
+          gl_FragColor = vec4(1.0, 0.92, 0.72, a);        /* warm glory */
+        }`
+    });
+    const glory = new THREE.Mesh(mergeGeometries(gloryParts), gloryMat);
+    glory.frustumCulled = false;
+    scene.add(glory);
+    gloryMat.userData.baseOp = .14; TR.shafts.push(gloryMat);
+    tickers.push(t=>{ gloryMat.uniforms.uTime.value = t;
+      gloryMat.uniforms.uOp.value = .14 * (1 + .5*(1 - HOUR.h) + .4*HOUR.v); });   /* the glory swells at dawn & vespers */
+
+    /* THE PAVEMENT OF LIGHT — where each column lands, a warm pool on the
+       marble; at vespers they lengthen and deepen. Additive discs read
+       bright against the pale floor (the Tree's golden-foot lesson). */
+    const paveTex = canvasTex(128, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      const rad = g.createRadialGradient(w/2,h/2,2, w/2,h/2,w*.48);
+      rad.addColorStop(0,'rgba(255,226,158,.95)');
+      rad.addColorStop(.6,'rgba(255,214,138,.42)');
+      rad.addColorStop(1,'rgba(255,214,138,0)');
+      g.fillStyle = rad; g.fillRect(0,0,w,h);
+    }, 128);
+    const paveMat = new THREE.MeshBasicMaterial({
+      map: paveTex, transparent:true, opacity:.5, depthWrite:false,
+      blending:THREE.AdditiveBlending, polygonOffset:true, polygonOffsetFactor:-3, polygonOffsetUnits:-3 });
+    const paveParts = [];
+    for (const wx of landX){
+      const p = new THREE.PlaneGeometry(4.6, 6.4).rotateX(-PI/2);
+      xf(p, wx, .46, CZ + 1.0);
+      paveParts.push(p);
+    }
+    const pavement = new THREE.Mesh(mergeGeometries(paveParts), paveMat);
+    pavement.frustumCulled = false;
+    scene.add(pavement);
+    tickers.push(t=>{ paveMat.opacity = .42 * (1 + .3*(1 - HOUR.h) + .55*HOUR.v)
+      * (0.92 + 0.08*Math.sin(t*.6)); });
+
+    /* THE LECTERN IN A COLUMN — the sanctuary reading-station (nave axis,
+       ~x60) stands in its own descending shaft so the open scroll rests
+       in light. A slender bright column + a tight foot-pool. */
+    const lecX = 60, lecZ = CZ;
+    const lecCol = new THREE.Mesh(new THREE.CylinderGeometry(.5, 1.7, 14.0, 16, 1, true), gloryMat);
+    lecCol.position.set(lecX, 7.4, lecZ); lecCol.frustumCulled = false;
+    scene.add(lecCol);
+    const lecPool = new THREE.Mesh(new THREE.CircleGeometry(2.2, 28).rotateX(-PI/2), paveMat);
+    lecPool.position.set(lecX, .47, lecZ); lecPool.frustumCulled = false;
+    scene.add(lecPool);
+  }
 }
 
 /* ================================================================
