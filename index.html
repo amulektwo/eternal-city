@@ -88,14 +88,15 @@
   #lampBtn:hover { border-color:var(--gold); box-shadow:0 0 22px rgba(212,175,55,.4); }
   #lampBtn svg { width:22px; height:22px; }
   /* THE SEER'S WINGS — aerial eye · flight controller · the gate index */
-  #aerialBtn, #gateBtn { position:fixed; top:18px; z-index:12; width:44px; height:44px;
+  #aerialBtn, #gateBtn, #tourBtn { position:fixed; top:18px; z-index:12; width:44px; height:44px;
     display:flex; align-items:center; justify-content:center; border-radius:50%;
     color:var(--gold); background:rgba(12,8,2,.4); border:1px solid rgba(212,175,55,.45);
     cursor:pointer; transition:all .3s; }
   #aerialBtn { right:70px; }
   #gateBtn { right:122px; }
-  #aerialBtn:hover, #gateBtn:hover { border-color:var(--gold); box-shadow:0 0 22px rgba(212,175,55,.4); }
-  #aerialBtn svg, #gateBtn svg { width:22px; height:22px; }
+  #tourBtn { right:174px; }
+  #aerialBtn:hover, #gateBtn:hover, #tourBtn:hover { border-color:var(--gold); box-shadow:0 0 22px rgba(212,175,55,.4); }
+  #aerialBtn svg, #gateBtn svg, #tourBtn svg { width:22px; height:22px; }
   #aerialBtn.on { background:rgba(212,175,55,.88); color:#1a1206; border-color:var(--gold); }
   #flightCtl { position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(14px);
     z-index:12; display:flex; gap:10px; opacity:0; pointer-events:none;
@@ -107,6 +108,40 @@
   #flightCtl button:hover { border-color:var(--gold); box-shadow:0 0 18px rgba(212,175,55,.35); }
   #flightCtl button.on { background:rgba(212,175,55,.88); color:#1a1206; }
   @media (pointer:coarse){ #flightCtl { bottom:112px; } }
+  /* LOOP 20 — THE GRAND TOURS: the tour scroll + the herald's captions */
+  #tourPanel { position:fixed; inset:0; z-index:32; display:flex; align-items:flex-start;
+    justify-content:center; padding-top:11vh; }
+  #tourPanel[hidden] { display:none; }
+  #tourVeil { position:absolute; inset:0; background:rgba(12,8,2,.78); cursor:pointer; }
+  #tourBox { position:relative; width:min(470px, 92vw); background:rgba(16,11,3,.96);
+    border:1px solid rgba(212,175,55,.5); box-shadow:0 0 60px rgba(0,0,0,.6);
+    max-height:74vh; overflow-y:auto; }
+  #tourBox h3 { font-family:'Cinzel',serif; font-weight:400; color:rgba(212,175,55,.85);
+    font-size:.72rem; letter-spacing:.3em; margin:0; padding:1.1rem 1.4rem .7rem;
+    border-bottom:1px solid rgba(212,175,55,.18); }
+  .tourRow { display:block; width:100%; text-align:left; background:none; border:none;
+    cursor:pointer; padding:.74rem 1.4rem .68rem; min-height:56px; font-family:'Cinzel',serif; }
+  .tourRow:hover { background:rgba(212,175,55,.1); }
+  .tourRow .tn { display:block; color:#f3d98b; font-size:.92rem; letter-spacing:.16em; }
+  .tourRow .td { display:block; font-family:'EB Garamond',serif; font-style:italic;
+    color:rgba(232,214,170,.72); font-size:.9rem; letter-spacing:.04em; margin-top:.14rem; }
+  .tourRow.playing .tn::after { content:'  ·  ALOFT'; color:rgba(212,175,55,.6);
+    font-size:.62rem; letter-spacing:.24em; }
+  #tourFoot { padding:.55rem 1.4rem .8rem; text-align:center; color:rgba(200,175,120,.4);
+    font-size:.62rem; letter-spacing:.22em; border-top:1px solid rgba(212,175,55,.18); }
+  /* THE HERALD'S VOICE — LEGIBLE WORD: dark scrim pill + keyline shadows */
+  #tourCap { position:fixed; left:50%; bottom:88px; transform:translateX(-50%); z-index:11;
+    text-align:center; pointer-events:none; opacity:0; transition:opacity .9s;
+    max-width:min(580px, 88vw); background:rgba(12,8,2,.42);
+    border:1px solid rgba(212,175,55,.26); border-radius:13px;
+    padding:.55rem 1.15rem .6rem; }
+  #tourCap.show { opacity:1; }
+  #tourCap .cn { font-family:'Cinzel',serif; color:#f3d98b; font-size:.76rem; letter-spacing:.28em;
+    text-shadow:0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.65); }
+  #tourCap .cl { font-family:'EB Garamond',serif; font-style:italic; color:#efe3c2;
+    font-size:1.02rem; letter-spacing:.03em; margin-top:.16rem;
+    text-shadow:0 1px 2px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.6); }
+  @media (pointer:coarse){ #tourCap { bottom:174px; } }
   #gatePanel { position:fixed; inset:0; z-index:32; display:flex; align-items:flex-start;
     justify-content:center; padding-top:11vh; }
   #gatePanel[hidden] { display:none; }
@@ -398,6 +433,11 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
     <path d="M5.5 20v-7.2a6.5 6.5 0 0 1 13 0V20"/><path d="M3 20h18"/></svg>
 </button>
+<button id="tourBtn" aria-label="The grand tours" title="The grand tours ( T )">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+    <path d="M5 19.5c6.5-2 1.5-6.5 7-9s7-3.5 7-6.5"/>
+    <circle cx="5" cy="19.5" r="1.7"/><circle cx="19" cy="4" r="1.7"/></svg>
+</button>
 <div id="flightCtl">
   <button id="flyTour">TOUR</button>
   <button id="flyOrbit">ORBIT</button>
@@ -411,6 +451,15 @@
     <div id="gateFoot">choose a gate — the city carries you there</div>
   </div>
 </div>
+<div id="tourPanel" hidden>
+  <div id="tourVeil"></div>
+  <div id="tourBox">
+    <h3>THE GRAND TOURS</h3>
+    <div id="tourList"></div>
+    <div id="tourFoot">a tap of the sky stills the wing · esc returns to your feet</div>
+  </div>
+</div>
+<div id="tourCap"><div class="cn"></div><div class="cl"></div></div>
 <div id="seek" hidden>
   <div id="seekVeil"></div>
   <div id="seekBox">
@@ -6364,9 +6413,11 @@ const canvasEl = renderer.domElement;
 let dragLook = false, lastX=0, lastY=0;
 document.addEventListener('pointerlockchange', ()=>{
   const locked = document.pointerLockElement === canvasEl;
-  /* losing lock while a scroll or the lamp is open is expected — they own the
-     screen; so is losing it aloft — the wing frees the cursor for its chips */
-  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen && FLIGHT.mode === 'none'){ paused = true; showOverlay(true); }
+  /* losing lock while a scroll, the lamp or the tour scroll is open is
+     expected — they own the screen; so is losing it aloft — the wing
+     frees the cursor for its chips */
+  if (!locked && started && !IS_TOUCH && !readerOpen && !seekOpen &&
+      document.getElementById('tourPanel').hidden && FLIGHT.mode === 'none'){ paused = true; showOverlay(true); }
 });
 addEventListener('mousemove', e=>{
   if (!started || paused || readerOpen || seekOpen) return;
@@ -6568,9 +6619,9 @@ function applyGlide(t){
 }
 
 /* ================================================================
-   18.4  THE SEER'S WINGS — aerial eye · tour · orbit · gate flights
-   One tap of the wing lifts the eye above the whole city; TOUR flies
-   the avenue, rounds the Tree and passes the east arch hands-free;
+   18.4  THE SEER'S WINGS — aerial eye · grand tours · orbit · gates
+   One tap of the wing lifts the eye above the whole city; TOUR opens
+   THE TOUR SCROLL (LOOP 20 — five authored pilgrimage flights);
    ORBIT turns the city slowly beneath the watcher; RETURN sets the
    eye back exactly where the feet stood. Any stick, key or tap
    during tour/orbit eases the flight to a still hover — the pilgrim
@@ -6589,6 +6640,8 @@ const FLIGHT = {
   hp:new THREE.Vector3(), hl:new THREE.Vector3(),      /* current hover perch */
   savedYaw:0, savedPitch:0,
   orbitAng:0, orbitV:0, tourU:0, gateEnd:null,
+  tour:null,                            /* the active GRAND_TOURS entry */
+  lookSm:new THREE.Vector3(),           /* smoothed gaze target (corners never jerk) */
 };
 /* L-2 rev 2 — THE NATIONS IN THE SEER'S EYE: the perch pulls back and
    the gaze lifts from plan-view to a high prospect, so ONE frame holds
@@ -6604,36 +6657,170 @@ const flightCtlEl = document.getElementById('flightCtl');
 const flyTourBtn  = document.getElementById('flyTour');
 const flyOrbitBtn = document.getElementById('flyOrbit');
 
-/* the tour road — dives from the sky to the causeway, through the
-   great south gate, down the avenue, once around the Tree plaza
-   (skirting the hall drum by >22m), back over the avenue, out
-   through the east arch, up the outer wall and home to the perch */
-const TOUR_CURVE = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(   0, 226,  56),
-  new THREE.Vector3(   0,  64, 172),
-  new THREE.Vector3(   0,   8, 150),
-  new THREE.Vector3(   0,   5.5, 122),
-  new THREE.Vector3(   0,   4.5,  82),
-  new THREE.Vector3(   2,   4.5,  40),
-  new THREE.Vector3(  26,   7,   16),
-  new THREE.Vector3(  37,  10,  -14),
-  new THREE.Vector3(  18,  12,  -44),
-  new THREE.Vector3( -10,  16,  -50),
-  new THREE.Vector3( -32,  11,  -30),
-  new THREE.Vector3( -38,   9,    6),
-  new THREE.Vector3( -24,   7,   28),
-  new THREE.Vector3(   2,  11,   46),
-  new THREE.Vector3(  52,  22,   62),
-  new THREE.Vector3(  96,  12,   26),
-  new THREE.Vector3( 110,   6,    6),
-  new THREE.Vector3( 112,   5.5,  0),
-  new THREE.Vector3( 128,   6,   -2),
-  new THREE.Vector3( 152,  34,  -46),
-  new THREE.Vector3( 110, 120,  -90),
-  new THREE.Vector3(  30, 210,  -30),
-  new THREE.Vector3(   0, 226,   56),
-], false, 'catmullrom', .12);
-const TOUR_DUR = PREFERS_STATIC ? 42 : 95;
+/* ================================================================
+   18.4b  THE GRAND TOURS (LOOP 20) — five authored pilgrimage
+   flights chosen from THE TOUR SCROLL (the TOUR chip, the path
+   glyph in the top bar, or the T key). Each tour is one smooth
+   arc-length CatmullRom spline the eye rides hands-free, and THE
+   HERALD'S VOICE names each waypoint in quiet text (the SACRED
+   SILENCE stands — never audio). Any stick, key or tap stills the
+   wing; ESC / RETURN / V lands the eye exactly where the feet
+   stood. Route law: the splines honor the west-avenue ruling —
+   every low pass over living water rides ALONG the course or
+   crosses above a crossing stone / bridge deck, never fording
+   open water; and THE PILGRIM'S WAY spends the arrival moment
+   honestly (the portal veil parts as the eye crosses, once, only
+   if the walker has not already crossed on foot).
+   Camera-driver + DOM only: zero geometry, zero draws.
+================================================================ */
+const GRAND_TOURS = [
+  { key:'pilgrim', name:"THE PILGRIM'S WAY", dur:75, tension:.5,
+    line:'the causeway, the parting veil, and the Tree revealed',
+    pts:[[0,22,182],[0,8,164],[0,5.2,152],[0,4.6,132],[0,5,117],[0,5.2,104],
+         [0,5.6,76],[0,6.2,46],[0,7,28],[16,8,12],[22,9.5,-8],[10,11,-22],
+         [-12,11,-20],[-22,9.5,0],[-16,8.5,18],[0,12,34],[0,16,40]],
+    gaze:[{a:.55,b:1.01,x:0,y:16,z:0}],
+    caps:[
+      {x:0,z:150,r:18,  n:'THE CAUSEWAY',      l:'the sea-road to the great portal'},
+      {x:0,z:114,r:11,  n:'THE GREAT PORTAL',  l:'the veil of mist parts before the pilgrim'},
+      {x:0,z:66,r:22,   n:'THE STREET OF GOLD',l:'the golden avenue to the heart of the city'},
+      {x:0,z:0,r:27,    n:'THE TREE OF LIFE',  l:'twelve fruit of light — the scrolls of the city'},
+    ]},
+  { key:'river', name:'THE RIVER OF LIFE', dur:85, tension:.4,
+    line:'from the spring beneath the dais to the confluence and the wall',
+    pts:[[4.6,4,-85],[2.6,2.9,-77.5],[2.12,2.6,-70],[2.12,2.6,-62],[2.12,3.2,-55.2],
+         [2.12,3.4,-49],[2.12,3,-41],[2.12,3,-35.5],[-2,3,-34],[-15,3,-34],
+         [-30,3,-34],[-34,3,-30],[-34,3,-13],[-34,3,-1],[-33.4,3,1.6],[-40,3,2.2],
+         [-46,3,2.2],[-58,3.2,2.2],[-69,3.6,2.3],[-77,4.2,2.5],[-92,4.4,2.5],
+         [-106,4.6,2.5],[-112.5,4,2.5]],
+    gaze:[{a:0,b:.05,x:2.12,y:.6,z:-72.85},{a:.94,b:1.01,x:-114,y:1.2,z:2.5}],
+    caps:[
+      {x:2.12,z:-72.85,r:9, n:'THE SPRING',          l:'living water issues from beneath the dais'},
+      {x:0,z:-55,r:7,       n:'THE HALL DOORS',      l:'the river goes out from the house'},
+      {x:2.12,z:-46,r:6.5,  n:'THE WEIRS',           l:'white water down the throne approach'},
+      {x:-16,z:-34,r:9,     n:'THE CROSSING STONES', l:'the pilgrim passes over dry-shod'},
+      {x:-34,z:-12,r:8,     n:'THE NORTH REACH',     l:'the river skirts the plaza of the Tree'},
+      {x:-52,z:2.2,r:9,     n:'THE WEST AVENUE',     l:'the golden run of the living water'},
+      {x:-72.5,z:2.4,r:6,   n:'THE CONFLUENCE',      l:'the river gives itself to the canal'},
+      {x:-110,z:2.5,r:10,   n:'THE GRATE',           l:'under the great wall and away'},
+    ]},
+  { key:'ramparts', name:'THE RAMPARTS WATCH', dur:135, closed:true, tension:.5,
+    line:'the wall-top circuit and the far horizons',
+    /* the parapet's outer shoulder — never crossing the wall band: the
+       walk slides beneath, the city rises within, the horizons stand
+       without; swings out a little at each gate to clear the arches */
+    pts:[], gaze:[],   /* generated below with the gates ring */
+    caps:[
+      {x:31.4,z:117.3,r:18,  n:'THE RAMPART WALK',      l:'the wall of the city is a road'},
+      {x:127.5,z:0,r:22,     n:'THE JEWELED HORIZON',   l:'sister cities stand in the sea of clouds'},
+      {x:85.9,z:-85.9,r:22,  n:'THE SUNWARD SEA',       l:'the cloud-sea glows toward the true sun'},
+      {x:-91,z:-91,r:22,     n:'THE WATERFALL TERRACE', l:'the falls give themselves to the sea below'},
+      {x:-117.4,z:31.4,r:20, n:'THE WEST GATE REACH',   l:'the canal dies under the wall through the grate'},
+    ]},
+  { key:'gates', name:'THE TWELVE GATES', dur:145, closed:true, tension:.5,
+    line:'the full ring of pearls, each gate named',
+    pts:[], gaze:[], caps:[] },   /* generated from TRIBES below — ONE list rules */
+  { key:'stones', name:'THE FOUNDATIONS', dur:130, closed:true, tension:.5,
+    line:'a low sweep along the twelve jewel courses of the wall',
+    pts:[], gaze:[], caps:[] },   /* generated below, Rev 21:19-20 order */
+];
+{
+  const ORD = ['first','second','third','fourth','fifth','sixth',
+               'seventh','eighth','ninth','tenth','eleventh','twelfth'];
+  /* THE TWELVE GATES — pearl portraits from without: the ring rides
+     out front of each arch (the nacre gates face the world, Rev 21:21)
+     and swings wide over the sea between them; a gaze window at each
+     gate holds the arch head-on. It BEGINS at a mid-swing so the first
+     pearl (REUBEN) is announced after the title card, at u=1/24.
+     Geometry and captions are generated from TRIBES — one list rules;
+     the whole ring lies OUTSIDE the wall, crossing nothing. */
+  const TG = GRAND_TOURS.find(t=> t.key === 'gates');
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6, m = a - PI/12;
+    TG.pts.push([Math.sin(m)*134, 12, Math.cos(m)*134]);   /* the wide swing */
+    TG.pts.push([Math.sin(a)*127, 8.5, Math.cos(a)*127]);  /* before the pearl */
+    const uk = (2*k + 1)/24;
+    TG.gaze.push({ a:uk - .021, b:uk + .021,
+      x:Math.sin(a)*118.5, y:10, z:Math.cos(a)*118.5 });
+    TG.caps.push({ x:Math.sin(a)*127, z:Math.cos(a)*127, r:24,
+      n:`THE GATE OF ${TRIBES[k]}`, l:`the ${ORD[k]} pearl of the twelve` });
+  }
+  /* THE RAMPARTS WATCH ring — same generator discipline: parapet
+     shoulder at the mids (r121.5, just off the rails), easing out and
+     up at each gate azimuth to pass in front of the arches. */
+  const TR2 = GRAND_TOURS.find(t=> t.key === 'ramparts');
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6, m = a + PI/12;
+    TR2.pts.push([Math.sin(a)*127.5, 14, Math.cos(a)*127.5]);
+    TR2.pts.push([Math.sin(m)*121.5, 12.6, Math.cos(m)*121.5]);
+  }
+  /* THE FOUNDATIONS — outside the wall, low in the jewel band (courses
+     climb y .35–7.34); swings out a little at the gates to clear the
+     portals, breathes in between. Stones named in the scripture's order
+     as the sweep proceeds. */
+  const TS = GRAND_TOURS.find(t=> t.key === 'stones');
+  for (let k = 0; k < 12; k++){
+    const a = k*PI/6, m = a + PI/12;
+    TS.pts.push([Math.sin(a)*129.5, 5.2, Math.cos(a)*129.5]);
+    TS.pts.push([Math.sin(m)*124.5, 3.6, Math.cos(m)*124.5]);
+  }
+  const STONES = [
+    ['JASPER','deep red, opaque and waxy-banded'],
+    ['SAPPHIRE','glassy blue depth'],
+    ['CHALCEDONY','warm translucent rose agate'],
+    ['EMERALD','columnar green prisms'],
+    ['SARDONYX','white-banded on warm red'],
+    ['SARDIUS','glassy blood-red carnelian'],
+    ['CHRYSOLITE','peridot gold-green'],
+    ['BERYL','the sea-blue stone'],
+    ['TOPAZ','clean gold light'],
+    ['CHRYSOPRASE','apple-green, seated as jade'],
+    ['JACINTH','violet-blue depth'],
+    ['AMETHYST','the twelfth, crowning'],
+  ];
+  STONES.forEach(([n, c], k)=>{
+    const a = .05 + k*.0775;
+    TS.caps.push({ a, b:a + .06, n, l:`the ${ORD[k]} foundation — ${c}` });
+  });
+}
+function tourCurve(T){
+  if (!T.curve){
+    T.curve = new THREE.CatmullRomCurve3(
+      T.pts.map(p=> new THREE.Vector3(p[0], p[1], p[2])),
+      !!T.closed, 'catmullrom', T.tension ?? .5);
+    T.curve.arcLengthDivisions = 600;
+    T.len = T.curve.getLength();
+    T.ahead = Math.max(.008, 10 / T.len);   /* look ~10m down the road */
+  }
+  return T.curve;
+}
+/* THE HERALD'S VOICE — one quiet caption pill; a waypoint speaks when
+   the eye draws near (anchor captions) or when the road reaches it
+   (u-window captions). Text only, always keylined (LEGIBLE WORD). */
+const tourCapEl = document.getElementById('tourCap');
+const tourCapN = tourCapEl.querySelector('.cn');
+const tourCapL = tourCapEl.querySelector('.cl');
+let tourCapKey = '';
+function setTourCap(cap){
+  const k = cap ? cap.n : '';
+  if (tourCapKey === k) return;
+  tourCapKey = k;
+  if (!cap){ tourCapEl.classList.remove('show'); return; }
+  tourCapN.textContent = cap.n;
+  tourCapL.textContent = cap.l;
+  tourCapEl.classList.add('show');
+}
+function tourHerald(T, u){
+  if (u < .035){ setTourCap({ n:T.name, l:T.line }); return; }   /* the title card */
+  let best = null, bd = 1e9;
+  for (const c of T.caps || []){
+    if (c.r !== undefined){
+      const d2 = (camera.position.x - c.x)**2 + (camera.position.z - c.z)**2;
+      if (d2 < c.r*c.r && d2 < bd){ bd = d2; best = c; }
+    } else if (u >= c.a && u < c.b && bd > 0){ bd = 0; best = c; }
+  }
+  setTourCap(best);
+}
 
 function setFlightChips(){
   flyTourBtn.classList.toggle('on',  FLIGHT.mode==='tour'  || FLIGHT.next==='tour');
@@ -6663,6 +6850,7 @@ function enterAerial(){
 }
 function startFlightReturn(){
   if (FLIGHT.mode === 'none') return;
+  FLIGHT.tour = null; setTourCap(null);
   const cp = Math.cos(FLIGHT.savedPitch);
   _fdir.set(-Math.sin(FLIGHT.savedYaw)*cp, Math.sin(FLIGHT.savedPitch), -Math.cos(FLIGHT.savedYaw)*cp);
   _fv1.copy(player.pos).addScaledVector(_fdir, 40);
@@ -6672,12 +6860,14 @@ function startFlightReturn(){
 }
 function landFlight(){
   FLIGHT.mode = 'none'; FLIGHT.next = null;
+  FLIGHT.tour = null; setTourCap(null);
   player.yaw = FLIGHT.savedYaw; player.pitch = FLIGHT.savedPitch;
   if (started && !paused) dotEl.style.display = 'block';
   setFlightChips();
 }
 function flightPauseHere(){
   FLIGHT.mode = 'hover'; FLIGHT.next = null;
+  FLIGHT.tour = null; setTourCap(null);
   FLIGHT.hp.copy(camera.position);
   camera.getWorldDirection(_fdir);
   FLIGHT.hl.copy(camera.position).addScaledVector(_fdir, 60);
@@ -6708,7 +6898,7 @@ function applyFlight(t, dt){
         const nx = FLIGHT.next; FLIGHT.next = null; FLIGHT.useArc = false;
         if (nx === 'hover'){ FLIGHT.mode='hover'; FLIGHT.hp.copy(FLIGHT.b); FLIGHT.hl.copy(FLIGHT.lb); }
         else if (nx === 'orbit'){ FLIGHT.mode='orbit'; }
-        else if (nx === 'tour'){ FLIGHT.mode='tour'; FLIGHT.tourU=0; }
+        else if (nx === 'tour'){ FLIGHT.mode='tour'; FLIGHT.tourU=0; FLIGHT.lookSm.copy(FLIGHT.lb); }
         else if (nx === 'landed'){ landFlight(); }
         else if (nx === 'gate'){ landGate(); }
         setFlightChips();
@@ -6726,11 +6916,31 @@ function applyFlight(t, dt){
       camera.lookAt(0, 22, 0);
       break; }
     case 'tour': {
-      FLIGHT.tourU = Math.min(1, FLIGHT.tourU + dt/TOUR_DUR);
-      TOUR_CURVE.getPointAt(FLIGHT.tourU, camera.position);
-      TOUR_CURVE.getPointAt(Math.min(1, FLIGHT.tourU + .008), _fv1);
-      camera.lookAt(_fv1);
-      if (FLIGHT.tourU >= 1) flightBlendTo('hover', AERIAL_POS, AERIAL_LOOK, FLY_DUR*.8);
+      const T = FLIGHT.tour;
+      if (!T){ flightPauseHere(); break; }
+      const dur = PREFERS_STATIC ? T.dur*.45 : T.dur;
+      FLIGHT.tourU = Math.min(1, FLIGHT.tourU + dt/dur);
+      const u = FLIGHT.tourU, cv = tourCurve(T);
+      cv.getPointAt(u, camera.position);
+      /* the desired gaze: an authored target inside a gaze window,
+         else the road ahead — always through the smoothing lerp */
+      let gz = null;
+      if (T.gaze) for (const g of T.gaze) if (u >= g.a && u < g.b){ gz = g; break; }
+      if (gz) _fv1.set(gz.x, gz.y, gz.z);
+      else cv.getPointAt(T.closed ? (u + T.ahead) % 1 : Math.min(1, u + T.ahead), _fv1);
+      /* smooth the gaze; a discontinuity (harness jump, mode hand-off) snaps */
+      if (FLIGHT.lookSm.distanceTo(_fv1) > 30) FLIGHT.lookSm.copy(_fv1);
+      else FLIGHT.lookSm.lerp(_fv1, 1 - Math.exp(-dt*2.4));
+      camera.lookAt(FLIGHT.lookSm);
+      tourHerald(T, u);
+      /* THE PILGRIM'S WAY spends the arrival moment honestly — the veil
+         parts ahead of the eye if the walker has not yet crossed on foot */
+      if (T.key === 'pilgrim' && APPROACH.active && !APPROACH.crossed &&
+          camera.position.z < 127 && Math.abs(camera.position.x) < 8){
+        APPROACH.crossed = true;
+        if (APPROACH.el) APPROACH.el.classList.remove('show');
+      }
+      if (u >= 1){ FLIGHT.tour = null; setTourCap(null); flightPauseHere(); }
       break; }
   }
 }
@@ -6741,11 +6951,12 @@ const ROMAN12 = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 const gatePanelEl = document.getElementById('gatePanel');
 document.getElementById('gateList').innerHTML = TRIBES.map((n,k)=>
   `<button class="gateRow" data-k="${k}"><span class="gn">${ROMAN12[k]}</span><span class="gt">THE GATE OF ${n}</span></button>`).join('');
-function openGatePanel(){ if (!started || readerOpen || seekOpen) return; gatePanelEl.hidden = false; }
+function openGatePanel(){ if (!started || readerOpen || seekOpen) return; closeTourScroll(); gatePanelEl.hidden = false; }
 function closeGatePanel(){ gatePanelEl.hidden = true; }
 function flyToGate(k){
   closeGatePanel();
   if (!started || readerOpen || seekOpen || glide.active) return;
+  FLIGHT.tour = null; setTourCap(null);
   const a = k*PI/6, gx = Math.sin(a), gz = Math.cos(a);
   if (FLIGHT.mode === 'none'){ FLIGHT.savedYaw = player.yaw; FLIGHT.savedPitch = player.pitch; }
   WAYWALK.active = false;
@@ -6778,10 +6989,47 @@ document.getElementById('gateBtn').addEventListener('click', ()=>{
 document.getElementById('gateVeil').addEventListener('click', closeGatePanel);
 document.getElementById('gateList').addEventListener('click', e=>{
   const b = e.target.closest('.gateRow'); if (b) flyToGate(+b.dataset.k); });
-flyTourBtn.addEventListener('click', ()=>{
-  if (FLIGHT.mode==='tour' || FLIGHT.next==='tour'){ flightPauseHere(); return; }
-  TOUR_CURVE.getPointAt(0, _fv1); TOUR_CURVE.getPointAt(.012, _fv2);
-  flightBlendTo('tour', _fv1, _fv2, FLY_DUR*.7); });
+/* THE TOUR SCROLL — the menu of the five grand tours. Reachable from
+   the ground (path glyph / T) or aloft (the TOUR chip): choosing a
+   tour lifts the eye straight into its road; the feet stay where
+   they stand and RETURN/ESC always lands exactly there. */
+const tourPanelEl = document.getElementById('tourPanel');
+document.getElementById('tourList').innerHTML = GRAND_TOURS.map(t=>
+  `<button class="tourRow" data-key="${t.key}"><span class="tn">${t.name}</span><span class="td">${t.line}</span></button>`).join('');
+function openTourScroll(){
+  if (!started || readerOpen || seekOpen) return;
+  closeGatePanel();
+  for (const b of tourPanelEl.querySelectorAll('.tourRow'))
+    b.classList.toggle('playing', !!FLIGHT.tour && FLIGHT.tour.key === b.dataset.key);
+  tourPanelEl.hidden = false;
+  /* the scroll frees the hand (Law 43) — a captive cursor cannot choose */
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeTourScroll(){ tourPanelEl.hidden = true; }
+function startGrandTour(key){
+  const T = GRAND_TOURS.find(t=> t.key === key);
+  closeTourScroll();
+  if (!T || !started || readerOpen || seekOpen || glide.active) return;
+  if (FLIGHT.mode === 'none'){          /* rising from the feet — same covenant as the wing */
+    FLIGHT.savedYaw = player.yaw; FLIGHT.savedPitch = player.pitch;
+    WAYWALK.active = false;
+    dotEl.style.display = 'none';
+  }
+  FLIGHT.tour = T;
+  setTourCap({ n:T.name, l:T.line });   /* the title card rises with the eye */
+  const cv = tourCurve(T);
+  cv.getPointAt(0, _fv1); cv.getPointAt(.01, _fv2);
+  flightBlendTo('tour', _fv1, _fv2, FLY_DUR*.9);
+  aerialBtnEl.classList.add('on');
+  /* the air frees the hand (Law 43) */
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+flyTourBtn.addEventListener('click', openTourScroll);
+document.getElementById('tourBtn').addEventListener('click', ()=>{
+  tourPanelEl.hidden ? openTourScroll() : closeTourScroll(); });
+document.getElementById('tourVeil').addEventListener('click', closeTourScroll);
+document.getElementById('tourList').addEventListener('click', e=>{
+  const b = e.target.closest('.tourRow'); if (b) startGrandTour(b.dataset.key); });
 flyOrbitBtn.addEventListener('click', ()=>{
   if (FLIGHT.mode==='orbit' || FLIGHT.next==='orbit'){ flightPauseHere(); return; }
   const ang = Math.atan2(camera.position.x, camera.position.z || 1e-4);
@@ -6792,9 +7040,12 @@ flyOrbitBtn.addEventListener('click', ()=>{
 document.getElementById('flyReturn').addEventListener('click', startFlightReturn);
 addEventListener('keydown', e=>{
   if (e.code==='Escape' && !gatePanelEl.hidden){ closeGatePanel(); e.stopImmediatePropagation(); return; }
+  if (e.code==='Escape' && !tourPanelEl.hidden){ closeTourScroll(); e.stopImmediatePropagation(); return; }
   if (e.code==='Escape' && FLIGHT.mode!=='none' && FLIGHT.next!=='landed'){
     startFlightReturn(); e.stopImmediatePropagation(); return; }
   if (e.code==='KeyV' && started && !readerOpen && !seekOpen) enterAerial();
+  if (e.code==='KeyT' && started && !readerOpen && !seekOpen)
+    tourPanelEl.hidden ? openTourScroll() : closeTourScroll();
 }, true);
 
 /* THE READER REFORGED (Seer's Ruling R1, 2026-07-05) — plate above,
@@ -7830,7 +8081,7 @@ if (IS_TOUCH){
   /* the HUD chrome keeps its taps — a global preventDefault on touchstart
      suppresses the synthetic click, so every fixed button dies to the finger
      (THE FREED HAND: the Seer's iPad found lamp/aerial/gates all dead) */
-  const UI_CHROME = '#lampBtn,#aerialBtn,#gateBtn,#flightCtl,#gatePanel,#proving';
+  const UI_CHROME = '#lampBtn,#aerialBtn,#gateBtn,#tourBtn,#flightCtl,#gatePanel,#tourPanel,#proving';
   addEventListener('touchstart', e=>{
     if (!started || readerOpen || seekOpen) return;   /* the reader (or the lamp) owns the screen */
     let claimed = false;
@@ -8445,6 +8696,11 @@ window.__CITY = {
   THREE, scene, camera, player, keys, fruits,
   flight: FLIGHT, enterAerial, startFlightReturn, flyToGate,   /* THE SEER'S WINGS — test handles */
   get flightMode(){ return FLIGHT.mode + (FLIGHT.next ? '→'+FLIGHT.next : ''); },
+  tours: GRAND_TOURS, startGrandTour, tourCurve,               /* THE GRAND TOURS — test handles */
+  get tourState(){ return FLIGHT.tour ? { key:FLIGHT.tour.key, u:+FLIGHT.tourU.toFixed(4), cap:tourCapKey } : null; },
+  get cam(){ const d = new THREE.Vector3(); camera.getWorldDirection(d);
+    return { p:[+camera.position.x.toFixed(2), +camera.position.y.toFixed(2), +camera.position.z.toFixed(2)],
+             d:[+d.x.toFixed(3), +d.y.toFixed(3), +d.z.toFixed(3)] }; },
   get paused(){ return paused; }, set paused(v){ paused = !!v; },
   get pos(){ return [player.pos.x, player.pos.y, player.pos.z]; },
   setPos(x,y,z){ player.pos.set(x,y,z); },
