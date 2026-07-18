@@ -683,22 +683,30 @@ const gradePass = new ShaderPass({
     tDiffuse: { value: null },
     uAmt:     { value: qs.get('grade') === '0' ? 0 : 1 },
     uWarm:    { value: 1.0 },   /* GOAL 5 — the hour scales the warm cast (inside the chroma gate, Law 30) */
+    uZone:    { value: 0.0 },   /* V-6 — interior body: deeper luma contrast under a roof (luma-only, Law 30) */
   },
   vertexShader: `varying vec2 vUv;
     void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uAmt; uniform float uWarm; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uAmt; uniform float uWarm; uniform float uZone; varying vec2 vUv;
     void main(){
       vec4 tex = texture2D(tDiffuse, vUv);
       vec3 c = tex.rgb;
-      /* display-exposure breath — pull the milk off the whites */
-      c *= 0.94;
+      /* display-exposure breath — pull the milk off the whites.
+         V-6: in the interior zone the pull deepens (post-tonemap, so the
+         ACES shoulder cannot eat it) — the high-key interior descends to
+         where the pivot contrast can carve true body. */
+      c *= 0.94 - 0.11*uZone;
       /* high-pivot contrast ON LUMINANCE ONLY — hue-exact by
          construction, so no gold can drift toward red (Law 3):
          the city lives in the highlights, the body comes from
          pulling the mids DOWN, never lifting the whites */
       float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
-      float lc = 0.74 + (lum - 0.74)*1.22;   /* LOOP 13-C: pivot 0.78→0.74, slope 1.16→1.22 — more body in the mids, whites still roll off (value contrast, luma-only, Law 30) */
+      /* V-6: inside the sanctuary/hall the pivot dips and the slope deepens —
+         the compressed high-key interior gains true mid-value body */
+      float gpv = 0.74 - 0.05*uZone;
+      float gsl = 1.22 + 0.34*uZone;
+      float lc = gpv + (lum - gpv)*gsl;   /* LOOP 13-C: pivot 0.78→0.74, slope 1.16→1.22 — more body in the mids, whites still roll off (value contrast, luma-only, Law 30) */
       float l3 = clamp(lc, 0.0, 1.0);
       lc = mix(lc, l3*l3*(3.0 - 2.0*l3), 0.22);
       c *= lc / max(lum, 1e-4);
@@ -736,6 +744,7 @@ const HOUR = { fixed: null, h: .5, v: 0, rayMat: null, stars: null };
 /* LOOP 7 · PASS B — interior/exterior visibility: objects tagged
    userData.extOnly cull when the walker stands inside the throne hall */
 const HALL = { inside: false, cull: [], lastToggleMs: 0, prog: 0 };
+const INTZ = { z: 0 };   /* V-6 — the interior light zone (sanctuary + hall): 0 outside → 1 inside */
 /* LOOP 9 · PASS A — THE PEARLS (Rev 21:21): shared nacre uniforms for
    every gate; time + hour-breathing amplitude (no red in the ramp) */
 const NACRE = { t: { value: 0 }, amp: { value: .12 } };
@@ -8841,7 +8850,17 @@ function animate(){
   sun.position.copy(_sd).multiplyScalar(320);
   sun.color.setHSL(.075 + .035*h - .018*v + .008*Math.sin(cyc), .62 - .24*h + .16*v, .72 + .12*h - .10*v);
   sunSprite.position.copy(_sd).multiplyScalar(780);
-  renderer.toneMappingExposure = Math.max(.88, 0.93 + .04*Math.sin(cyc*.5) + .015*h - .07*v);   /* LOOP 13-C: base 0.95→0.93, noon boost .03→.015 — recovers highlight detail at the bright hours (value contrast, not darkness); floor stays .88 for LOOP 5's LEGIBLE WORD at vespers */
+  /* V-6 — THE MASTER LIGHT WITHIN: under a roof the sky's full exposure
+     compresses every value into the highlights (sanctuary mean measured
+     215/255 — milk without clipping). Inside the sanctuary or the hall
+     the exposure eases down with the bright hours (nothing at vespers —
+     the .88 LEGIBLE-WORD floor governs there), restoring the mid-value
+     body the vision's interiors live on. Eased, never snapped. */
+  const _inSanct = camera.position.x > 41 && camera.position.x < 87 &&
+                   camera.position.z > -22 && camera.position.z < 10 && camera.position.y < 18;
+  INTZ.z += (((HALL.inside || _inSanct) ? 1 : 0) - INTZ.z) * Math.min(1, dt*2.4);
+  renderer.toneMappingExposure = Math.max(.88, 0.93 + .04*Math.sin(cyc*.5) + .015*h - .07*v);   /* LOOP 13-C law intact — V-6 works purely in the display-space grade */
+  gradePass.uniforms.uZone.value = INTZ.z * (.35 + .65*h);   /* body deepens at the bright hours, gentle at vespers */
   gradePass.uniforms.uWarm.value = 1.35 - .8*h + .25*v;   /* warmth tracks the hour (Law 30 gate inside) */
   if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
   NACRE.t.value = t;
