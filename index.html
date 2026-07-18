@@ -1993,7 +1993,12 @@ function bake(){
                  baked city fabric and remain.
      angelStatue plinth base (placed at all 8 portal positions).
 ================================================================ */
-const SLOT_NAMES = ['treeOfLife','throne','fountain','gateArch','angelStatue'];
+/* LOOP P-C — THE PREPARED HOUSES (WO-20260714-04): five figure-slots added,
+   every anchor EMPTY until the Seer's Meshy GLBs land (statues are the
+   artistry of heavenly artists — his ruling; never a figure by primitive).
+   The manifest is the only key: drop a GLB + one manifest line, done. */
+const SLOT_NAMES = ['treeOfLife','throne','fountain','gateArch','angelStatue',
+                    'fountainAngel','causewayHost','marketKeeper','nicheFigure','sanctuaryHost'];
 const HEROES = {}, SLOT_STATUS = {};
 function registerHero(slot, group, anchors){ HEROES[slot] = { group, anchors }; }
 async function initSlots(){
@@ -5552,6 +5557,46 @@ function addBuilding(x,z,ry,big){
   heroAngel.add(anWM, anGM, anPM);
   registerHero('angelStatue', heroAngel, angelAnchors);
 
+  /* ========== LOOP P-C — THE PREPARED HOUSES (WO-20260714-04) ==========
+     Every place a sculpted figure will ever stand, anchored NOW so the
+     Seer's Meshy deposits land with zero code — a GLB + one manifest
+     line each. All groups empty (the loader clones straight into the
+     scene per anchor); zero visual change today. */
+  {
+    const mkHouse = (slot, anchors)=> registerHero(slot, new THREE.Group(), anchors);
+    /* the four angels at the fountain's base (board 2) — facing outward */
+    const fh = [];
+    for (const az of [45, 135, 225, 315]){
+      const a = az*D2R;
+      fh.push({ x: -52 + Math.sin(a)*6.9, y: 0, z: 8 + Math.cos(a)*6.9, ry: a });
+    }
+    mkHouse('fountainAngel', fh);
+    /* the host of the causeway (board 5) — five facing pairs down the walk */
+    const ch = [];
+    for (let k = 0; k < 5; k++){
+      const z = 126 + k*7;
+      ch.push({ x:  4.6, y: 0, z, ry: -PI/2 });
+      ch.push({ x: -4.6, y: 0, z, ry:  PI/2 });
+    }
+    mkHouse('causewayHost', ch);
+    /* the givers of the gifts — one behind each market stall (board 1,
+       the HEAVENLY MARKET: gifts freely given, never sold) */
+    const mk = [];
+    for (let i = 0; i < 6; i++){
+      const sx = (i%2 ? -4.4 : 4.4), z = 44 + i*7 + (i%2)*3;
+      mk.push({ x: sx + (sx > 0 ? 1.7 : -1.7), y: 0, z, ry: sx > 0 ? -PI/2 : PI/2 });
+    }
+    mkHouse('marketKeeper', mk);
+    /* the twelve niches of the throne hall (LOOP 8's prepared houses,
+       now formally slotted) — each figure on its niche base, facing out */
+    mkHouse('nicheFigure', nicheSpots.map(n => ({ x: n.x, y: .8, z: n.z, ry: n.ry })));
+    /* the sanctuary aisles — four hosts between the nave columns */
+    mkHouse('sanctuaryHost', [
+      { x: 54, y: .4, z: -13.5, ry: 0 },  { x: 68, y: .4, z: -13.5, ry: 0 },
+      { x: 54, y: .4, z:   1.5, ry: PI }, { x: 68, y: .4, z:   1.5, ry: PI },
+    ]);
+  }
+
   /* doves circling the spires */
   const birdGeo = new THREE.BufferGeometry();
   birdGeo.setAttribute('position', new THREE.Float32BufferAttribute([
@@ -8903,6 +8948,10 @@ window.__CITY = {
   THREE, scene, camera, player, keys, fruits,
   flight: FLIGHT, enterAerial, startFlightReturn, flyToGate,   /* THE SEER'S WINGS — test handles */
   get flightMode(){ return FLIGHT.mode + (FLIGHT.next ? '→'+FLIGHT.next : ''); },
+  /* P-C — THE PREPARED HOUSES: every figure-slot, its status, its anchors */
+  get houses(){ return SLOT_NAMES.map(s => ({ slot: s,
+    status: SLOT_STATUS[s] || 'UNRESOLVED',
+    anchors: (HEROES[s] && HEROES[s].anchors) ? HEROES[s].anchors.length : 0 })); },
   tours: GRAND_TOURS, startGrandTour, tourCurve,               /* THE GRAND TOURS — test handles */
   get tourState(){ return FLIGHT.tour ? { key:FLIGHT.tour.key, u:+FLIGHT.tourU.toFixed(4), cap:tourCapKey } : null; },
   get cam(){ const d = new THREE.Vector3(); camera.getWorldDirection(d);
