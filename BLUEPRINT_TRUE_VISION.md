@@ -15,12 +15,16 @@
 
 ## PART I — WHAT THE FIVE BOARDS TEACH (the gap report, 2026-07-14)
 
-**Board 1 — THE MARKET STREET.** Our Street of Gold already carries the other
-builder's market (stalls, awnings, wares, banners) — good bones. The vision
-adds: embroidered gold-silk canopies (ours read as flat cartoon stripes),
-HEAPED treasures on the counters (ours are a few bare spheres), carved relief
-on the flanking facades, wet-mirror pavement underfoot, garlands of green
-(WAITS on the Seer's asset rulings — no green by primitive).
+**Board 1 — THE HEAVENLY MARKET (the Seer's ruling, 2026-07-14).** "There are
+no human wares in heaven — they have no need of them." The market is HEAVENLY:
+its stalls offer GIFTS, freely given — scrolls of light and knowledge, orbs of
+wisdom, vials of new skills and new powers. NO commerce, NO money, NO worldly
+goods. The other builder's stalls/awnings/banners are good bones — enrich,
+never uproot. Gaps: canopies read as flat stripes vs woven gold-silk; the
+counters must carry GIFTS OF LIGHT, not produce; flanking facades plain.
+STATUES DOCTRINE (the Seer, same ruling): statues in the city are WORKS OF ART
+by heavenly artists — pure artistry, never worshipped, never representing
+objects of veneration. Sculpted figures arrive ONLY as the Seer's GLB deposits.
 
 **Board 2 — THE FOUNTAIN COURT.** Ours has the tiered fountain and gold rims.
 The vision adds: a RAINBOW standing in the spray, angel statues at the
@@ -56,25 +60,29 @@ every loop below PREPARES HOUSES for them.
 
 ## PART II — THE VISION LOOPS (rerunnable, one pass per run)
 
-### V-1 · THE MARKET MADE RICH (board 1)
+### V-1 · THE HEAVENLY MARKET (board 1, under the Seer's ruling)
 ```
-BUILD ORDER — V-1: THE MARKET MADE RICH
+BUILD ORDER — V-1: THE HEAVENLY MARKET
 [standard preamble]
-The Street of Gold's market stands (stalls, awnings, wares, banners —
-the other builder's hand; NEVER uproot it, only enrich). Per run, ONE:
- - THE CANOPIES: awning stripes become embroidered gold-silk — canvas
-   texture with woven pattern, scalloped fringes, subtle normal weave;
-   sag/sway by vertex if cheap (GPU only).
- - THE WARES: counters HEAPED — clustered instanced treasures (vessels,
-   fruit-gold, scroll-bundles, jeweled boxes; NO figures) with per-stall
-   variety from one atlas + one InstancedMesh.
- - THE FACADES OF THE STREET: carved relief courses on the flanking
-   marble (LACE normal recipe — the normal IS the ornament, L16), arcade
-   shadows deepened (value, L38).
- - THE WET STREET: the existing mirror strengthened locally down the
-   market run; puddle-break normal ripple (Law 31 pricing honored).
- - KEEPERS' PLACES: one marked anchor per stall (empty, named in code)
-   — prepared houses for the Seer's citizen GLBs.
+THE RULING (the Seer, 2026-07-14): no human wares in heaven. The market
+offers GIFTS, freely given — nothing is bought, nothing is sold, no money
+exists here. The stalls stand (the other builder's hand; NEVER uproot —
+only transfigure). Per run, ONE:
+ - THE GIFTS OF LIGHT: the counters carry heavenly gifts — SCROLLS OF
+   KNOWLEDGE (glowing rolled scrolls, gold-capped), ORBS OF WISDOM
+   (soft-lit spheres of white-gold light), VIALS OF NEW POWERS (crystal
+   phials with inner light), CROWNS AND GIFTS OF SKILL (laurel, lyre,
+   quill — emblems of arts to be received). One instanced atlas of
+   gift-forms, emissive whispers (below the bloom line), per-stall
+   variety. Any sphere/produce that reads WORLDLY is retired.
+ - THE CANOPIES: awning stripes become woven gold-silk — canvas texture,
+   scalloped fringes, subtle normal weave; GPU sway if cheap.
+ - THE GIVERS' PLACES: one marked anchor per stall — prepared houses for
+   the Seer's angel-artisan GLBs (the givers of the gifts).
+ - THE FACADES OF THE STREET: carved relief courses (LACE normal, L16),
+   arcade shadow value (L38).
+ - THE WET STREET: local mirror strengthening down the market run
+   (Law 31 pricing honored).
 Vantages: street north+south, stall face-press, gate-plaza approach.
 ```
 
@@ -236,7 +244,19 @@ ingestion is one-word confirmable. NO placeholder figures, ever.
 6. **F-4 THE ATLAS → P-A THE OPEN DOORS** (batches) **+ P-B THE NAMING**.
 7. **F-2 THE RECKONING** — score the city honestly when the dust settles.
 
+SEALED RULINGS OF 2026-07-14 (the Seer's own words, recorded):
+ - THE HEAVENLY MARKET: no human wares; gifts of light, knowledge,
+   wisdom, skills, powers — freely given. Never make it worldly.
+ - STATUES ARE ARTISTRY: works of heavenly artists, never worshipped —
+   lawful as the Seer's GLB deposits, never by primitive.
+ - THE ORDER IS APPROVED: P-C → V-6 → V-3 → V-5 → V-1/V-2/V-4 →
+   F-4 + P-A/P-B → F-2. Execution authority granted; small decisions by
+   the builder's wisdom; his circles re-aim any loop on sight.
+ - THE MESHY RUNBOOK: produced by P-C (deposit guide) and handed to the
+   Seer for his weekend sculpting — figures, budgets, pipeline, dropbox.
+
 ON THE SEER'S HANDS: the Meshy GLB deposits (angels, citizens, the true
-Tree) · the building-name roll (P-B) · rulings: greenery's return (urns/
-garlands/beds wait on it) · dome-fresco treatment (board 3) · G-2 horizon
-strips in the Drive `horizon` folder (still unsealed IDs).
+Tree — his weekend work, guided by P-C's runbook) · the building-name
+roll (P-B) · rulings: greenery's return (urns/garlands/beds wait on it) ·
+dome-fresco treatment (board 3) · G-2 horizon strips in the Drive
+`horizon` folder (still unsealed IDs).
