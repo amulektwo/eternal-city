@@ -4599,6 +4599,67 @@ function addBuilding(x,z,ry,big){
     xf(arc, cx, 14.2, cz);
     P.gold.push(arc);
   }
+  /* ========== LOOP V-3 — THE INLAID FLOOR (board 3) ==========
+     The vision's basilica lives on VALUE CONTRAST: dark marble figures
+     inlaid in the pale floor. The inlay canvas draws ONLY the dark
+     figures and gold hairlines — transparent elsewhere, so the true
+     marble breathes through. One sheet, +1 draw, reverent geometry
+     (stars, rings, rays — nothing figurative). */
+  {
+    const inlayTex = canvasTex(2048, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      /* soft-edge the strokes: a 3px canvas blur reads as stone-cut
+         anti-aliasing at feet-down range (kills the texel staircase) */
+      g.shadowColor = 'rgba(43,34,28,.6)'; g.shadowBlur = 3;
+      const dark = 'rgba(43,34,28,', gold = 'rgba(158,120,42,';
+      const cx2 = w/2, cy2 = h/2;
+      /* border band: twin gold hairlines framing a dark fret ribbon */
+      const bd = (inset, lw, col, a)=>{ g.strokeStyle = col + a + ')'; g.lineWidth = lw;
+        g.strokeRect(inset, inset*2.4, w - inset*2, h - inset*4.8); };
+      bd(60, 6, gold, .9); bd(88, 20, dark, .8); bd(116, 6, gold, .9);
+      /* the great central medallion — rings, an eight-point star, rays */
+      const R = 420;
+      g.strokeStyle = dark + '.85)'; g.lineWidth = 24;
+      g.beginPath(); g.arc(cx2, cy2, R, 0, TAU); g.stroke();
+      g.strokeStyle = gold + '.95)'; g.lineWidth = 6;
+      for (const rr2 of [R-28, R+28]){ g.beginPath(); g.arc(cx2, cy2, rr2, 0, TAU); g.stroke(); }
+      g.strokeStyle = dark + '.8)'; g.lineWidth = 14;
+      g.beginPath(); g.arc(cx2, cy2, R*.52, 0, TAU); g.stroke();
+      /* eight-point star of two offset squares (the city's own geometry) */
+      g.strokeStyle = dark + '.85)'; g.lineWidth = 18;
+      for (const rot of [0, PI/4]){
+        g.save(); g.translate(cx2, cy2); g.rotate(rot);
+        g.strokeRect(-R*.34, -R*.34, R*.68, R*.68); g.restore();
+      }
+      /* rays between medallion and border */
+      g.strokeStyle = dark + '.55)'; g.lineWidth = 10;
+      for (let k = 0; k < 16; k++){
+        const a = k/16*TAU;
+        g.beginPath();
+        g.moveTo(cx2 + Math.cos(a)*(R+68), cy2 + Math.sin(a)*(R+68)*.62);
+        g.lineTo(cx2 + Math.cos(a)*(R+184), cy2 + Math.sin(a)*(R+184)*.62);
+        g.stroke();
+      }
+      /* twin side medallions on the nave axis */
+      for (const mx of [w*.17, w*.83]){
+        g.strokeStyle = dark + '.8)'; g.lineWidth = 16;
+        g.beginPath(); g.arc(mx, cy2, 184, 0, TAU); g.stroke();
+        g.strokeStyle = gold + '.9)'; g.lineWidth = 6;
+        g.beginPath(); g.arc(mx, cy2, 156, 0, TAU); g.stroke();
+        g.save(); g.translate(mx, cy2); g.rotate(PI/4);
+        g.strokeStyle = dark + '.75)'; g.lineWidth = 12;
+        g.strokeRect(-104, -104, 208, 208); g.restore();
+      }
+    }, 2048);
+    inlayTex.anisotropy = 16;
+    const inlayMat = new THREE.MeshStandardMaterial({
+      map: inlayTex, transparent: true, roughness: .34, metalness: .05,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const inlay = new THREE.Mesh(new THREE.PlaneGeometry(40, 15.5).rotateX(-PI/2), inlayMat);
+    inlay.position.set(63, .415, CZ);
+    inlay.receiveShadow = SHADOWS;
+    scene.add(inlay);
+  }
   /* altar platform + steps + altar + flame */
   P.white.push(xf(new THREE.BoxGeometry(8, 1, 13), 80.5, .9, CZ));
   P.gold.push(xf(new THREE.BoxGeometry(8.4,.14,13.4), 80.5, 1.44, CZ));
@@ -5156,6 +5217,39 @@ function addBuilding(x,z,ry,big){
       P.glow.push(xf(new THREE.PlaneGeometry(.3,.58), lx,1.98,lz, la));
       P.glow.push(xf(new THREE.PlaneGeometry(.3,.58), lx,1.98,lz, la+PI/2));
       addCircle(lx,lz,.3);
+    }
+    /* LOOP V-3 — THE INLAID RING (board 3, the hall's floor): a dark
+       fret-and-gold band circling the hall between the sea of glass and
+       the seats — value on the pale floor. Transparent canvas ring,
+       +1 draw, clear of the carpet's run and every S-1 work. */
+    {
+      const ringTex = canvasTex(1024, (g,w,h)=>{
+        g.clearRect(0,0,w,h);
+        const cx2 = w/2, cy2 = h/2, dark = 'rgba(43,34,28,', gold = 'rgba(158,120,42,';
+        const rMid = w*.395;
+        g.strokeStyle = dark + '.8)'; g.lineWidth = w*.032;
+        g.beginPath(); g.arc(cx2, cy2, rMid, 0, TAU); g.stroke();
+        g.strokeStyle = gold + '.9)'; g.lineWidth = 3;
+        for (const rr2 of [rMid - w*.024, rMid + w*.024]){
+          g.beginPath(); g.arc(cx2, cy2, rr2, 0, TAU); g.stroke(); }
+        /* greek-key beats around the band */
+        g.strokeStyle = gold + '.85)'; g.lineWidth = 4;
+        for (let k = 0; k < 24; k++){
+          const a = k/24*TAU;
+          g.save(); g.translate(cx2 + Math.cos(a)*rMid, cy2 + Math.sin(a)*rMid);
+          g.rotate(a + PI/2);
+          g.strokeRect(-w*.010, -w*.010, w*.020, w*.020);
+          g.restore();
+        }
+      }, 1024);
+      ringTex.anisotropy = 8;
+      const ringMat = new THREE.MeshStandardMaterial({
+        map: ringTex, transparent: true, roughness: .34, metalness: .05,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const ring = new THREE.Mesh(new THREE.PlaneGeometry(25.4, 25.4).rotateX(-PI/2), ringMat);
+      ring.position.set(CX, .062, CZ);
+      ring.receiveShadow = SHADOWS;
+      scene.add(ring);
     }
     /* THE FOUR AND TWENTY SEATS (Rev 4:4) — a ring of elder seats about
        the throne, EMPTY (no figure by primitive — the Seer's law). White
