@@ -725,3 +725,15 @@ Board 5's processional bridge — and a deep old wound found and healed beneath 
 - **PRICE:** +1 draw (lace) + glows; plinths/lamps merged. Causeway pose 369.2k tris. Zero console/page errors; nav+reader regression green; 144 sha EXACT.
 - **CANDIDATES for the Seer's eye:** the gold rail caps and plinth bands read dark walnut-brown under the IBL from walking angles (horizontal gold mirrors the zenith) — handsome value contrast, but his call whether it should read GOLD; the piers below the deck (the from-the-sea read) wait for this loop's rerun.
 - **LAW-CANDIDATE:** a world-edge clamp must name every corridor built after it — GOAL 6 built a bridge through a rail that predated it, and nothing failed loudly; probe the walkable sweep of every new corridor against ALL standing clamps.
+
+## LOOP 30 — V-1 THE HEAVENLY MARKET, pass 1 (WO-20260714-04, fifth loop) — 2026-07-14
+The Seer's ruling made flesh: **no human wares in heaven.** The market's 30 worldly produce-spheres (30 separate meshes, 30 draws) are RETIRED; the counters now carry the GIFTS, freely given:
+- **SCROLLS OF KNOWLEDGE** — rolled parchment, gold-banded, stacked on the counters (soft parchment luminance .22).
+- **ORBS OF WISDOM** — soft-lit white-gold spheres on gold ring-stands (emissive 1.25, far below the 1.8 bloom line — lanterns of thought, never glare).
+- **VIALS OF NEW POWERS** — crystal phials (transparent, glassy) with inner light-cores and gold stoppers.
+- **EMBLEMS OF SKILL** — gold laurels and a quill with a gold nib (the arts, waiting to be received).
+- **THE WOVEN CANOPIES** — the flat cartoon stripes become gold-silk: warp shading in the gold bands, a weft crosshatch, deterministic thread-glints.
+- **PRICE: net −27 draws** (30 sphere meshes → 3 merged gift meshes: parchment, orb+cores, phial glass; all gold rides P.gold). **LAYOUT LAW kept:** the old spheres drew 60 numbers from the global rng — burned unchanged, so every later seeded layout stands byte-identical; all gift placement runs on a LOCAL mulberry32(7177).
+- **PROVEN:** market boards (phials with inner light and orbs read on the counters; silk weave reads on the canopies); street control mean unmoved (198.2→198.3); Tree red-scan A/B judged with a repeat-capture noise measurement — same-build captures vary ±550/100k from the fruit-pulse phase, and V-1's delta sits inside that band with the market fully out of the Tree frame (L3 holds). Zero console errors; reader+nav regression green; 144 sha EXACT.
+- **INSTRUMENT NOTE (for future scans):** the strict red-dominance scan carries ~±550/100k animation-phase noise at the Tree pose — matched verdicts need repeat-capture medians or a frozen pulse, never a single pair.
+- **REMAINING V-1 RERUNS:** facade relief courses, the wet street, keeper-arrival dressing when the Seer's angel-artisans land.

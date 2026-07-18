@@ -963,10 +963,23 @@ const noiseTex = canvasTex(256, (g,w,h)=>{
 });
 noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
 
-const canopyStripeTex = canvasTex(128, (g,w,h)=>{
+const canopyStripeTex = canvasTex(256, (g,w,h)=>{
+  /* V-1 THE HEAVENLY MARKET — woven gold-silk: soft warp stripes, a weft
+     crosshatch, and thread-glints (no more flat cartoon stripes) */
   for (let i=0;i<8;i++){
-    g.fillStyle = i%2 ? '#f7ead0' : '#e2b74e';
+    g.fillStyle = i%2 ? '#f7ead0' : '#e6bd58';
     g.fillRect(i*w/8, 0, w/8, h);
+    if (i%2){   /* warp shading inside the gold bands */
+      g.fillStyle = 'rgba(190,140,50,.18)';
+      g.fillRect(i*w/8, 0, 3, h); g.fillRect((i+1)*w/8 - 3, 0, 3, h);
+    }
+  }
+  g.strokeStyle = 'rgba(120,90,40,.10)'; g.lineWidth = 1;   /* the weft */
+  for (let y = 0; y < h; y += 5){ g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  for (let k = 0; k < 130; k++){   /* thread-glints (deterministic lattice) */
+    const gx = (k*97) % w, gy = (k*53) % h;
+    g.fillStyle = 'rgba(255,236,170,.30)';
+    g.fillRect(gx, gy, 3, 1);
   }
 });
 const bannerTex = canvasTex(256, (g,w,h)=>{
@@ -3014,8 +3027,22 @@ function addBuilding(x,z,ry,big){
   const canM = new THREE.Mesh(mergeGeometries(canParts), canMat);
   canM.castShadow = SHADOWS; scene.add(canM);
 
-  /* market stalls */
-  const goodsCols = [0xe2b74e, 0xc8502e, 0xf3ecd8, 0x9ec78a, 0xe88a6a];
+  /* market stalls — V-1 THE HEAVENLY MARKET (the Seer's ruling,
+     2026-07-14): no human wares in heaven. The counters carry GIFTS,
+     freely given — scrolls of knowledge, orbs of wisdom, vials of new
+     powers, emblems of skill. The 30 worldly produce-spheres (30 draws)
+     are RETIRED; the gifts merge into three shared meshes (+3 draws).
+     LAYOUT LAW: the old spheres drew 60 numbers from the global rng —
+     those draws are burned unchanged so every later layout stands. */
+  const parchMat = new THREE.MeshStandardMaterial({ color:0xf6edd8,
+    emissive:0xfff3d6, emissiveIntensity:.22, roughness:.58, metalness:.04 });
+  const orbMat = new THREE.MeshStandardMaterial({ color:0xfff3d6,
+    emissive:0xffe2a6, emissiveIntensity:1.25, roughness:.3, metalness:.1 });
+  const phialMat = new THREE.MeshStandardMaterial({ color:0xdfeef7,
+    transparent:true, opacity:.42, roughness:.12, metalness:0, envMapIntensity:1.0 });
+  const parchParts = [], orbParts = [], phialParts = [];
+  const vr = mulberry32(7177);
+  const vrr = (a,b)=> a + vr()*(b-a);
   for (let i=0;i<6;i++){
     const sx = (i%2 ? -4.4 : 4.4), z = 44 + i*7 + (i%2)*3;
     P.ivory.push(xf(new THREE.BoxGeometry(3,1,1.3), sx, .5, z));
@@ -3025,14 +3052,46 @@ function addBuilding(x,z,ry,big){
     const cg = new THREE.PlaneGeometry(3.6,2);
     xf(cg, sx, 3.5, z, 0, 1,1,1, .28, 0);
     const cm = new THREE.Mesh(cg, canMat); cm.castShadow = SHADOWS; scene.add(cm);
-    for (let gI=0;gI<5;gI++){
-      const gm = new THREE.MeshStandardMaterial({ color:goodsCols[(i+gI)%5], roughness:.5 });
-      const gS = new THREE.Mesh(new THREE.SphereGeometry(.16,8,6), gm);
-      gS.position.set(sx+rr(-1.2,1.2), 1.24, z+rr(-.4,.4));
-      scene.add(gS);
+    for (let gI=0;gI<5;gI++){ rr(-1.2,1.2); rr(-.4,.4); }   /* the burned draws (layout law) */
+    const kind = i % 4;
+    if (kind === 0){        /* SCROLLS OF KNOWLEDGE — rolled, gold-banded */
+      for (let k=0;k<5;k++){
+        const gx = sx + vrr(-1.1,1.1), gz = z + vrr(-.34,.34), gy = k<4 ? 1.18 : 1.32;
+        parchParts.push(xf(new THREE.CylinderGeometry(.07,.07,.54,8).rotateZ(PI/2), gx, gy, gz, vrr(-.3,.3)));
+        P.gold.push(xf(new THREE.CylinderGeometry(.075,.075,.06,8).rotateZ(PI/2), gx, gy, gz, 0));
+      }
+    } else if (kind === 1){ /* ORBS OF WISDOM — soft-lit spheres on gold rings */
+      for (let k=0;k<4;k++){
+        const gx = sx + vrr(-1.1,1.1), gz = z + vrr(-.32,.32);
+        orbParts.push(xf(new THREE.SphereGeometry(.13,12,9), gx, 1.26, gz));
+        P.gold.push(xf(new THREE.TorusGeometry(.09,.022,6,14).rotateX(PI/2), gx, 1.13, gz));
+      }
+    } else if (kind === 2){ /* VIALS OF NEW POWERS — crystal phials, inner light */
+      for (let k=0;k<5;k++){
+        const gx = sx + vrr(-1.1,1.1), gz = z + vrr(-.32,.32);
+        phialParts.push(xf(new THREE.CylinderGeometry(.05,.06,.26,8), gx, 1.25, gz));
+        phialParts.push(xf(new THREE.CylinderGeometry(.016,.05,.09,8), gx, 1.42, gz));
+        orbParts.push(xf(new THREE.CylinderGeometry(.02,.02,.18,6), gx, 1.24, gz));
+        P.gold.push(xf(new THREE.CylinderGeometry(.02,.026,.05,6), gx, 1.49, gz));
+      }
+    } else {                /* EMBLEMS OF SKILL — laurel, quill, the gift of arts */
+      for (let k=0;k<2;k++){
+        const gx = sx + vrr(-1.0,1.0), gz = z + vrr(-.3,.3);
+        P.gold.push(xf(new THREE.TorusGeometry(.16,.028,6,18).rotateX(PI/2), gx, 1.14, gz));
+      }
+      const qx = sx + vrr(-.9,.9), qz = z + vrr(-.3,.3);
+      parchParts.push(xf(new THREE.BoxGeometry(.02,.015,.42), qx, 1.14, qz, .6));
+      P.gold.push(xf(new THREE.ConeGeometry(.018,.06,6).rotateX(PI/2), qx, 1.14, qz + .22, .6));
     }
     addBox(sx-1.7, sx+1.7, z-.9, z+.9);
   }
+  const asNI = a => a.map(g => g.index ? g.toNonIndexed() : g);
+  if (parchParts.length){ const m = new THREE.Mesh(mergeGeometries(asNI(parchParts)), parchMat);
+    m.castShadow = SHADOWS; m.frustumCulled = false; scene.add(m); }
+  if (orbParts.length){ const m = new THREE.Mesh(mergeGeometries(asNI(orbParts)), orbMat);
+    m.frustumCulled = false; scene.add(m); }
+  if (phialParts.length){ const m = new THREE.Mesh(mergeGeometries(asNI(phialParts)), phialMat);
+    m.frustumCulled = false; scene.add(m); }
 
   /* banners across the street */
   for (let bi=0; bi<3; bi++){
