@@ -5674,12 +5674,13 @@ function addBuilding(x,z,ry,big){
       fh.push({ x: -52 + Math.sin(a)*6.9, y: 0, z: 8 + Math.cos(a)*6.9, ry: a });
     }
     mkHouse('fountainAngel', fh);
-    /* the host of the causeway (board 5) — five facing pairs down the walk */
+    /* the host of the causeway (board 5) — five facing pairs down the
+       walk, each standing ON its V-5 plinth (top y 1.18, x ±4.85) */
     const ch = [];
     for (let k = 0; k < 5; k++){
-      const z = 126 + k*7;
-      ch.push({ x:  4.6, y: 0, z, ry: -PI/2 });
-      ch.push({ x: -4.6, y: 0, z, ry:  PI/2 });
+      const z = 130 + k*7;
+      ch.push({ x:  4.85, y: 1.18, z, ry: -PI/2 });
+      ch.push({ x: -4.85, y: 1.18, z, ry:  PI/2 });
     }
     mkHouse('causewayHost', ch);
     /* the givers of the gifts — one behind each market stall (board 1,
@@ -6498,6 +6499,68 @@ const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:nu
   addBox(-CW-.6, CW+.6, z1c - .45, z1c + .45);
   platforms.push((x, z)=> (Math.abs(x) <= CW + .2 && z > z0c - .5 && z < z1c) ? 0 : -Infinity);
 
+  /* ========== LOOP V-5 — THE BRIDGE OF ANGELS (board 5) ==========
+     The arrival becomes a processional bridge: pierced lace crest on the
+     parapets (Law 44 — the silhouette reads), carved plinths marching in
+     five pairs (EMPTY — the causewayHost houses; the Seer's angels land
+     here), and gold lamps of the way between them. The piers below the
+     deck wait for this loop's next rerun (the from-the-sea read). */
+  {
+    /* THE LACE CREST — pierced diamond fretwork above the gilt rail,
+       between the posts; one alpha-card mesh, both sides, +1 draw */
+    const laceTex = canvasTex(256, (g,w,h)=>{
+      g.clearRect(0,0,w,h);
+      g.strokeStyle = 'rgba(243,236,216,1)'; g.lineWidth = 7;
+      for (let x = -h; x < w + h; x += 32){
+        g.beginPath(); g.moveTo(x, 0); g.lineTo(x + h, h); g.stroke();
+        g.beginPath(); g.moveTo(x + h, 0); g.lineTo(x, h); g.stroke();
+      }
+      g.strokeStyle = 'rgba(243,236,216,1)'; g.lineWidth = 10;
+      g.strokeRect(2, 2, w - 4, h - 4);
+    }, 64);
+    laceTex.wrapS = THREE.RepeatWrapping;
+    const laceMat = new THREE.MeshStandardMaterial({
+      map:laceTex, alphaTest:.5, side:THREE.DoubleSide,
+      color:0xf3ecd8, roughness:.6, metalness:.05, envMapIntensity:.6 });
+    const laceParts = [];
+    for (const sx of [-1, 1]){
+      const lg = new THREE.PlaneGeometry(len - 2, .52, 1, 1);
+      const uv = lg.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * (len - 2) / 1.6);   /* square repeats */
+      lg.rotateY(PI/2);
+      xf(lg, sx*CW, 1.62, zc);
+      laceParts.push(lg.toNonIndexed());
+    }
+    const lace = new THREE.Mesh(mergeGeometries(laceParts), laceMat);
+    lace.frustumCulled = false;
+    scene.add(lace);
+    /* THE PLINTHS OF THE HOST — five carved pairs, gold-banded, EMPTY */
+    for (let k = 0; k < 5; k++){
+      const z = 130 + k*7;
+      for (const sx of [-1, 1]){
+        const px = sx*4.85;
+        P.white.push(xf(new THREE.BoxGeometry(1.2, .28, 1.2), px, .14, z));       /* base step */
+        P.white.push(xf(new THREE.BoxGeometry(1.0, .78, 1.0), px, .67, z));       /* shaft */
+        P.gold.push(xf(new THREE.BoxGeometry(1.06, .09, 1.06), px, .50, z));      /* gold band */
+        P.white.push(xf(new THREE.BoxGeometry(1.14, .12, 1.14), px, 1.12, z));    /* cap */
+        P.gold.push(xf(new THREE.BoxGeometry(.72, .05, .05), px + (sx>0?-1:1)*.0, .92, z + .53));  /* carved front strip */
+        addCircle(px, z, .75);
+      }
+      /* THE LAMPS OF THE WAY — a gold lamp rising from the parapet rail
+         at the midpoint between plinth stations, flame-orb + glow */
+      if (k < 4){
+        const lz = z + 3.5;
+        for (const sx of [-1, 1]){
+          P.gold.push(xf(new THREE.CylinderGeometry(.05, .08, 1.7, 6), sx*CW, 2.15, lz));
+          P.gold.push(xf(new THREE.CylinderGeometry(.16, .07, .2, 6), sx*CW, 3.05, lz));
+          P.glow.push(xf(new THREE.PlaneGeometry(.26, .5), sx*CW, 3.35, lz));
+          P.glow.push(xf(new THREE.PlaneGeometry(.26, .5), sx*CW, 3.35, lz, PI/2));
+          glows.push(mkGlow(sx*CW, 3.35, lz, 2.2, 0xffd98a, .45));
+        }
+      }
+    }
+  }
+
   /* THE PORTAL VEIL — soft drifting mist filling the arch, hiding the axis
      until the walker crosses. Normal-blended white cloud (occludes, unlike
      the additive shafts). One draw. */
@@ -6666,14 +6729,20 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
     }
   }
   /* the invisible rail before the falls — ground walkers only; the
-     rampart has its own parapets */
+     rampart has its own parapets. V-5 HEALING: the CAUSEWAY corridor is
+     exempt — the rail was clamping the whole arrival bridge to r127.4
+     (spawn included) since GOAL 6; the deck's own parapet and far-end
+     colliders guard its edges, so the rail stands down over the deck. */
   if (feetY < 8.0){
     const r = Math.hypot(px,pz);
-    const a = angOf(px,pz);
-    const lim = (angDiff(a,TERR_A) < TERR_HALF) ? TERR_RAIL-.5 : RAIL_R;
-    if (r > lim){
-      const sc = lim / r;
-      px *= sc; pz *= sc;
+    const onCauseway = Math.abs(px) <= 6.25 && pz > 100 && pz < 160.5;
+    if (!onCauseway){
+      const a = angOf(px,pz);
+      const lim = (angDiff(a,TERR_A) < TERR_HALF) ? TERR_RAIL-.5 : RAIL_R;
+      if (r > lim){
+        const sc = lim / r;
+        px *= sc; pz *= sc;
+      }
     }
   }
   /* throne hall wall ring */
