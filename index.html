@@ -3836,6 +3836,70 @@ function addBuilding(x,z,ry,big){
   particleMeshes.push(spray);
   registerHero('fountain', heroFountain, [{ x:FX, y:0, z:FZ, ry:0 }]);
 
+  /* ========== LOOP V-2 — THE COURT OF THE RAINBOW (board 2) ==========
+     Pass 1: the rainbow stands IN the spray, six carved urns ring the
+     court (EMPTY of green — the Seer's ruling governs life), and four
+     plinths rise at the fountain's base for his angels (the
+     fountainAngel houses). The court's own paving is already rich —
+     its pattern waits on his circle (rerun scope). */
+  {
+    /* THE RAINBOW IN THE SPRAY — an emerald-to-rose bow arcing through
+       the mist above the second tier; hour-linked like the confluence
+       (dawn/vespers strongest), additive whisper, +1 draw. */
+    const bowG = new THREE.TorusGeometry(5.5, .62, 8, 44, PI);
+    const bowM = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, side:THREE.DoubleSide,
+      blending:THREE.AdditiveBlending,
+      uniforms:{ uTime:{value:0}, uAmp:{value:.42} },
+      vertexShader:`varying vec3 vP;
+        void main(){ vP=position;
+          gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime,uAmp; varying vec3 vP;
+        void main(){
+          float r = length(vP.xy);
+          float t = clamp((r-4.88)/1.24, 0., 1.);
+          vec3 col = mix(vec3(.48,.22,.55), vec3(.18,.34,.66), smoothstep(.0,.25,t));   /* violet -> blue */
+          col = mix(col, vec3(.14,.52,.32), smoothstep(.28,.5,t));                      /* -> emerald */
+          col = mix(col, vec3(.72,.6,.18),  smoothstep(.52,.74,t));                     /* -> gold */
+          col = mix(col, vec3(.66,.28,.24), smoothstep(.78,1.,t));                      /* -> rose rim */
+          float breathe = .84 + .16*sin(uTime*.6);
+          float ends = smoothstep(.02,.16,abs(atan(vP.y,vP.x)));
+          gl_FragColor = vec4(col, uAmp * breathe * ends);
+        }`});
+    const bow = new THREE.Mesh(bowG, bowM);
+    bow.position.set(FX, 3.1, FZ);
+    bow.rotation.y = .30;   /* nearly faces the court's north approach, still crossing the spray */
+    scene.add(bow);
+    tickers.push(t=>{ bowM.uniforms.uTime.value = t;
+      bowM.uniforms.uAmp.value = .42 * (1 + (1 - HOUR.h)*.85 + HOUR.v*.4); });
+    /* THE URNS — six carved marble-and-gold urns on the old garden ring
+       (r15.4, clear of the walkers' circuits — Law 15), EMPTY until the
+       Seer's word returns the green. Lathe-carved, merged, zero draws. */
+    const urnPts = [
+      new THREE.Vector2(.001,0), new THREE.Vector2(.34,0), new THREE.Vector2(.42,.06),
+      new THREE.Vector2(.30,.14), new THREE.Vector2(.26,.34), new THREE.Vector2(.44,.66),
+      new THREE.Vector2(.52,.92), new THREE.Vector2(.46,1.06), new THREE.Vector2(.56,1.12),
+    ];
+    for (let u = 0; u < 6; u++){
+      const ua = u/6*TAU + .55;
+      const ux = FX + Math.sin(ua)*15.4, uz = FZ + Math.cos(ua)*15.4;
+      const urn = new THREE.LatheGeometry(urnPts, 14);
+      P.white.push(xf(urn, ux, .1, uz));
+      P.gold.push(xf(new THREE.TorusGeometry(.56,.035,6,18).rotateX(PI/2), ux, 1.22, uz));
+      P.gold.push(xf(new THREE.CylinderGeometry(.36,.44,.1,12), ux, .05, uz));
+      addCircle(ux, uz, .85);
+    }
+    /* THE PLINTHS OF THE FOUNTAIN ANGELS — four at the base diagonals
+       (under the P-C fountainAngel anchors, re-seated to their tops) */
+    for (const az of [45, 135, 225, 315]){
+      const a = az*D2R;
+      const px2 = FX + Math.sin(a)*6.9, pz2 = FZ + Math.cos(a)*6.9;
+      P.white.push(xf(new THREE.CylinderGeometry(.7,.82,.95,8), px2, .48, pz2, a));
+      P.gold.push(xf(new THREE.CylinderGeometry(.74,.74,.07,8), px2, .99, pz2, a));
+      addCircle(px2, pz2, .95);
+    }
+  }
+
   if (TIER>0){
     const pl = new THREE.PointLight(0xffe0a0, 46, 26, 2);
     pl.position.set(FX, 4.8, FZ); scene.add(pl);
@@ -5726,11 +5790,12 @@ function addBuilding(x,z,ry,big){
      scene per anchor); zero visual change today. */
   {
     const mkHouse = (slot, anchors)=> registerHero(slot, new THREE.Group(), anchors);
-    /* the four angels at the fountain's base (board 2) — facing outward */
+    /* the four angels at the fountain's base (board 2) — facing outward,
+       each standing on its V-2 plinth (top y 1.03) */
     const fh = [];
     for (const az of [45, 135, 225, 315]){
       const a = az*D2R;
-      fh.push({ x: -52 + Math.sin(a)*6.9, y: 0, z: 8 + Math.cos(a)*6.9, ry: a });
+      fh.push({ x: -52 + Math.sin(a)*6.9, y: 1.03, z: 8 + Math.cos(a)*6.9, ry: a });
     }
     mkHouse('fountainAngel', fh);
     /* the host of the causeway (board 5) — five facing pairs down the
