@@ -8312,6 +8312,145 @@ function buildGateVaults(index){
     tex.anisotropy = 8;
     return tex;
   }
+
+  /* ==============================================================
+     V-4 · THE LIBRARIES OF LIGHT — pass 1 (WO-20260714-04, board 4)
+     C-2's jewel vault and crown of stars STAND (the hall) — this
+     dresses the twelve gate-vault STATIONS as libraries of the Word:
+     W1 THE GOLD SPINES — a curved shelf-apse behind each helix,
+        ranked scroll-spines with gold leaf (ONE shared canvas atlas;
+        the texture IS the ornament, L16), opening toward the gate
+        corridor so the approach walks into a library.
+     W2 THE FLOATING LIGHTS — sparse cool-white orb-lights drifting
+        between the shelves (the motes recipe, one shared shader).
+     W3 THE READING DESK — a marble desk at each vault's side with an
+        open book-form and a gold quill under a soft glow. The pages
+        show NO text — scripture renders only in the reader (L4).
+     All three join st.group: they reveal at 15m with the station and
+     cost NOTHING when hidden. Local rng only (layout law). Scroll
+     taps/pagers untouched — the aim scan reads radii, not geometry.
+  ============================================================== */
+  const spineTex = canvasTex(1024, (cg,w,h)=>{
+    const lr = mulberry32(4404);
+    cg.fillStyle = '#241a10'; cg.fillRect(0,0,w,h);          /* the deep case */
+    const ROWS = 4, rh = h/ROWS;
+    const hues = ['#d8c49a','#c9b183','#b89a68','#a58657','#8f7146','#6b5233','#42506e'];
+    for (let r=0;r<ROWS;r++){
+      const y0 = r*rh;
+      /* recess shadow at the row's crown */
+      const gsh = cg.createLinearGradient(0,y0,0,y0+rh*.42);
+      gsh.addColorStop(0,'rgba(0,0,0,.55)'); gsh.addColorStop(1,'rgba(0,0,0,0)');
+      cg.fillStyle = gsh; cg.fillRect(0,y0,w,rh*.42);
+      /* the ranked scroll-spines */
+      let x = 0;
+      while (x < w - 6){
+        const sw = 30 + lr()*30, top = y0 + rh*(.16 + lr()*.08), bot = y0 + rh - 14;
+        cg.fillStyle = hues[(lr()*hues.length)|0];
+        cg.beginPath(); cg.roundRect(x+3, top, sw-6, bot-top, 7); cg.fill();
+        /* rolled-edge shading */
+        const gs = cg.createLinearGradient(x,0,x+sw,0);
+        gs.addColorStop(0,'rgba(0,0,0,.42)'); gs.addColorStop(.5,'rgba(255,246,220,.20)');
+        gs.addColorStop(1,'rgba(0,0,0,.46)');
+        cg.fillStyle = gs; cg.beginPath(); cg.roundRect(x+3, top, sw-6, bot-top, 7); cg.fill();
+        /* gold leaf: cap ring + two bands */
+        cg.fillStyle = '#e8c765';
+        cg.fillRect(x+6, top+8, sw-12, 5);
+        cg.fillRect(x+6, top+(bot-top)*(.40+lr()*.14), sw-12, 4);
+        cg.beginPath(); cg.arc(x+sw/2, bot-(bot-top)*.16, Math.min(7,sw*.14), 0, TAU); cg.fill();
+        cg.fillStyle = 'rgba(120,86,20,.8)';
+        cg.beginPath(); cg.arc(x+sw/2, bot-(bot-top)*.16, Math.min(4,sw*.08), 0, TAU); cg.fill();
+        x += sw;
+      }
+      /* the shelf board: walnut lip with a gold edge */
+      cg.fillStyle = '#3a2c1c'; cg.fillRect(0, y0+rh-14, w, 14);
+      cg.fillStyle = '#caa24e'; cg.fillRect(0, y0+rh-14, w, 3);
+    }
+  });
+  spineTex.wrapS = THREE.RepeatWrapping; spineTex.repeat.set(3,1); spineTex.anisotropy = 8;
+  const spineMat = new THREE.MeshStandardMaterial({
+    map:spineTex, emissiveMap:spineTex, emissive:0xffffff, emissiveIntensity:.10,
+    roughness:.62, metalness:.05, side:THREE.DoubleSide });
+  const parchMat = new THREE.MeshStandardMaterial({
+    color:0xf2e3c0, emissive:0xffe9b8, emissiveIntensity:.18, roughness:.75 });
+  const orbMat = new THREE.ShaderMaterial({    /* the floating lights — cool-white, sparse */
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+    uniforms:{ uTime:{value:0}, uTex:{value:glowTex} },
+    vertexShader:`attribute float aSeed; uniform float uTime; varying float vA;
+      void main(){
+        vec3 p = position;
+        p.x += sin(uTime*0.24+aSeed)*0.45;
+        p.y += sin(uTime*0.17+aSeed*2.0)*0.55;
+        p.z += cos(uTime*0.21+aSeed)*0.45;
+        vec4 mv = modelViewMatrix*vec4(p,1.0);
+        gl_PointSize = 30.0 / max(-mv.z, 1.0) * (2.0+sin(aSeed*7.0));
+        vA = 0.26 + 0.24*sin(uTime*0.7+aSeed*3.0);
+        gl_Position = projectionMatrix*mv;
+      }`,
+    fragmentShader:`uniform sampler2D uTex; varying float vA;
+      void main(){
+        vec4 t = texture2D(uTex, gl_PointCoord);
+        gl_FragColor = vec4(0.86,0.93,1.0, t.a*vA);
+      }`
+  });
+  tickers.push(t=>{ orbMat.uniforms.uTime.value = t; });
+  const libRng = mulberry32(4405);
+  function dressLibrary(st, px, pz, gateAng){
+    const g = st.group;
+    /* the apse opens toward the gate corridor (the approach) */
+    const phi = Math.atan2(-Math.cos(gateAng), Math.sin(gateAng));
+    /* W1 — the shelf-apse: a 150-degree case BEHIND the helix (an apse,
+       never an enclosure — the first 240° build swallowed the scroll-
+       lights from the south approach, screenshot-caught: what glows
+       must stay visible from every natural approach, L22's spirit) */
+    const wall = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.35, 2.35, 3.3, 18, 1, true, 7*PI/12, 5*PI/6), spineMat);
+    wall.position.set(px, 1.72, pz); wall.rotation.y = phi;
+    const marble = [], gold = [];
+    marble.push(xf(new THREE.CylinderGeometry(2.5, 2.58, .22, 18, 1, false, 7*PI/12, 5*PI/6), px, .11, pz, phi));
+    { /* the gold cornice arc: torus angle t sits at azimuth PI/2 - t, so a
+         rotateY of phi + 11*PI/12 seats the arc exactly over the case */
+      const cor = new THREE.TorusGeometry(2.4, .06, 6, 18, 5*PI/6).rotateX(PI/2);
+      gold.push(xf(cor, px, 3.42, pz, phi + 11*PI/12)); }
+    /* W3 — the reading desk, inside the case's flank, facing the helix */
+    const dAz = phi + 1.95;
+    const dx = px + Math.sin(dAz)*1.72, dz = pz + Math.cos(dAz)*1.72;
+    const face = Math.atan2(px-dx, pz-dz);
+    for (const s of [-1,1])
+      marble.push(xf(new THREE.BoxGeometry(.14,.86,.5), dx+Math.cos(face)*s*.36, .43, dz-Math.sin(face)*s*.36, face));
+    marble.push(xf(new THREE.BoxGeometry(.96,.07,.58), dx, .92, dz, face));
+    const book = [];
+    for (const s of [-1,1]){
+      const pg = new THREE.BoxGeometry(.34,.024,.44);
+      pg.translate(s*.165, 0, 0);
+      pg.rotateZ(-s*.16);
+      book.push(xf(pg, dx, 1.01, dz, face));
+    }
+    gold.push(xf(new THREE.CylinderGeometry(.012,.002,.30,5).rotateZ(.5), dx+.28, 1.14, dz+.1, face));
+    const mMesh = new THREE.Mesh(mergeGeometries(marble.map(q=> q.index ? q.toNonIndexed() : q)), MAT.white);
+    const gMesh = new THREE.Mesh(mergeGeometries(gold.map(q=> q.index ? q.toNonIndexed() : q)), MAT.gold);
+    const bMesh = new THREE.Mesh(mergeGeometries(book.map(q=> q.index ? q.toNonIndexed() : q)), parchMat);
+    mMesh.receiveShadow = SHADOWS;
+    /* the quill's soft glow */
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:glowTex, color:0xffe9b8, transparent:true, opacity:.42, depthWrite:false }));
+    glow.position.set(dx+.28, 1.30, dz+.1); glow.scale.set(.55,.55,1);
+    /* W2 — the floating lights of the house */
+    const N = 22, opos = new Float32Array(N*3), oseed = new Float32Array(N);
+    for (let i=0;i<N;i++){
+      const oa = libRng()*TAU, orr = .5 + Math.sqrt(libRng())*1.6;
+      opos[i*3] = px + Math.sin(oa)*orr;
+      opos[i*3+1] = 1.25 + libRng()*1.9;
+      opos[i*3+2] = pz + Math.cos(oa)*orr;
+      oseed[i] = libRng()*100;
+    }
+    const og = new THREE.BufferGeometry();
+    og.setAttribute('position', new THREE.BufferAttribute(opos,3));
+    og.setAttribute('aSeed', new THREE.BufferAttribute(oseed,1));
+    const orbs = new THREE.Points(og, orbMat);
+    orbs.frustumCulled = false;
+    g.add(wall, mMesh, gMesh, bMesh, glow, orbs);
+    addCircle(dx, dz, .5);   /* the desk stands solid; the case stays passable this pass (flagged) */
+  }
   function renderShelf(st){
     if (st.pts){ st.group.remove(st.pts); st.pts.dispose(); st.pts = null; }
     st.records.length = 0;
@@ -8349,7 +8488,7 @@ function buildGateVaults(index){
     showInvite(`Shelf ${st.page+1} of ${Math.ceil(st.list.length/SHELF)}`, st.label || '', 2.2);
   }
   let revealT = -9;
-  function buildStation(px, pz, label, list, kind){
+  function buildStation(px, pz, label, list, kind, gateAng){
     const g = new THREE.Group();
     g.visible = false;
     const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.8,.95,1.1,14), MAT.white);
@@ -8387,6 +8526,7 @@ function buildGateVaults(index){
       vaultPagers.push({ station:st, dir:-1, pos:new THREE.Vector3(px-.95,1.36,pz) },
                        { station:st, dir:+1, pos:new THREE.Vector3(px+.95,1.36,pz) });
     }
+    if (kind === 'vault') dressLibrary(st, px, pz, gateAng);   /* V-4: the library dress */
     renderShelf(st);
     vaultGroups.push(st);
     return st;
@@ -8397,7 +8537,7 @@ function buildGateVaults(index){
     const px = Math.sin(a)*(WALL_R-8) + Math.cos(a)*6.2;
     const pz = Math.cos(a)*(WALL_R-8) - Math.sin(a)*6.2;
     const label = labels[k] || null;
-    buildStation(px, pz, label, label ? groups.get(label) : [], 'vault');
+    buildStation(px, pz, label, label ? groups.get(label) : [], 'vault', a);
   }
   /* the four lecterns — the reading enters the city's heart */
   const LECTERNS = [

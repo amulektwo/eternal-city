@@ -745,3 +745,42 @@ Board 2 enters the Fountain Court:
 - **THE PLINTHS OF THE FOUNTAIN ANGELS** — four octagonal plinths (gold-capped) at the basin diagonals (r6.9); the P-C fountainAngel anchors re-seated onto their tops (y1.03). The Seer's wreath-bearing angels land here.
 - **PROVEN:** court boards day + vespers (the bow reads at vespers over the crown; urns flank the benches; plinths ring the basin); zero console/page errors; reader+nav regression green; **144 sha EXACT**. Price: +1 draw, ~3k merged tris.
 - **RERUN SCOPE HELD BACK by wisdom:** the court floor already carries rich paving (blue ring bands + honeycomb) — the board's checker/medallion pattern would fight it blind; it waits on the Seer's circle. The court banners likewise.
+
+## LOOP 32 — V-4 THE LIBRARIES OF LIGHT, pass 1 (WO-20260714-04, seventh loop) — 2026-07-19
+Board 4 enters the twelve gate-vaults — the last vision loop receives its first pass. C-2's jewel
+vault and crown of stars STAND untouched (the hall); this dresses the vault STATIONS, where the
+Word actually lives. All three works join each station's own reveal group: they appear at 15m with
+the station and cost NOTHING when hidden — zero always-on draws, zero exterior-battery movement.
+- **W1 THE GOLD SPINES** — a curved shelf-apse (150°, r2.35, h3.3) stands BEHIND each helix of
+  light-points, its opening facing the gate corridor so the approach walks INTO a library. THE CUT THAT MADE IT: the first build was a 240° case — the boards caught it swallowing the scroll-lights from the south approach (what glows must stay visible, L22’s spirit / the Seeker’s Hand) — narrowed to a 150° apse and re-proven: the helix stands lit before the spines from every natural approach. ONE
+  shared 1024² canvas atlas does the work (the texture IS the ornament, L16): four shelf-rows of
+  ranked scroll-spines — varied parchment/leather hues (no red; the retirement stands), rolled-edge
+  shading, gold-leaf cap rings and bands, walnut shelf lips with gold edges, recess shadow at each
+  row's crown. Emissive whisper ×.10 rides the same map so the spines never die in shade (Loop 21's
+  lesson). Marble base skirt + gold cornice arc (torus azimuth math: torus angle t sits at π/2−t,
+  so rotateY φ+7π/6 seats the arc over the case — derived, then screenshot-proven).
+- **W2 THE FLOATING LIGHTS** — 22 cool-white orb-lights per house drift slowly among the shelves
+  (the motes recipe, tighter wander ±.5, additive whisper .26–.50) — board 4's floating orbs,
+  sparse, one shared shader + one Points per station.
+- **W3 THE READING DESK** — a marble desk inside each case's flank, facing the helix: side panels,
+  slab, an OPEN BOOK-FORM of two angled parchment leaves, a gold quill under a soft glow sprite.
+  **The pages show NO text — scripture renders only in the reader (L4).** Desk collider set (r.5).
+- **PRICE:** ~700 tris + ≤6 draws per REVEALED vault (≤2 revealed at once by the 15m law); ~8.4k
+  tris across all twelve but hidden groups never render. One 1024² canvas + shared materials.
+  LAYOUT LAW kept: all variety from local mulberry32(4404/4405) — the global stream untouched.
+- **PROVEN (software-GL harness, boards before=main@7dd10be / after=this build, hour .5):** the
+  four ordered vantages — vault-reveal approach, shelf face, desk, from the gate arch — at the
+  Gate 00 vault; regression green: all 16 stations stand with points intact, the near vault
+  reveals with its shelf, spawn holds (no stray collider push), the gates tour flies its REUBEN
+  pearl moment over the new dress, reader deep-link opens, ZERO console/page errors on every load.
+- **HONEST GAPS (this container, the standing pattern):** software GL — no GPU fps battery (the
+  works are reveal-gated and near-free by construction; the 12-pose battery is owed at the next
+  real-glass session); egress denied — HERALD deploy + live-md5 and the 144-sha-through-the-live-
+  gate proofs owed at merge. Sealed on branch `claude/grand-tours-pilgrimage-9lk59h`; the ONE
+  reconciler (Law 32) merges, batteries the union, HERALDs, md5-proves.
+- **REMAINING V-4 RERUNS (the loop stands open):** THE DEEPER HOUSE (local value so the lights
+  burn — coordinate with V-6's uZone system, not run blind beside it); the shelf-apse is
+  collider-free this pass (walkers can clip it — flagged, small circle-arc colliders are the fix
+  once WALK-THERE routing is re-audited against them); lectern houses (the four street/court
+  lecterns kept bare this pass — vault houses only, board 4's scope); keeper-arrival dressing
+  when the Seer's librarian angels land.
