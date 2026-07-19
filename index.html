@@ -1982,10 +1982,16 @@ function addFloorMedallion(x, z, r, y = .075, spokes = 12, phase = 0){
       x + Math.sin(a)*r*.39, y+.006, z + Math.cos(a)*r*.39, a));
   }
 }
+/* F-4 THE ATLAS pass 1 — THE NAMES: every great merge and hero carries
+   its true name (mesh.name) so __CITY.census() reads a real atlas instead
+   of a wall of anonymous "Mesh @(0,y,0)" rows, and pass 3's interior
+   enlistment can identify a door-invisible payer by name, never by guess.
+   Naming is zero render cost; the map is the rescue's foundation. */
 function bake(){
   for (const k in P){
     if (!P[k].length) continue;
     const m = new THREE.Mesh(mergeGeometries(P[k]), MAT[k]);
+    m.name = 'P.' + k;                       /* P.white · P.gold · P.ivory · P.glow · P.crimson · P.goldSt · … */
     m.castShadow = SHADOWS && (k==='white'||k==='ivory'||k==='gold');
     m.receiveShadow = SHADOWS;
     scene.add(m);
@@ -2131,6 +2137,7 @@ async function initSlots(){
           inst.position.set(anc.x, (anc.y||0) + yo, anc.z);
           inst.rotation.y = anc.ry || 0;
           inst.scale.setScalar(sc);
+          inst.name = 'HERO.' + slot;   /* F-4 Atlas: the GLB clones read true in the census */
           /* LOOP 11 quarry: a GLB replacing an extOnly hero inherits the
              tag AND enrolls in the hall cull registry — initSlots runs
              after the one-time traverse at startup, so a late arrival
@@ -4037,6 +4044,7 @@ function addBuilding(x,z,ry,big){
     }
     leafI.castShadow = SHADOWS;
     leafI.frustumCulled = false;
+    leafI.name = 'TREE.canopy';   /* F-4 Atlas */
     leafI.userData.fullCount = leafN; TR.instanced.push(leafI);
     heroTree.add(leafI);
   }
@@ -4934,6 +4942,7 @@ function addBuilding(x,z,ry,big){
     const dome = new THREE.SphereGeometry(R+.5, 40, 20, 0, TAU, .30, PI/2-.30);
     xf(dome, CX, H-2.5, CZ);
     const domeM = new THREE.Mesh(dome, ivoryDS);
+    domeM.name = 'HALL.dome';   /* F-4 Atlas */
     domeM.castShadow = SHADOWS;
     scene.add(domeM);
     P.gold.push(xf(new THREE.TorusGeometry((R+.5)*Math.sin(.30), .4, 8, 32).rotateX(PI/2),
@@ -6408,6 +6417,7 @@ const laceGold = new THREE.MeshStandardMaterial({
 
   const laceStoneMesh = new THREE.Mesh(mergeGeometries(LS.map(g=> g.index ? g.toNonIndexed() : g)), laceStone);
   const laceGoldMesh  = new THREE.Mesh(mergeGeometries(LG2.map(g=> g.index ? g.toNonIndexed() : g)), laceGold);
+  laceStoneMesh.name = 'LACE.stone'; laceGoldMesh.name = 'LACE.gold';   /* F-4 Atlas: named */
   laceStoneMesh.receiveShadow = SHADOWS; laceGoldMesh.receiveShadow = SHADOWS;
   scene.add(laceStoneMesh, laceGoldMesh);
 
