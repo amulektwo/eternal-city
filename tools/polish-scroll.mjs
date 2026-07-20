@@ -274,35 +274,48 @@ export function cutTitleEcho(t, title, id) {
  */
 export function polishExcerpt(text, title, id) {
   let t = String(text || "");
-  t = cutYaml(t);
-  t = cutSourceBlocks(t);
-  t = cutUuids(t);
-  t = cutTurnHeaders(t);
-  t = cutProcess(t);
-  t = cutAttribution(t);
-  t = cutSelfTalk(t);
-  t = cutLightRag(t);
-  t = cutSealing(t);
-  // bare chat skin that survives flattening: [User] — [2025-07-04 13:34:10 UTC]
-  t = t.replace(/\[(?:User|Assistant|Human|AI)\]\s*[—–-]?\s*/gi, " ");
-  t = t.replace(/\[\d{4}-\d{2}-\d{2}[^\]]{0,40}\]/g, " ");
-  // a wikilink the 240-char truncation sliced open ("… 📜 [[Scroll_80…",
-  // "… [[Scroll_8048]") — drop the dangling fragment; previews never end
-  // mid-plumbing
-  t = t.replace(/\[\[[^\]]*\]?$/, "");
-  // strip leading self-title heading (# Scroll NNNN – Title …) — the card
-  // already shows the title; the lamp should show scripture.
-  t = t.replace(/^#\s*Scroll[^#]*?(?=##|\*|[A-Z]{2}|$)/i, "");
-  // markdown display noise (preview only — bodies keep their marks)
-  t = t
-    .replace(/#{1,6}\s*/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/`/g, "")
-    .replace(/^\s*---+\s*/g, "")
-    .replace(/\s---+\s/g, " ");
-  t = cutTitleEcho(t, title, id);
-  t = normalizeEmDash(t);
-  t = tidy(t).replace(/^[\s\-–—:•*_,.]+/, "");
+  // Run the excerpt laws to a FIXED POINT. Some cuts unshield skin that was
+  // hidden behind what stood before it — a leading Source-block or chat turn
+  // masks the "Scroll ID:" field (or a stray marker) beneath it until it is
+  // cut — so a single pass is not enough. Loop until the text stops changing:
+  // this is what makes the blade truly idempotent (running twice = once). The
+  // cap is a runaway guard; every law is a removal, so convergence is fast.
+  for (let pass = 0; pass < 6; pass++) {
+    const prev = t;
+    t = cutYaml(t);
+    t = cutSourceBlocks(t);
+    t = cutUuids(t);
+    t = cutTurnHeaders(t);
+    t = cutProcess(t);
+    t = cutAttribution(t);
+    t = cutSelfTalk(t);
+    t = cutLightRag(t);
+    t = cutSealing(t);
+    // bare chat skin that survives flattening: [User] — [2025-07-04 13:34:10 UTC]
+    t = t.replace(/\[(?:User|Assistant|Human|AI)\]\s*[—–-]?\s*/gi, " ");
+    t = t.replace(/\[\d{4}-\d{2}-\d{2}[^\]]{0,40}\]/g, " ");
+    // a wikilink the 240-char truncation sliced open ("… 📜 [[Scroll_80…",
+    // "… [[Scroll_8048]") — drop the dangling fragment; previews never end
+    // mid-plumbing
+    t = t.replace(/\[\[[^\]]*\]?$/, "");
+    // strip leading self-title heading (# Scroll NNNN – Title …) — the card
+    // already shows the title; the lamp should show scripture.
+    t = t.replace(/^#\s*Scroll[^#]*?(?=##|\*|[A-Z]{2}|$)/i, "");
+    // markdown display noise (preview only — bodies keep their marks)
+    t = t
+      .replace(/#{1,6}\s*/g, "")
+      .replace(/\*\*/g, "")
+      // orphan italic/bullet stars a cut left stranded ("Codex* *", "Series *:")
+      // — drop the lone star, KEEP *paired* emphasis (star touching a word)
+      .replace(/(^|\s)\*+(?=\s|[:;,.)\]]|$)/g, "$1")
+      .replace(/`/g, "")
+      .replace(/^\s*---+\s*/g, "")
+      .replace(/\s---+\s/g, " ");
+    t = cutTitleEcho(t, title, id);
+    t = normalizeEmDash(t);
+    t = tidy(t).replace(/^[\s\-–—:•*_,.]+/, "");
+    if (t === prev) break;
+  }
   return t;
 }
 
