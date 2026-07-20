@@ -6742,6 +6742,51 @@ const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:nu
   });
 }
 
+/* ================================================================
+   17.5  THE CELESTIAL HIGHWAYS (ghost build, WO-20260720b) — eleven
+   outward spoke roads from the pearl gates into the cloud sea. Gate 0
+   (REUBEN, +Z) is already served by THE CAUSEWAY, so these run the other
+   eleven gates from the foundation edge out to r180: a marble deck, low
+   parapets, a gilt cap, and a radiant gold border, ending in a capped
+   overlook. Every deck/parapet/trim folds into the baked white/gold/glow
+   merges — ZERO new draw calls. The rim rail stands down over each
+   corridor (as the causeway does) and the deck edges + far end clamp the
+   feet in resolveCollisions; groundAt returns floor only on a corridor.
+   Axis note: this city's gates lie at k·PI/6 with +Z = gate 0.
+================================================================ */
+const HW_IN = 129.5, HW_OUT = 180, HW_HALF = 4.0, HW_ANG = 0.06;
+{
+  const cLen = HW_OUT - HW_IN, cMid = (HW_IN + HW_OUT) / 2;
+  for (let k = 1; k < 12; k++){                 /* skip gate 0 — the causeway is its road */
+    const ga = k*PI/6, sn = Math.sin(ga), cs = Math.cos(ga);
+    const W = (al, cr)=> [sn*al + cs*cr, cs*al - sn*cr];   /* (along,cross) -> world x,z */
+    const dc = W(cMid, 0);
+    P.white.push(xf(new THREE.BoxGeometry(HW_HALF*2, .5, cLen), dc[0], -.25, dc[1], ga));   /* deck, top y0 */
+    for (const s of [-1, 1]){
+      const pc = W(cMid, s*(HW_HALF - .17));
+      P.white.push(xf(new THREE.BoxGeometry(.34, .4, cLen), pc[0], .2, pc[1], ga));         /* low parapet */
+      P.gold.push(xf(new THREE.BoxGeometry(.4, .08, cLen), pc[0], .44, pc[1], ga));         /* gilt cap */
+      const lc = W(cMid, s*(HW_HALF - .6));
+      P.glow.push(xf(new THREE.BoxGeometry(.14, .04, cLen), lc[0], .03, lc[1], ga));        /* radiant border */
+    }
+    const ec = W(HW_OUT - .3, 0);
+    P.white.push(xf(new THREE.BoxGeometry(HW_HALF*2, .9, .6), ec[0], .2, ec[1], ga));       /* far-end overlook cap */
+    P.gold.push(xf(new THREE.BoxGeometry(HW_HALF*2 + .2, .1, .7), ec[0], .68, ec[1], ga));
+  }
+  /* THE FLOOR — one closure serves all eleven corridors (r WALL_R..HW_OUT,
+     within HW_HALF of a gate spoke); the disc already floors r<CITY_R */
+  platforms.push((x, z)=>{
+    const r = Math.hypot(x, z);
+    if (r < WALL_R || r > HW_OUT + .5) return -Infinity;
+    const a = angOf(x, z);
+    const k = Math.round(a / (PI/6));
+    if (k === 0) return -Infinity;              /* gate 0 is the causeway */
+    const ga = k*PI/6;
+    if (angDiff(a, ga) > HW_ANG) return -Infinity;
+    return Math.abs(x*Math.cos(ga) - z*Math.sin(ga)) <= HW_HALF ? 0 : -Infinity;
+  });
+}
+
 bake();
 applyTier(TIER);
 initSlots();
@@ -6868,9 +6913,33 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
      (spawn included) since GOAL 6; the deck's own parapet and far-end
      colliders guard its edges, so the rail stands down over the deck. */
   if (feetY < 8.0){
+    /* THE CELESTIAL HIGHWAYS — on a corridor the rim rail stands down
+       (as the causeway); beyond the foundation disc the deck edges and
+       the far end clamp the feet so the walker cannot fall into the void. */
+    let onHighway = false;
+    {
+      const r0 = Math.hypot(px,pz);
+      if (r0 > WALL_R - 2 && r0 < HW_OUT + 8){
+        const a = angOf(px,pz);
+        const k = Math.round(a / (PI/6));
+        if (k !== 0){
+          const ga = k*PI/6, cs = Math.cos(ga), sn = Math.sin(ga);
+          let cross = px*cs - pz*sn;
+          let along = px*sn + pz*cs;
+          if (along > WALL_R && along < HW_OUT + .6 && Math.abs(cross) <= HW_HALF) onHighway = true;
+          if (along > CITY_R && along < HW_OUT + 8 && Math.abs(cross) < HW_HALF + 6){
+            const half = HW_HALF - PR;
+            let changed = false;
+            if (Math.abs(cross) > half){ cross = Math.sign(cross)*half; changed = true; }
+            if (along > HW_OUT - PR){ along = HW_OUT - PR; changed = true; }
+            if (changed){ px = sn*along + cs*cross; pz = cs*along - sn*cross; onHighway = true; }
+          }
+        }
+      }
+    }
     const r = Math.hypot(px,pz);
     const onCauseway = Math.abs(px) <= 6.25 && pz > 100 && pz < 160.5;
-    if (!onCauseway){
+    if (!onCauseway && !onHighway){
       const a = angOf(px,pz);
       const lim = (angDiff(a,TERR_A) < TERR_HALF) ? TERR_RAIL-.5 : RAIL_R;
       if (r > lim){
