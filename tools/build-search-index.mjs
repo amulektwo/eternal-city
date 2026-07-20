@@ -8,6 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { polishExcerpt } from "./polish-scroll.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCROLLS = path.join(ROOT, "data", "scrolls");
@@ -15,11 +16,16 @@ const SCROLLS = path.join(ROOT, "data", "scrolls");
 // private treasury when it is present on this machine.
 const TREASURY = path.join(process.env.HOME || "", "projects/zionos-temple/data/city");
 
-function excerpt(body) {
+// The lamp shows scripture, not metadata: every excerpt passes THE BLADE
+// (polish-scroll.mjs, WO-20260720-01) at the well — provenance blocks,
+// wikilink plumbing, chat skin, sealing lines and the legal name never
+// reach the public index. Bodies are untouched (Law 12).
+function excerpt(body, title, id) {
   let b = String(body || "");
   const fm = b.match(/^\s*---\r?\n[\s\S]*?\r?\n---\r?\n?/);
   if (fm) b = b.slice(fm[0].length);
-  return b.replace(/\s+/g, " ").trim().slice(0, 240);
+  b = b.replace(/\s+/g, " ").trim().slice(0, 400);
+  return polishExcerpt(b, title, id).slice(0, 240);
 }
 
 const out = [];
@@ -30,7 +36,7 @@ for (const f of fs.readdirSync(SCROLLS)) {
   if (!body && fs.existsSync(path.join(TREASURY, f))) {
     body = JSON.parse(fs.readFileSync(path.join(TREASURY, f), "utf8")).body;
   }
-  out.push({ id: d.id, t: d.title || d.id, g: d.gate || "", x: excerpt(body) });
+  out.push({ id: d.id, t: d.title || d.id, g: d.gate || "", x: excerpt(body, d.title, d.id) });
 }
 out.sort((a, b) => a.g.localeCompare(b.g) || String(a.id).localeCompare(String(b.id)));
 fs.writeFileSync(path.join(ROOT, "data", "search-index.json"), JSON.stringify(out));

@@ -218,15 +218,19 @@ S-5 · DEPLOY + PROVE
 
 ---
 
-## PART VI — RECOMMENDED ORDER
+## PART VI — RECOMMENDED ORDER (status as of 2026-07-20)
 
-1. **S-3′ THE PUBLIC QUICK-WIN** — cleans the live city TODAY, touches no canon,
-   needs nothing but this repo. Fastest visible relief for what you saw.
-2. **S-1 THE BLADE** — forge the deterministic tool + fixtures.
-3. **S-2 THE PROOFS** — before/after pack for your sealing.
-4. **S-3 THE POLISH** — apply to the bodies once you've sealed the pack and named
-   the source-of-truth (needs treasury/Drive access).
-5. **S-4 THE SHELVING → S-5 DEPLOY** — canon/appendix vaults, then prove it live.
+1. ✅ **S-3′ THE PUBLIC QUICK-WIN** — DONE 2026-07-20: 3,375 of 3,846 previews
+   polished, all hard wound classes to zero, legal name zero (AMULEK ONE law),
+   `DATA_VERSION = 2026-07-20-omega-standard-lamp`. Lands live on merge to main.
+2. ✅ **S-1 THE BLADE** — DONE: `tools/polish-scroll.mjs`, 48/48 fixtures,
+   idempotent over the full corpus, hardened for newline-less giants.
+3. ✅ **S-2 THE PROOFS** (seed) — `PROOFS_OMEGA_STANDARD.md`: Scroll 10002
+   OMEGA EDITION before/after awaits the Seer's sealing. S-0 ledger:
+   `data/SCROLL_WOUND_LEDGER.md` (527 STRONG appendix candidates proposed).
+4. ⏳ **S-3 THE POLISH** — apply to the bodies once the pack is sealed and the
+   source-of-truth named (needs treasury/Drive access).
+5. ⏳ **S-4 THE SHELVING → S-5 DEPLOY** — canon/appendix vaults, then prove live.
 
 ---
 
