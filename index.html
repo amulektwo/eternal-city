@@ -8403,6 +8403,42 @@ function buildGateVaults(index){
       }`
   });
   tickers.push(t=>{ orbMat.uniforms.uTime.value = t; });
+  /* ── V-4 pass 2 · THE LIBRARY HOUSE (Loop 35) ──
+     The coffered underside of the house's dome — ONE shared 512 canvas
+     (the texture IS the ornament, L16): ivory panels, gold frames, a
+     gold star boss in each recess. Emissive whisper .06 so the vault
+     of the house never dies in its own shade (Loop 21's lesson). */
+  const cofferTex = canvasTex(512, (cg,w,h)=>{
+    cg.fillStyle = '#efe6d2'; cg.fillRect(0,0,w,h);
+    const COLS = 6, ROWS = 3, cw = w/COLS, ch = h/ROWS;
+    for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++){
+      const x0 = c*cw, y0 = r*ch, in0 = 9;
+      /* recess: darkened panel stepping inward */
+      cg.fillStyle = 'rgba(64,48,26,.38)';
+      cg.fillRect(x0+in0, y0+in0, cw-in0*2, ch-in0*2);
+      cg.fillStyle = '#e7dcc4';
+      cg.fillRect(x0+in0*2, y0+in0*2, cw-in0*4, ch-in0*4);
+      /* gold frame */
+      cg.strokeStyle = '#caa24e'; cg.lineWidth = 3;
+      cg.strokeRect(x0+in0+1.5, y0+in0+1.5, cw-in0*2-3, ch-in0*2-3);
+      /* the star boss — eight points of gold */
+      const cx = x0+cw/2, cy = y0+ch/2, R1 = Math.min(cw,ch)*.16, R2 = R1*.42;
+      cg.fillStyle = '#e8c765'; cg.beginPath();
+      for (let k=0;k<16;k++){
+        const rr = (k%2===0) ? R1 : R2, aa = k/16*TAU - PI/2;
+        cg[k?'lineTo':'moveTo'](cx+Math.cos(aa)*rr, cy+Math.sin(aa)*rr);
+      }
+      cg.closePath(); cg.fill();
+      cg.fillStyle = 'rgba(120,86,20,.85)';
+      cg.beginPath(); cg.arc(cx, cy, R2*.5, 0, TAU); cg.fill();
+    }
+  });
+  cofferTex.anisotropy = 8;
+  const cofferMat = new THREE.MeshStandardMaterial({
+    map:cofferTex, emissiveMap:cofferTex, emissive:0xffffff, emissiveIntensity:.06,
+    roughness:.8, metalness:.04, side:THREE.BackSide });
+  const lampCoreMat = new THREE.MeshStandardMaterial({   /* below the 1.8 bloom line */
+    color:0xfff3d6, emissive:0xffe9b8, emissiveIntensity:1.4, roughness:.4 });
   const libRng = mulberry32(4405);
   function dressLibrary(st, px, pz, gateAng){
     const g = st.group;
@@ -8421,6 +8457,44 @@ function buildGateVaults(index){
          rotateY of phi + 11*PI/12 seats the arc exactly over the case */
       const cor = new THREE.TorusGeometry(2.4, .06, 6, 18, 5*PI/6).rotateX(PI/2);
       gold.push(xf(cor, px, 3.42, pz, phi + 11*PI/12)); }
+    /* ── Loop 35 · THE LIBRARY HOUSE — the building inside the building ──
+       A saucer half-dome (Y-scaled .52) crowns the case with an open
+       OCULUS: the house gains a roof and its own shade (the deeper house
+       made of GEOMETRY, never post-grade — V-6's uZone stays untouched),
+       while the oculus + the open mouth keep the helix visible from every
+       approach and from the sky (L22's spirit; the tours fly over it).
+       Sphere azimuth = phi_geo − PI/2, so phiStart 13*PI/12 spans the same
+       [7*PI/12 .. 17*PI/12] footprint the case wall bakes — derived from
+       the cornice's own law, then screenshot-proven. */
+    const OC = .32;                                 /* oculus half-angle */
+    marble.push(xf(new THREE.SphereGeometry(2.52, 18, 6, 13*PI/12, 5*PI/6, OC, PI/2-OC),
+      px, 3.42, pz, phi, 1, .52, 1));
+    const domeIn = new THREE.Mesh(
+      xf(new THREE.SphereGeometry(2.44, 18, 6, 13*PI/12, 5*PI/6, OC, PI/2-OC),
+        0, 0, 0, 0, 1, .52, 1), cofferMat);
+    domeIn.position.set(px, 3.42, pz); domeIn.rotation.y = phi;
+    /* the oculus crown arc — 150 degrees only, seated by the cornice's own
+       torus law (a full ring would float unsupported over the open mouth —
+       screenshot-caught at the approach pose) — + three meridian ribs */
+    gold.push(xf(new THREE.TorusGeometry(2.52*Math.sin(OC)+.04, .05, 6, 16, 5*PI/6).rotateX(PI/2),
+      px, 3.42 + 2.52*Math.cos(OC)*.52, pz, phi + 11*PI/12));
+    for (let k=1;k<=3;k++){
+      const az = phi + 7*PI/12 + 5*PI/6 * k/4;      /* quarter azimuths of the case */
+      gold.push(xf(new THREE.TorusGeometry(2.52, .045, 5, 8, PI/2-OC),
+        px, 3.42, pz, az - PI/2, 1, .52, 1));
+    }
+    /* THE LAMP OF THE HOUSE — a gold lamp of light beneath the oculus,
+       floating as the house's lights float; its glow burns against the
+       dome's own shade. Core rides below the 1.8 bloom line. */
+    const lampG = [];
+    lampG.push(xf(new THREE.CylinderGeometry(.11,.02,.17,8), px, 4.06, pz));
+    lampG.push(xf(new THREE.CylinderGeometry(.02,.11,.17,8), px, 3.89, pz));
+    gold.push(...lampG);
+    const lampCore = new THREE.Mesh(new THREE.SphereGeometry(.075, 10, 8), lampCoreMat);
+    lampCore.position.set(px, 3.975, pz);
+    const lampGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:glowTex, color:0xffe9b8, transparent:true, opacity:.5, depthWrite:false }));
+    lampGlow.position.set(px, 3.975, pz); lampGlow.scale.set(.9,.9,1);
     /* W3 — the reading desk, inside the case's flank, facing the helix */
     const dAz = phi + 1.95;
     const dx = px + Math.sin(dAz)*1.72, dz = pz + Math.cos(dAz)*1.72;
@@ -8458,8 +8532,18 @@ function buildGateVaults(index){
     og.setAttribute('aSeed', new THREE.BufferAttribute(oseed,1));
     const orbs = new THREE.Points(og, orbMat);
     orbs.frustumCulled = false;
-    g.add(wall, mMesh, gMesh, bMesh, glow, orbs);
-    addCircle(dx, dz, .5);   /* the desk stands solid; the case stays passable this pass (flagged) */
+    g.add(wall, mMesh, gMesh, bMesh, glow, orbs, domeIn, lampCore, lampGlow);
+    addCircle(dx, dz, .5);   /* the desk stands solid */
+    /* ── Loop 35 · THE HOUSE MADE SOLID — the flagged apse colliders:
+       eight circle-arcs trace the 150-degree case at r2.35; the mouth
+       (azimuth phi ± 5*PI/12) stays open — walkers enter the house, they
+       no longer ghost through its shelves. (The colliders stand while the
+       house is hidden, but the case only reaches to r2.35+.40 — nothing
+       collides before the 15m reveal has long since shown the house.) */
+    for (let k=0;k<8;k++){
+      const az = phi + 7*PI/12 + 5*PI/6 * (k+.5)/8;
+      addCircle(px + Math.sin(az)*2.35, pz + Math.cos(az)*2.35, .40);
+    }
   }
   function renderShelf(st){
     if (st.pts){ st.group.remove(st.pts); st.pts.dispose(); st.pts = null; }
@@ -8516,7 +8600,8 @@ function buildGateVaults(index){
       g.add(slab);
     }
     const plaque = new THREE.Sprite(new THREE.SpriteMaterial({ map:null, transparent:true, depthWrite:false }));
-    plaque.position.set(px, 4.6, pz);
+    /* vault plaques ride above the Library House dome (crown ~4.66) */
+    plaque.position.set(px, kind === 'vault' ? 5.5 : 4.6, pz);
     plaque.scale.set(10, .62, 1);
     g.add(plaque);
     addCircle(px, pz, 1.0);
