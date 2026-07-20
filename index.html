@@ -4897,6 +4897,36 @@ function addBuilding(x,z,ry,big,enter){
     burst.material.opacity  = (0.36 + 0.12*Math.sin(t*0.6)) * (1 + (1 - HOUR.h)*0.6);
     burst2.material.opacity = (0.28 + 0.10*Math.sin(t*0.8 + 1.0)) * hour;
   });
+  /* THE ASCENDING GLORY — motes of living light rising up the pillar into
+     heaven (embers of praise). ONE Points draw, additive white-gold; local
+     mulberry32 (no global rng — layout law). +1 draw, ~260 pts. */
+  {
+    const NM = 260, mb = mulberry32(90210);
+    const gp = new Float32Array(NM*3), gPh = new Float32Array(NM), gSp = new Float32Array(NM);
+    for (let i=0;i<NM;i++){ const a = mb()*TAU, rd = Math.sqrt(mb())*7.5;
+      gp[i*3]=Math.sin(a)*rd; gp[i*3+1]=0; gp[i*3+2]=Math.cos(a)*rd; gPh[i]=mb(); gSp[i]=.55+mb()*.9; }
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.BufferAttribute(gp,3));
+    gg.setAttribute('aPh', new THREE.BufferAttribute(gPh,1));
+    gg.setAttribute('aSp', new THREE.BufferAttribute(gSp,1));
+    const moteMat = new THREE.ShaderMaterial({
+      uniforms:{ uTime:{value:0}, uTex:{value:glowTex}, uBase:{value:PB}, uH:{value:PH}, uAmp:{value:1} },
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      vertexShader:`attribute float aPh,aSp; uniform float uTime,uBase,uH; varying float vA;
+        void main(){ float t = fract(aPh + uTime*0.018*aSp);
+          vec3 p = position; p.y = uBase + t*uH;
+          vec4 mv = modelViewMatrix*vec4(p,1.0);
+          gl_PointSize = (16.0*aSp) * (60.0/max(-mv.z,1.0));
+          vA = smoothstep(0.0,.10,t)*smoothstep(1.0,.45,t);
+          gl_Position = projectionMatrix*mv; }`,
+      fragmentShader:`uniform sampler2D uTex; uniform float uAmp; varying float vA;
+        void main(){ float m = texture2D(uTex, gl_PointCoord).r;
+          gl_FragColor = vec4(1.0,0.94,0.74, m*vA*0.55*uAmp); }`
+    });
+    const motes = new THREE.Points(gg, moteMat); motes.frustumCulled = false; scene.add(motes);
+    tickers.push(t=>{ moteMat.uniforms.uTime.value = t;
+      moteMat.uniforms.uAmp.value = 1 + (1-HOUR.h)*0.6 + HOUR.v*0.4; });
+  }
 }
 
 /* ================================================================

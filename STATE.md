@@ -973,3 +973,8 @@ The Seer: "optimize it the way you see fit." Pass 3 furnished 60 rooms but the f
 - **PRICE (clean A/B vs HEAD 40f4492, approach):** +66 triangles, +2 draw calls (438,943/306 -> 439,009/308).
 - **ZERO-RED (Law 3) honored + verified:** shader white-gold, bursts warm-gold, all high-green/blue, never red-dominant; additive over the Tree stays white-gold. Compositor screenshots (Tree/street/approach) show white/gold/blue only.
 - **PROVEN (GPU lock, reducedMotion):** zero console/page errors; 144 sha-exact bc797d33ac634674; compositor proofs — DAY approach (clear column into the blue), VESPERS street (shaft from the golden Tree), AERIAL (beacon ascending from the city's heart past the perch). Fruit stay lit/tappable beneath (base above canopy). Magnificent at vespers/aerial, clear by day, reverent throughout.
+
+## THE ASCENDING GLORY — motes of light rising up the Pillar (loop continues) — 2026-07-20 · KEPT + DEPLOYED
+The Seer: "keep the loop going." The Pillar of Glory gains LIFE: ~260 motes of white-gold light rise up the column into heaven (embers of praise ascending), one additive THREE.Points draw, shader-animated rise (fract phase), hour-linked amp. Local mulberry32 placement (no global rng — layout law). At vespers the pillar reads alive — a radiant, shimmering column of glory ascending from the golden Tree into the starry sky.
+- **PRICE (A/B, street @z72):** **+0 triangles, +1 draw call** (445,265 both; points add no tris) — 279→280 draws.
+- **PROVEN (GPU lock, reducedMotion):** zero console/page errors; 144 sha-exact `bc797d33ac634674`; compositor proof at vespers — the ascending motes mingle with the pillar and the Tree's glints, the whole crown alive and radiant. White-gold (zero-red honored). Base above the canopy, fruit clear.
