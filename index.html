@@ -1358,48 +1358,184 @@ const cloudSprites = [];
    so nothing can z-fight. Bases sink into the sea, tops stay far below
    the cloud dome. Local seeded rng (layout law).
 ================================================================ */
+const HORIZON = { u: null };
 {
+  /* ================================================================
+     THE GLORY OF THE NEARER NATIONS (beauty loop) — the LOOP 6-D near
+     spire band (r185-430) reborn with the proven LOOP 14-B living-city
+     treatment: a 6-column body+glow atlas of PALER, humbler nations
+     (Rev 21:24 — the near rank walks in her light, humbler than the bride
+     AND than the farther 14-B nations), threaded by THE LIVING HOUR
+     (window-wake at vespers, gilt spire-tips at dawn, hour tint), bases
+     dissolving into the cloud sea. REUSES the two merged band meshes +
+     their renderOrder/extOnly discipline — +0 draws, +0 tris; only the
+     canvas widens and the flat MeshBasicMaterial becomes a trimmed 14-B
+     ShaderMaterial. LOCAL mulberry32(8888) only (Law 15); no global rng().
+     BLOOM/GRADE UNTOUCHED: window/gilt amplitudes are MODEST + vespers-
+     gated so the near pinpricks never cross the shared 1.8 bloom line —
+     the other builder's r180 HIGHWAYS OF GLORY lamps stay byte-unchanged.
+     Zero-red by construction: windows/gilt live in the glow atlas R/G
+     channels (rgb(br,0,0) MASK) and map to warm/gilt vec3 — no red pigment. */
   const hr = mulberry32(8888);
   const hrr = (a,b)=> a + hr()*(b-a);
-  const mkSkyline = (contrast)=> canvasTex(256, (g,w,h)=>{
-    g.clearRect(0,0,w,h);
-    /* a cluster of pale spires, atmospheric gradient toward the base */
-    const grd = g.createLinearGradient(0,0,0,h);
-    grd.addColorStop(0, `rgba(${205+contrast*20},${200+contrast*14},${215+contrast*8},.96)`);
-    grd.addColorStop(.75, 'rgba(236,222,206,.94)');
-    grd.addColorStop(1, 'rgba(248,236,216,.9)');
-    g.fillStyle = grd;
-    let x = 6;
-    while (x < w - 10){
-      const bw = 12 + (x*7 % 24), bh = h*(.22 + ((x*13) % 56)/100);
-      g.fillRect(x, h - bh, bw, bh);                        /* tower body */
-      g.beginPath();                                        /* spire cap */
-      g.moveTo(x, h - bh); g.lineTo(x + bw/2, h - bh - 22 - (x*11 % 26)); g.lineTo(x + bw, h - bh);
-      g.closePath(); g.fill();
-      /* LOOP 14-B: real AIR between the towers — tight 3-7px gaps packed
-         the cards into near-solid pale SLABS on the horizon (the card
-         bounds read, not the spires). Open, varied gaps let the sky
-         through and the cards vanish into a true skyline. */
-      x += bw + 9 + (x*5 % 19);
+  const COLS = 6, CW = 3072, CH = 512, colW = CW/COLS, base = CH*0.95;
+  const FOG = { r:0xd8, g:0xbd, b:0x94 };
+  const mixc = (c,f,t)=> Math.round(c + (f-c)*t);
+  const rgb = (r,g,b)=> 'rgb('+(r|0)+','+(g|0)+','+(b|0)+')';
+  const hazed = (r,g,b,t)=> rgb(mixc(r,FOG.r,t), mixc(g,FOG.g,t), mixc(b,FOG.b,t));
+  const bodyC = document.createElement('canvas'); bodyC.width = CW; bodyC.height = CH;
+  const glowC = document.createElement('canvas'); glowC.width = CW; glowC.height = CH;
+  const bg = bodyC.getContext('2d'), gg = glowC.getContext('2d');
+  bg.clearRect(0,0,CW,CH); gg.fillStyle = 'rgb(0,0,0)'; gg.fillRect(0,0,CW,CH);
+  for (let c = 0; c < COLS; c++){
+    const ox = c*colW + 8, w = colW - 16, cx = ox + w/2;
+    /* three depth rows; PALER + hazier than the r660 nations (Rev 21:24) */
+    const rows = [
+      { n:6+(hr()*3|0), haze:.66, hMin:.30, hMax:.60, wMin:16, wMax:36, win:.2 },
+      { n:8+(hr()*3|0), haze:.50, hMin:.24, hMax:.70, wMin:13, wMax:28, win:.5 },
+      { n:6+(hr()*3|0), haze:.34, hMin:.18, hMax:.54, wMin:14, wMax:24, win:.8 },
+    ];
+    const tips = [];
+    for (const R of rows){
+      for (let t = 0; t < R.n; t++){
+        const spread = 0.10 + 0.80*(t + hr()*.8)/R.n;
+        const bx = ox + w*spread;
+        const bw = hrr(R.wMin, R.wMax);
+        const bh = CH*hrr(R.hMin, R.hMax);
+        const top = base - bh;
+        const v0 = 226 - R.haze*34, v1 = 246 - R.haze*26;   /* humbler ivory than 14-B (232/250) */
+        const grd = bg.createLinearGradient(0, top, 0, base);
+        grd.addColorStop(0, hazed(v1, v1 - 6, v1 - 20, R.haze));
+        grd.addColorStop(1, hazed(v0 - 14, v0 - 18, v0 - 28, R.haze + .16));
+        bg.fillStyle = grd;
+        bg.fillRect(bx - bw/2, top, bw, bh);
+        bg.fillStyle = hazed(244, 234, 208, R.haze*.8);      /* sunlit ledge */
+        bg.fillRect(bx - bw/2, top, bw, 2.5);
+        const kind = hr();
+        if (kind < .30){                                      /* dome on a drum */
+          const dr = bw*.52;
+          bg.fillRect(bx - dr*.78, top - 4, dr*1.56, 4);
+          bg.beginPath(); bg.arc(bx, top - 4, dr, PI, 0); bg.fill();
+          bg.fillRect(bx - 1, top - 4 - dr - 6, 2, 7);
+          tips.push([bx, top - 4 - dr - 7, R.haze]);
+        } else if (kind < .44){                               /* twin spires over a gate */
+          for (const sx2 of [-bw*.30, bw*.30]){
+            bg.beginPath();
+            bg.moveTo(bx + sx2 - bw*.16, top); bg.lineTo(bx + sx2, top - hrr(14, 28)); bg.lineTo(bx + sx2 + bw*.16, top);
+            bg.closePath(); bg.fill();
+            tips.push([bx + sx2, top - hrr(14, 26), R.haze]);
+          }
+        } else if (kind < .78){                               /* spire + needle */
+          bg.beginPath();
+          bg.moveTo(bx - bw/2, top); bg.lineTo(bx, top - hrr(12, 28)); bg.lineTo(bx + bw/2, top);
+          bg.closePath(); bg.fill();
+          const ny = top - hrr(24, 42);
+          bg.fillRect(bx - 1, ny, 2, top - ny);
+          tips.push([bx, ny, R.haze]);
+        } else if (kind < .90){                               /* stepped crown */
+          bg.fillRect(bx - bw*.36, top - 6, bw*.72, 6);
+          bg.fillRect(bx - bw*.20, top - 12, bw*.40, 6);
+          if (hr() < .6) tips.push([bx, top - 14, R.haze]);
+        } else {                                              /* flat crown + cornice */
+          bg.fillRect(bx - bw/2 - 2, top - 3, bw + 4, 3);
+          if (hr() < .5) tips.push([bx, top - 5, R.haze]);
+        }
+        if (R.win > 0){                                       /* windows -> R channel (MASK, not red pigment) */
+          gg.save(); gg.globalCompositeOperation = 'lighter';
+          const rowsY = Math.max(2, (bh/9)|0), colsX = Math.max(1, (bw/5)|0);
+          for (let wy = 1; wy < rowsY; wy++)
+            for (let wx = 0; wx < colsX; wx++){
+              if (hr() > .40*R.win) continue;
+              const px = bx - bw/2 + 2.5 + wx*5 + hr()*1.5;
+              const py = top + 4 + wy*9 + hr()*2;
+              if (py > base - 6) continue;
+              const br = 120 + hr()*100;
+              gg.fillStyle = 'rgb(' + (br|0) + ',0,0)';
+              gg.fillRect(px, py, 1, 1);
+            }
+          gg.restore();
+        }
+      }
     }
-  }, 256);
-  const mkBandMat = (tex, op)=> new THREE.MeshBasicMaterial({
-    map:tex, transparent:true, opacity:op, alphaTest:.04,
-    depthWrite:false, side:THREE.DoubleSide });
+    gg.save(); gg.globalCompositeOperation = 'lighter';        /* gilt tips -> G channel */
+    for (const tp of tips){
+      const g2 = gg.createRadialGradient(tp[0], tp[1], 0, tp[0], tp[1], 2.8);
+      g2.addColorStop(0, 'rgba(0,' + Math.round(215*(1 - tp[2]*.5)) + ',0,1)');
+      g2.addColorStop(1, 'rgba(0,0,0,0)');
+      gg.fillStyle = g2; gg.beginPath(); gg.arc(tp[0], tp[1], 2.8, 0, TAU); gg.fill();
+    }
+    const gy = base - CH*.50;                                  /* faint god-glow -> B channel */
+    const g3 = gg.createRadialGradient(cx, gy, 4, cx, gy, w*.44);
+    g3.addColorStop(0, 'rgba(0,0,120,1)');
+    g3.addColorStop(1, 'rgba(0,0,0,0)');
+    gg.fillStyle = g3; gg.beginPath(); gg.arc(cx, gy, w*.44, 0, TAU); gg.fill();
+    gg.restore();
+    bg.save(); bg.globalCompositeOperation = 'destination-out';  /* base dissolves into the cloud sea */
+    const fd = bg.createLinearGradient(0, base - CH*.09, 0, base + CH*.03);
+    fd.addColorStop(0, 'rgba(0,0,0,0)'); fd.addColorStop(1, 'rgba(0,0,0,1)');
+    bg.fillStyle = fd; bg.fillRect(c*colW, base - CH*.09, colW, CH*.15);
+    bg.restore();
+  }
+  const bodyTex = new THREE.CanvasTexture(bodyC); bodyTex.colorSpace = THREE.SRGBColorSpace; bodyTex.anisotropy = 4;
+  const glowTex = new THREE.CanvasTexture(glowC); glowTex.anisotropy = 4;
+  const uvCol = (geo, col, flip)=>{
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++){ let ux = uv.getX(i); if (flip) ux = 1 - ux; uv.setX(i, (ux + col)/COLS); }
+    return geo;
+  };
+  const mat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    uniforms: {
+      uBody: { value: bodyTex }, uGlow: { value: glowTex },
+      uHour: { value: new THREE.Vector2(.5, 0) },
+      uFog:  { value: new THREE.Color(0xd8bd94) },
+    },
+    vertexShader: `varying vec2 vUv; varying float vHaze; attribute float aHaze;
+      void main(){ vUv = uv; vHaze = aHaze;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform sampler2D uBody, uGlow; uniform vec2 uHour; uniform vec3 uFog;
+      varying vec2 vUv; varying float vHaze;
+      void main(){
+        vec4 b = texture2D(uBody, vUv);
+        if (b.a < 0.05) discard;
+        vec3 glow = texture2D(uGlow, vUv).rgb;
+        float h = uHour.x, v = uHour.y;
+        vec3 tint = mix(vec3(1.12,1.02,0.82), vec3(1.04,1.00,0.92), h);
+        tint = mix(tint, vec3(0.82,0.86,1.05), v*0.70);
+        float hz = vHaze * (1.0 - 0.15*h + 0.10*v);
+        vec3 col = b.rgb * tint;
+        col = mix(col, uFog*1.10, hz);
+        /* windows wake at VESPERS, humble by day — modest + hazed so the near
+           pinpricks never cross the shared bloom line (his r180 lamps untouched) */
+        float winAmp = 0.30 + 0.12*(1.0 - h) + 1.05*v;
+        col += vec3(1.0,0.84,0.55) * glow.r * winAmp * (1.0 - hz*0.55);
+        float tipAmp = max(0.70 + 0.55*(1.0 - h) - 0.30*v, 0.20);
+        col += vec3(1.0,0.85,0.46) * glow.g * tipAmp * (1.0 - hz*0.55);
+        float gAmp = 0.40 + 0.32*(1.0 - h) + 0.55*v;
+        col += vec3(1.0,0.93,0.74) * glow.b * gAmp * 0.32;
+        gl_FragColor = vec4(col, b.a * (1.0 - hz*0.30));
+      }`,
+  });
+  HORIZON.u = mat.uniforms;
   const bands = [
-    { r0:185, r1:235, n:22, w:58, hgt:64, yb:-14, tex:mkSkyline(1),  op:.5 },
-    { r0:320, r1:430, n:26, w:115, hgt:92, yb:-18, tex:mkSkyline(0), op:.32 },
+    { r0:185, r1:235, n:22, w:58,  hgt:64, yb:-14, haze:.30 },
+    { r0:320, r1:430, n:26, w:115, hgt:92, yb:-18, haze:.52 },
   ];
   for (const b of bands){
-    const parts = [];
+    const parts = [], hazeArr = [];
     for (let i = 0; i < b.n; i++){
       const a = (i + hr()*.6)/b.n*TAU, r = hrr(b.r0, b.r1);
-      const g2 = new THREE.PlaneGeometry(b.w*hrr(.8,1.3), b.hgt*hrr(.75,1.2));
+      let g2 = new THREE.PlaneGeometry(b.w*hrr(.8,1.3), b.hgt*hrr(.75,1.2));
+      uvCol(g2, (hr()*COLS)|0, hr() < .5);
       xf(g2, Math.sin(a)*r, b.yb + b.hgt*.45, Math.cos(a)*r, a + PI);
+      if (g2.index) g2 = g2.toNonIndexed();
       parts.push(g2);
+      const hz = Math.min(.82, b.haze + hr()*.12);
+      for (let k = 0; k < g2.attributes.position.count; k++) hazeArr.push(hz);
     }
-    const m = new THREE.Mesh(
-      mergeGeometries(parts.map(g3=> g3.index ? g3.toNonIndexed() : g3)), mkBandMat(b.tex, b.op));
+    const merged = mergeGeometries(parts);
+    merged.setAttribute('aHaze', new THREE.Float32BufferAttribute(hazeArr, 1));
+    const m = new THREE.Mesh(merged, mat);
     m.frustumCulled = false; m.renderOrder = -1;   /* behind the city's transparents */
     m.userData.extOnly = true;
     scene.add(m);
@@ -5707,6 +5843,31 @@ function addBuilding(x,z,ry,big){
     glows.push(mkGlow(x,4.9,z,2.4,0xffd98a,.45));
     addCircle(x,z,.55);
   }
+
+  /* ===== THE CROWNED WALL (Seer beauty loop 3) — the rampart walk had
+     balusters and rails but no light. A ring of lamps now crowns the wall
+     (outer parapet r WALL_R+1.18), so the whole city is lamplit — the
+     processional below AND the crown above — and the aerial reads a wheel
+     of light. Rises from the rail (y9.4) into the sky. Skips the twelve
+     gate gaps and the terrace opening (no lamp floats in a void). Merged
+     into P.gold/P.glow (+0 draws), deterministic; poles sit just beyond
+     the walker's ±1.05 rampart clamp — no collider. */
+  {
+    const RR = WALL_R + 1.18;
+    const rlamp = (x, z)=>{
+      P.gold.push(xf(new THREE.CylinderGeometry(.06, .09, 2.0, 6), x, 10.4, z));   /* standard */
+      P.gold.push(xf(new THREE.CylinderGeometry(.18, .08, .24, 6), x, 11.5, z));   /* cup */
+      P.glow.push(xf(new THREE.PlaneGeometry(.34, .6), x, 11.85, z));              /* white-gold flame */
+      P.glow.push(xf(new THREE.PlaneGeometry(.34, .6), x, 11.85, z, PI/2));
+    };
+    for (let deg = 5; deg < 360; deg += 10){
+      const a = deg * D2R;
+      let skip = angDiff(a, TERR_A) < TERR_HALF + .03;          /* the terrace opening */
+      for (let k = 0; k < 12 && !skip; k++) if (angDiff(a, k*PI/6) < .07) skip = true;   /* gate gaps */
+      if (skip) continue;
+      rlamp(Math.sin(a)*RR, Math.cos(a)*RR);
+    }
+  }
 }
 
 /* ================================================================
@@ -9657,6 +9818,7 @@ function animate(){
   RIVER.tint.value.setRGB(1 + .05*(1-h) - .05*v, 1 + .012*(1-h) + .01*v, 1 - .04*(1-h) + .09*v);
   NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
   if (FARCITY.u) FARCITY.u.uHour.value.set(h, v);   /* LOOP 14-B: the far cities keep the hour */
+  if (HORIZON.u) HORIZON.u.uHour.value.set(h, v);   /* THE GLORY OF THE NEARER NATIONS: the near band keeps the hour */
   MAT.glowArch.emissiveIntensity = 2.1 + 1.2*v;      /* LOOP 14-D THE GLASS THAT BURNS: windows hold by day, blaze at Vespers (DC dusk) */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
