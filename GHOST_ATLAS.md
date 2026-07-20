@@ -71,9 +71,13 @@
   order). **P-A THE OPEN DOORS:** ALL 60 district buildings (rings R=70/86/103) are
   now ENTERABLE — hollow marble shells via `buildEnterable`, a door facing
   the core, interior ceiling, 3 room styles (apse-chapel / hall of lamps /
-  starlit room); circle colliders replaced by 5 wall colSegs each, doorway
-  open. CARRIED: stronger interior differentiation (columns, altars, named
-  halls, figure-house slots).
+  starlit room), each now FURNISHED — pilasters + gold cornice + blind arch,
+  plus a focal piece (chapel altar+candlesticks / hall of 4 columns /
+  central pedestal). Circle colliders replaced by 5 wall colSegs + furniture
+  colliders; doorways open. NOTE: interior furniture draws even when
+  roof-occluded (aerial worst ~605k ≤700k) — a distance/visibility cull is
+  CARRIED before more interior mass. CARRIED: benches, deeper apses, named
+  halls, figure-house slots for the Seer's Meshy angels.
 - **TWELVE GATE PLAZAS** (§16) at r≈100 on each spoke: gold rings +
   medallions, pilgrim clusters, vault reveal grounds (each gate's scroll
   vault helix appears at ~15m), plaza circuits (keep 13.2m clear of centres).
