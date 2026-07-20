@@ -3015,6 +3015,16 @@ function buildEnterable(x,z,ry,w,dpt,h){
       addSeg(a[0], a[1], b[0], b[1], .12);   /* collider keeps the aisle clean */
     }
   };
+  const sconces = ()=>{                       /* P-A pass 6 — processional wall-lights down both side walls */
+    const n = Math.max(2, Math.min(4, Math.round(dpt/3.0)));
+    const yS = Math.min(h-1.9, h*.5);
+    for (const sgn of [-1,1]) for (let i=0;i<n;i++){
+      const p = W(sgn*(hw-.32), -hd + dpt*((i+.5)/n));
+      II.gold.push(xf(new THREE.CylinderGeometry(.13,.06,.26,8), p[0], yS, p[1]));       /* the gold cup */
+      II.glow.push(xf(new THREE.PlaneGeometry(.3,.46), p[0], yS+.32, p[1]));             /* crossed warm flame */
+      II.glow.push(xf(new THREE.PlaneGeometry(.3,.46), p[0], yS+.32, p[1], PI/2));
+    }
+  };
   const medallion = (mr,y,spokes)=>{   /* inlined addFloorMedallion, into II */
     II.goldSt.push(xf(new THREE.RingGeometry(mr*.72, mr*.78, 48).rotateX(-PI/2), x, y, z));
     II.goldSt.push(xf(new THREE.RingGeometry(mr*.30, mr*.34, 36).rotateX(-PI/2), x, y+.004, z));
@@ -3022,10 +3032,10 @@ function buildEnterable(x,z,ry,w,dpt,h){
       II.goldSt.push(xf(new THREE.BoxGeometry(.10,.035,mr*.82), x+Math.sin(a)*mr*.39, y+.006, z+Math.cos(a)*mr*.39, a)); } };
   const style = Math.abs(Math.floor(x/13)*5 + Math.floor(z/13)*11) % 3;
   if (style === 0){                        /* THE CHAPEL — a deep lit apse + nave pews */
-    bay(); pews(); medallion(Math.min(2.6, Math.min(w,dpt)*.3), .06, 12);
+    bay(); pews(); sconces(); medallion(Math.min(2.6, Math.min(w,dpt)*.3), .06, 12);
   } else if (style === 1){                 /* THE HALL OF LAMPS — a colonnade leading to a lit apse */
     for (const t of [-.26, 0, .26]) hang(x + Math.sin(ry)*t*dpt, z + Math.cos(ry)*t*dpt, h-1.6);
-    bay(); medallion(Math.min(3.0, Math.min(w,dpt)*.34), .06, 16);
+    bay(); sconces(); medallion(Math.min(3.0, Math.min(w,dpt)*.34), .06, 16);
   } else {                                 /* THE STARLIT ROOM — a ceiling star over a lit apse */
     II.glow.push(xf(new THREE.PlaneGeometry(Math.min(3.0,w*.48), Math.min(3.0,dpt*.48)).rotateX(PI/2), x, h-.42, z, ry));
     II.goldSt.push(xf(new THREE.RingGeometry(Math.min(1.35,w*.22), Math.min(1.55,w*.25), 8).rotateX(-PI/2), x, h-.4, z, ry));
