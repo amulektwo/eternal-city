@@ -7187,7 +7187,39 @@ const flyOrbitBtn = document.getElementById('flyOrbit');
    if the walker has not already crossed on foot).
    Camera-driver + DOM only: zero geometry, zero draws.
 ================================================================ */
+/* THE SCOUT TOUR (ghost build order, WO-20260720) — the three outer-edge
+   capture vantages the Seer photographs: the arrival causeway looking in,
+   the tenth gate's edge looking out over the sea of clouds, and the aerial
+   perch over the whole ring. ONE source of truth for the vantages; the tour
+   rides through them and __CITY.scoutVantage(n) parks dead-still at any one
+   for a clean shot. Camera-driver only, zero geometry, zero draws.
+   (Axis note: this city's arrival causeway lies at +Z / azimuth 0, and the
+   tenth gate at 10·PI/6 = 300° — the ghost's map-relative angles are mapped
+   to the true ground axes here.) */
+const SCOUT_VANTAGES = [
+  { p:[0, 3.2, 150],   l:[0, 9, 118.5],    n:'THE ARRIVAL CAUSEWAY', d:'the sea-road meets the wall at the great portal' },
+  { p:[-95, 7.5, 56],  l:[-232, -22, 134], n:'THE GATE’S EDGE',  d:'the tenth gate opens on the sea of clouds' },
+  { p:[0, 254, 256],   l:[0, 6, 34],       n:'THE AERIAL PERCH',      d:'the whole bride-city and the bridge on the deep' },
+];
 const GRAND_TOURS = [
+  { key:'scout', name:'THE SCOUT TOUR', dur:48, tension:.5,
+    line:'the arrival bridge, the gate’s edge, and the whole city from on high',
+    pts:[
+      SCOUT_VANTAGES[0].p, [0, 3.8, 140], [0, 5.4, 128],
+      [-16, 22, 118], [-48, 34, 96], [-80, 26, 72],
+      SCOUT_VANTAGES[1].p, [-99.5, 8, 54],
+      [-70, 72, 94], [-30, 152, 168], SCOUT_VANTAGES[2].p, [0, 262, 268],
+    ],
+    gaze:[
+      { a:0,   b:.10,  x:SCOUT_VANTAGES[0].l[0], y:SCOUT_VANTAGES[0].l[1], z:SCOUT_VANTAGES[0].l[2] },
+      { a:.24, b:.42,  x:SCOUT_VANTAGES[1].l[0], y:SCOUT_VANTAGES[1].l[1], z:SCOUT_VANTAGES[1].l[2] },
+      { a:.80, b:1.01, x:SCOUT_VANTAGES[2].l[0], y:SCOUT_VANTAGES[2].l[1], z:SCOUT_VANTAGES[2].l[2] },
+    ],
+    caps:[
+      { x:SCOUT_VANTAGES[0].p[0], z:SCOUT_VANTAGES[0].p[2], r:20, n:SCOUT_VANTAGES[0].n, l:SCOUT_VANTAGES[0].d },
+      { x:SCOUT_VANTAGES[1].p[0], z:SCOUT_VANTAGES[1].p[2], r:26, n:SCOUT_VANTAGES[1].n, l:SCOUT_VANTAGES[1].d },
+      { a:.80, b:1.01, n:SCOUT_VANTAGES[2].n, l:SCOUT_VANTAGES[2].d },
+    ]},
   { key:'pilgrim', name:"THE PILGRIM'S WAY", dur:75, tension:.5,
     line:'the causeway, the parting veil, and the Tree revealed',
     pts:[[0,22,182],[0,8,164],[0,5.2,152],[0,4.6,132],[0,5,117],[0,5.2,104],
@@ -7539,6 +7571,23 @@ function startGrandTour(key){
   aerialBtnEl.classList.add('on');
   /* the air frees the hand (Law 43) */
   if (document.pointerLockElement) document.exitPointerLock();
+}
+/* THE SCOUT PARK — sit the eye dead-still at one scout vantage so the Seer
+   photographs at leisure (hover holds the perch; RETURN/ESC lands the feet).
+   n = 1 causeway-in · 2 gate's-edge-out · 3 aerial perch. */
+function scoutVantage(n){
+  const V = SCOUT_VANTAGES[(n|0) - 1];
+  if (!V || !started || readerOpen || seekOpen || glide.active) return null;
+  if (FLIGHT.mode === 'none'){ FLIGHT.savedYaw = player.yaw; FLIGHT.savedPitch = player.pitch; }
+  WAYWALK.active = false; FLIGHT.tour = null; setTourCap({ n:V.n, l:V.d });
+  aerialBtnEl.classList.add('on'); dotEl.style.display = 'none';
+  FLIGHT.mode = 'hover'; FLIGHT.next = null;
+  FLIGHT.hp.set(V.p[0], V.p[1], V.p[2]);
+  FLIGHT.hl.set(V.l[0], V.l[1], V.l[2]);
+  camera.position.copy(FLIGHT.hp); camera.lookAt(FLIGHT.hl);
+  if (document.pointerLockElement) document.exitPointerLock();
+  setFlightChips();
+  return { vantage:(n|0), pos:V.p.slice(), look:V.l.slice(), name:V.n };
 }
 flyTourBtn.addEventListener('click', openTourScroll);
 document.getElementById('tourBtn').addEventListener('click', ()=>{
@@ -9495,6 +9544,9 @@ window.__CITY = {
     anchors: (HEROES[s] && HEROES[s].anchors) ? HEROES[s].anchors.length : 0 })); },
   tours: GRAND_TOURS, startGrandTour, tourCurve,               /* THE GRAND TOURS — test handles */
   get tourState(){ return FLIGHT.tour ? { key:FLIGHT.tour.key, u:+FLIGHT.tourU.toFixed(4), cap:tourCapKey } : null; },
+  runScoutTour(){ startGrandTour('scout'); return { tour:'scout', vantages:SCOUT_VANTAGES.map(v=>v.n) }; },
+  scoutVantage,                                                /* THE SCOUT TOUR — park at vantage 1/2/3 for a clean shot */
+  get scoutVantages(){ return SCOUT_VANTAGES.map((v,i)=>({ n:i+1, name:v.n, pos:v.p.slice(), look:v.l.slice() })); },
   get cam(){ const d = new THREE.Vector3(); camera.getWorldDirection(d);
     return { p:[+camera.position.x.toFixed(2), +camera.position.y.toFixed(2), +camera.position.z.toFixed(2)],
              d:[+d.x.toFixed(3), +d.y.toFixed(3), +d.z.toFixed(3)] }; },
