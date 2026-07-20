@@ -74,9 +74,9 @@
   starlit room), each now FURNISHED — pilasters + gold cornice + blind arch,
   plus a focal piece (chapel altar+candlesticks / hall of 4 columns /
   central pedestal). Circle colliders replaced by 5 wall colSegs + furniture
-  colliders; doorways open. NOTE: interior furniture draws even when
-  roof-occluded (aerial worst ~605k ≤700k) — a distance/visibility cull is
-  CARRIED before more interior mass. CARRIED: benches, deeper apses, named
+  colliders; doorways open. Interiors are per-building GROUPS distance-culled (shown ≤40m, hidden
+  else) so they cost nothing from the aerial/core — reclaimed ~166k tris
+  (aerial 439k, headroom ~261k). CARRIED: benches, deeper apses, named
   halls, figure-house slots for the Seer's Meshy angels.
 - **TWELVE GATE PLAZAS** (§16) at r≈100 on each spoke: gold rings +
   medallions, pilgrim clusters, vault reveal grounds (each gate's scroll
