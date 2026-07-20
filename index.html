@@ -4579,8 +4579,8 @@ function addBuilding(x,z,ry,big,enter){
              RISES at the Tree's heart — rings born at the center spreading
              outward, over a softly breathing white-gold spring. */
           float well = smoothstep(.035,.0,abs(fract(R*4.5 - uTime*.32) - .5)*2.0 - .84) * smoothstep(.55,.05,R);
-          col += vec3(.85,.95,1.0)*well*.22;
-          col += vec3(1.0,.97,.88)*smoothstep(.12,.0,R)*(.30 + .12*sin(uTime*1.7));
+          col += vec3(.85,.95,1.0)*well*.34;
+          col += vec3(1.0,.97,.88)*smoothstep(.12,.0,R)*(.46 + .14*sin(uTime*1.7));
           float edge = smoothstep(1.0,.86,R);
           gl_FragColor = vec4(col, (.62 + dap*.18) * edge);
         }`
@@ -4693,7 +4693,7 @@ function addBuilding(x,z,ry,big,enter){
     /* the descending radiance */
     const colMat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
-      uniforms:{ uOp:{value:.062}, uTime:{value:0} },
+      uniforms:{ uOp:{value:.132}, uTime:{value:0} },
       vertexShader:`varying vec3 vN; varying vec3 vV; varying vec2 vUv;
         void main(){ vUv=uv; vN=normalMatrix*normal;
           vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz;
@@ -4706,7 +4706,7 @@ function addBuilding(x,z,ry,big,enter){
           gl_FragColor = vec4(1.0,0.92,0.74,a);
         }`
     });
-    colMat.userData.baseOp = .062; TR.shafts.push(colMat);
+    colMat.userData.baseOp = .132; TR.shafts.push(colMat);   /* THE GLORY OF THE TREE: the descending radiance READS as light pouring down (board 03) — additive white-gold, zero-red by construction */
     const godCol = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 12.8, 44, 28, 6, true), colMat);
     godCol.position.set(0, 22, 0);
     scene.add(godCol);
@@ -4720,10 +4720,10 @@ function addBuilding(x,z,ry,big,enter){
     pool.receiveShadow = SHADOWS;
     scene.add(pool);
     if (TIER>0){
-      const bl = new THREE.PointLight(0xffdf9a, 42, 24, 2);
+      const bl = new THREE.PointLight(0xffdf9a, 72, 30, 2);   /* warm fill floods the roots (board 03) + lifts the low-sun shadow on the plaza floor */
       bl.position.set(0, 3.2, 0); scene.add(bl);
     }
-    glows.push(mkGlow(0, 1.0, 0, 24, 0xffe2a6, .13));
+    glows.push(mkGlow(0, 1.0, 0, 29, 0xffe2a6, .22));         /* a stronger golden-foot halo — the light gathers at the roots */
   }
 
   /* THE TWELVE FRUIT — the keystone scrolls of the Tree (THE HARVEST)
