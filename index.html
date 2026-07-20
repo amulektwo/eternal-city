@@ -3119,12 +3119,16 @@ function buildEnterable(x,z,ry,w,dpt,h){
       II.gold.push(xf(new THREE.TorusGeometry(.5,.07,6,12).rotateX(PI/2), co[0], h-1.55, co[1]));
       II.gold.push(xf(new THREE.TorusGeometry(.52,.08,6,12).rotateX(PI/2), co[0], .22, co[1]));
       addCircle(co[0], co[1], .55); }
-  } else {                   /* STARLIT — central pedestal */
-    II.white.push(xf(new THREE.CylinderGeometry(.7,.92,1.1,12), x, .55, z));
-    II.gold.push(xf(new THREE.TorusGeometry(.72,.08,6,16).rotateX(PI/2), x, 1.1, z));
-    II.glow.push(xf(new THREE.PlaneGeometry(.6,.6), x, 1.5, z));
-    II.glow.push(xf(new THREE.PlaneGeometry(.6,.6), x, 1.5, z, PI/2));
-    addCircle(x, z, .95);
+  } else {                   /* STARLIT — a pedestal shrine raised on a stepped base */
+    II.white .push(xf(new THREE.CylinderGeometry(1.5,1.62,.15,16), x, .075, z));    /* lower step */
+    II.goldSt.push(xf(new THREE.TorusGeometry(1.5,.035,6,32).rotateX(PI/2), x, .16, z));
+    II.white .push(xf(new THREE.CylinderGeometry(1.12,1.22,.16,16), x, .23, z));    /* upper step */
+    II.goldSt.push(xf(new THREE.TorusGeometry(1.12,.035,6,28).rotateX(PI/2), x, .32, z));
+    II.white.push(xf(new THREE.CylinderGeometry(.7,.92,1.1,12), x, .86, z));        /* the pedestal, raised */
+    II.gold.push(xf(new THREE.TorusGeometry(.72,.08,6,16).rotateX(PI/2), x, 1.41, z));
+    II.glow.push(xf(new THREE.PlaneGeometry(.62,.62), x, 1.8, z));                  /* the orb */
+    II.glow.push(xf(new THREE.PlaneGeometry(.62,.62), x, 1.8, z, PI/2));
+    addCircle(x, z, 1.6);
   }
   /* one cullable group per building — hidden until the walker draws near */
   const IG = new THREE.Group();

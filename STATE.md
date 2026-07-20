@@ -1024,3 +1024,9 @@ The interior loop made the rooms deep; this ennobles their thresholds. Each of t
 - **PRICE:** ~17k tris across all 60 porches, always-drawn but per-cell cullable. Budget sampled WITH porches: street/inner-ring 603k, plaza-breadth 407k, on-street 411k — all <=700k; the Tree-plaza-out sightline (the spatial split's fix) holds ~407k, unbroken by the porches. Draws 290-437 by vantage.
 - **PROVEN (real glass):** zero console errors; compositor — porticoed doorways in a row (columns + gold canopy framing each door, the lancet glow-window above). Doorway stays OPEN by construction (columns strictly outside the DW opening; DW>=3 >> the .55 walker) and the interior doorway collision is pass-5-proven, unchanged. White + gold (zero-red). data/ untouched -> 144-sha unaffected.
 - **CARRIED:** porch steps / a threshold sill; richer capitals; a lantern hung in the canopy (vespers).
+
+## THE STARLIT SANCTUARY — the pedestal raised on a stepped base (P-A pass 9) — 2026-07-20 · KEPT + DEPLOYED
+Keep-looping (Seer: "my pick"). The starlit room was the plainest style (apse only, after the constellation revert); now its pedestal is a raised shrine.
+- **THE WORK:** the central pedestal + orb lift onto a two-step gold-trimmed marble base — a monumental shrine focal point before the lit apse, ringed by the 8-spoke medallion. Into II.white/goldSt/glow (+0 draws), culled group, deterministic; the collider bumped .95->1.6 to cover the base.
+- **PRICE:** +0 meshes = +0 draws (5/group; 2,060->2,908 tris per starlit room, culled); interior view 378,945 tris / 253 draws.
+- **PROVEN (real glass):** collision via `__CITY.probe` — the shrine blocks (moved 0.91 just inside r1.6) and the door approach stays walkable (0); compositor — the raised orb-pedestal on gold-trimmed steps before the apse light-shaft, ringed by the medallion. White + gold + warm (zero-red). data/ untouched -> 144-sha unaffected.
