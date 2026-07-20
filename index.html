@@ -5707,6 +5707,31 @@ function addBuilding(x,z,ry,big){
     glows.push(mkGlow(x,4.9,z,2.4,0xffd98a,.45));
     addCircle(x,z,.55);
   }
+
+  /* ===== THE CROWNED WALL (Seer beauty loop 3) — the rampart walk had
+     balusters and rails but no light. A ring of lamps now crowns the wall
+     (outer parapet r WALL_R+1.18), so the whole city is lamplit — the
+     processional below AND the crown above — and the aerial reads a wheel
+     of light. Rises from the rail (y9.4) into the sky. Skips the twelve
+     gate gaps and the terrace opening (no lamp floats in a void). Merged
+     into P.gold/P.glow (+0 draws), deterministic; poles sit just beyond
+     the walker's ±1.05 rampart clamp — no collider. */
+  {
+    const RR = WALL_R + 1.18;
+    const rlamp = (x, z)=>{
+      P.gold.push(xf(new THREE.CylinderGeometry(.06, .09, 2.0, 6), x, 10.4, z));   /* standard */
+      P.gold.push(xf(new THREE.CylinderGeometry(.18, .08, .24, 6), x, 11.5, z));   /* cup */
+      P.glow.push(xf(new THREE.PlaneGeometry(.34, .6), x, 11.85, z));              /* white-gold flame */
+      P.glow.push(xf(new THREE.PlaneGeometry(.34, .6), x, 11.85, z, PI/2));
+    };
+    for (let deg = 5; deg < 360; deg += 10){
+      const a = deg * D2R;
+      let skip = angDiff(a, TERR_A) < TERR_HALF + .03;          /* the terrace opening */
+      for (let k = 0; k < 12 && !skip; k++) if (angDiff(a, k*PI/6) < .07) skip = true;   /* gate gaps */
+      if (skip) continue;
+      rlamp(Math.sin(a)*RR, Math.cos(a)*RR);
+    }
+  }
 }
 
 /* ================================================================
