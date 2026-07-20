@@ -3235,6 +3235,27 @@ function addBuilding(x,z,ry,big,enter){
     scene.add(ti,ci);
   }
 
+  /* THE CRESSETS OF THE QUARTERS (Seer beauty loop — the fresh lane): the
+     plain, unlit district quarters gain ceremonial fire. Twelve standing
+     braziers ring the district gap at r95, one per inter-gate sector, in
+     the city's twelvefold rhythm — a gold foot + stem, a wide fire-bowl +
+     rim, and a warm-gold flame with an ember heart. Merged into P.gold /
+     P.glow (+0 draws; per-cell cullable since THE SPATIAL SPLIT),
+     deterministic (no rng — layout law); r95 inter-gate probed 12/12 clear,
+     a small base collider on each, poles off every walk. */
+  for (let k=0;k<12;k++){
+    const a=(k+.5)*PI/6, x=Math.sin(a)*95, z=Math.cos(a)*95;
+    P.gold.push(xf(new THREE.CylinderGeometry(.16,.24,.42,8), x, .21, z));            /* foot */
+    P.gold.push(xf(new THREE.CylinderGeometry(.11,.13,2.3,8), x, 1.45, z));           /* stem */
+    P.gold.push(xf(new THREE.CylinderGeometry(.66,.28,.55,14,1,true), x, 2.78, z));   /* the OPEN fire-bowl */
+    P.gold.push(xf(new THREE.TorusGeometry(.66,.07,6,16).rotateX(PI/2), x, 3.05, z)); /* bowl rim */
+    P.glow.push(xf(new THREE.CircleGeometry(.52,16).rotateX(-PI/2), x, 2.92, z));     /* glowing coals in the bowl */
+    P.glow.push(xf(new THREE.PlaneGeometry(.92,1.7), x, 3.95, z));                    /* the ceremonial flame, clear of the rim */
+    P.glow.push(xf(new THREE.PlaneGeometry(.92,1.7), x, 3.95, z, PI/2));
+    P.glow.push(xf(new THREE.PlaneGeometry(.6,.6), x, 3.35, z));                      /* the ember heart */
+    addCircle(x, z, .72);
+  }
+
   /* PASS B (FACADES) — THE CROWNS: spirelet clusters ringing the roof
      apexes of the 36 tallest towers (board-05 crossing towers). Rides the
      lace-pinnacle InstancedMesh — zero new draw calls. Flying buttresses
