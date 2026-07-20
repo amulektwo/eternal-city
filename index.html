@@ -8613,6 +8613,12 @@ function buildGateVaults(index){
     roughness:.8, metalness:.04, side:THREE.BackSide });
   const lampCoreMat = new THREE.MeshStandardMaterial({   /* below the 1.8 bloom line */
     color:0xfff3d6, emissive:0xffe9b8, emissiveIntensity:1.4, roughness:.4 });
+  /* Loop 36 · THE SHAFT OF THE WORD — faint gold light falling from the
+     oculus (board 05: light poured through the threshold). Additive, no
+     depth write, one shared material across all twelve houses. */
+  const shaftMat = new THREE.MeshBasicMaterial({
+    color:0xffdf9a, transparent:true, opacity:.17, depthWrite:false,
+    blending:THREE.AdditiveBlending, side:THREE.DoubleSide });
   const libRng = mulberry32(4405);
   function dressLibrary(st, px, pz, gateAng){
     const g = st.group;
@@ -8706,7 +8712,13 @@ function buildGateVaults(index){
     og.setAttribute('aSeed', new THREE.BufferAttribute(oseed,1));
     const orbs = new THREE.Points(og, orbMat);
     orbs.frustumCulled = false;
-    g.add(wall, mMesh, gMesh, bMesh, glow, orbs, domeIn, lampCore, lampGlow);
+    /* Loop 36 — the shaft: a cone of light widening from the oculus mouth
+       (r.55) to a soft pool on the floor (r1.6), descending through the
+       house onto the Word. Reveal-gated with the group; near-free hidden. */
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 1.6, 4.5, 16, 1, true), shaftMat);
+    shaft.position.set(px, 2.35, pz);
+    g.add(wall, mMesh, gMesh, bMesh, glow, orbs, domeIn, lampCore, lampGlow, shaft);
     addCircle(dx, dz, .5);   /* the desk stands solid */
     /* ── Loop 35 · THE HOUSE MADE SOLID — the flagged apse colliders:
        eight circle-arcs trace the 150-degree case at r2.35; the mouth
