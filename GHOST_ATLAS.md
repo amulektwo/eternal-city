@@ -101,12 +101,18 @@
   — lace crest parapets, five plinth pairs (`causewayHost`×10 empty), lamps
   of the way, portal veil + THE APPROACH arrival moment. Its exemption
   corridor (|px|≤6.25, pz 100–160.5) is LOAD-BEARING — never re-clamp.
-- **ELEVEN CELESTIAL HIGHWAYS** (GHOST-BUILD "V-5"/WO-20260720b, gates
-  1–11): 8-wide marble decks r129.5–180 along each spoke, low parapets +
-  gilt caps + glow borders, far-end overlook caps. Deck edges + far ends
-  clamp in resolveCollisions; one platform closure floors all corridors.
+- **ELEVEN CELESTIAL HIGHWAYS** (WO-20260720b, gates 1–11): 8-wide marble
+  decks r129.5–180 along each spoke, low parapets + gilt caps + glow
+  borders. Deck edges clamp in resolveCollisions; one platform closure
+  floors all corridors.
+- **ELEVEN OVERLOOK LANDING GROUNDS** (GHOST-BUILD-04, WO-20260720d): each
+  highway ends in an octagonal marble pad (r6 @ spoke r180) — gold floor
+  ring, rim parapet (entry face open), glow rim, and an arched marble
+  portal (gold-capped pillars + keystone, own colliders) at r175. Physics:
+  deck∪pad union clamp + pad platform closure; HUD area THE OVERLOOK.
   **CARRIED (open reruns):** terraced steps; underside piers; gates 7/8
-  decks could start past the terrace railing; causeway-grade dressing.
+  decks could start past the terrace railing; pad lamps/finials;
+  far-city viewing markers (await the Seer's names).
 
 ### r 180+ · THE SEA OF CLOUDS & THE NATIONS — **MOSTLY OPEN**
 - Standing: the cloud-sea shader discs (sun-graded), rolling wisps, RIM
@@ -146,7 +152,8 @@
 
 ## GENUINELY OPEN GAPS (fair ground, priced lanes)
 1. Highway reruns: terraced steps, piers, gate-7/8 re-seat (carried).
-2. Overlook landings / outer islets past r180 (new domain).
+2. ~~Overlook landings~~ **BUILT (GHOST-BUILD-04)** — outer islets past
+   r186 remain open (new domain).
 3. P-A THE OPEN DOORS: district-building interiors (priced, unbuilt).
 4. The underside read (the island from the sea below).
 5. The far sister cities (Seer ambition, awaits his order).

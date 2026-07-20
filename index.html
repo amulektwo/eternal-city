@@ -6755,6 +6755,7 @@ const APPROACH = { active:true, crossed:false, done:false, crossT:-1, veilMat:nu
    Axis note: this city's gates lie at k·PI/6 with +Z = gate 0.
 ================================================================ */
 const HW_IN = 129.5, HW_OUT = 180, HW_HALF = 4.0, HW_ANG = 0.06;
+const PAD_R = 6.0;   /* GHOST-BUILD-04 — the overlook landing pads at each terminus */
 {
   const cLen = HW_OUT - HW_IN, cMid = (HW_IN + HW_OUT) / 2;
   for (let k = 1; k < 12; k++){                 /* skip gate 0 — the causeway is its road */
@@ -6769,9 +6770,37 @@ const HW_IN = 129.5, HW_OUT = 180, HW_HALF = 4.0, HW_ANG = 0.06;
       const lc = W(cMid, s*(HW_HALF - .6));
       P.glow.push(xf(new THREE.BoxGeometry(.14, .04, cLen), lc[0], .03, lc[1], ga));        /* radiant border */
     }
-    const ec = W(HW_OUT - .3, 0);
-    P.white.push(xf(new THREE.BoxGeometry(HW_HALF*2, .9, .6), ec[0], .2, ec[1], ga));       /* far-end overlook cap */
-    P.gold.push(xf(new THREE.BoxGeometry(HW_HALF*2 + .2, .1, .7), ec[0], .68, ec[1], ga));
+    /* ===== GHOST-BUILD-04 — THE OVERLOOK LANDING GROUNDS =====
+       The far-end cap retires; in its place an octagonal marble landing
+       pad (flat face greeting the deck), a gold floor ring, a rim parapet
+       on seven of eight faces (the entry face stays open), glow studs at
+       the rim, and a soaring round-arched marble portal with gold-capped
+       pillars framing the sky at the pad's threshold. All folded into the
+       baked P merges — zero new draw calls by construction. */
+    const pc0 = W(HW_OUT, 0);
+    P.white.push(xf(new THREE.CylinderGeometry(PAD_R, PAD_R, .5, 8), pc0[0], -.25, pc0[1], ga + PI/8));  /* pad slab, top y0 */
+    P.goldSt.push(xf(new THREE.RingGeometry(5.05, 5.4, 8).rotateX(-PI/2), pc0[0], .015, pc0[1], ga + PI/8)); /* gold border ring */
+    for (let i = 0; i < 8; i++){
+      const ph = i*PI/4;                                     /* pad-local face centres; ph=PI faces the city */
+      if (Math.cos(ph) < -0.92) continue;                    /* the entry face stays open */
+      const rc = W(HW_OUT + 5.7*Math.cos(ph), 5.7*Math.sin(ph));
+      const ry = ga + ph + PI/2;                             /* tangent to the rim */
+      P.white.push(xf(new THREE.BoxGeometry(.34, .4, 4.2), rc[0], .2, rc[1], ry));   /* rim parapet */
+      P.gold.push(xf(new THREE.BoxGeometry(.4, .08, 4.3), rc[0], .44, rc[1], ry));   /* gilt cap */
+      const gc = W(HW_OUT + 5.0*Math.cos(ph), 5.0*Math.sin(ph));
+      P.glow.push(xf(new THREE.BoxGeometry(.14, .04, 3.6), gc[0], .03, gc[1], ry));  /* radiant rim border */
+    }
+    /* THE ARCHED PORTAL at the threshold (along r175) — marble pillars,
+       gold caps, a round marble arch, a gold keystone */
+    for (const s of [-1, 1]){
+      const qc = W(HW_OUT - 5, s*3.0);
+      P.white.push(xf(new THREE.BoxGeometry(.75, 5.2, .75), qc[0], 2.6, qc[1], ga)); /* pillar */
+      P.gold.push(xf(new THREE.BoxGeometry(.95, .3, .95), qc[0], 5.35, qc[1], ga));  /* gold cap */
+      addCircle(qc[0], qc[1], .8);                                                   /* pillar collider */
+    }
+    const ac = W(HW_OUT - 5, 0);
+    P.white.push(xf(new THREE.TorusGeometry(3.0, .22, 6, 14, PI), ac[0], 5.3, ac[1], ga)); /* the arch */
+    P.gold.push(xf(new THREE.BoxGeometry(.5, .5, .6), ac[0], 8.5, ac[1], ga));             /* gold keystone */
   }
   /* THE FLOOR — one closure serves all eleven corridors (r WALL_R..HW_OUT,
      within HW_HALF of a gate spoke); the disc already floors r<CITY_R */
@@ -6784,6 +6813,17 @@ const HW_IN = 129.5, HW_OUT = 180, HW_HALF = 4.0, HW_ANG = 0.06;
     const ga = k*PI/6;
     if (angDiff(a, ga) > HW_ANG) return -Infinity;
     return Math.abs(x*Math.cos(ga) - z*Math.sin(ga)) <= HW_HALF ? 0 : -Infinity;
+  });
+  /* THE PADS' FLOOR (GHOST-BUILD-04) — a disc of ground at each terminus */
+  platforms.push((x, z)=>{
+    const r = Math.hypot(x, z);
+    if (r < HW_OUT - PAD_R - .5 || r > HW_OUT + PAD_R + .5) return -Infinity;
+    const a = angOf(x, z);
+    const k = Math.round(a / (PI/6));
+    if (k === 0) return -Infinity;
+    const ga = k*PI/6;
+    const dx = x - Math.sin(ga)*HW_OUT, dz = z - Math.cos(ga)*HW_OUT;
+    return Math.hypot(dx, dz) <= PAD_R ? 0 : -Infinity;
   });
 }
 
@@ -6807,6 +6847,11 @@ const AREAS = [
   { n:'THE TREE OF LIFE PLAZA', t:(x,z)=> Math.hypot(x,z) < 25 },
   { n:'THE STREET OF GOLD',     t:(x,z)=> x>-8&&x<8&&z>32&&z<88 },
   { n:'THE GATE PLAZA',         t:(x,z)=> Math.hypot(x, z-100) < 17 },
+  { n:'THE OVERLOOK',           t:(x,z)=>{ const r=Math.hypot(x,z);        /* GHOST-BUILD-04 pads */
+      if (r < HW_OUT-PAD_R || r > HW_OUT+PAD_R) return false;
+      const k = Math.round(angOf(x,z)/(PI/6)); if (k===0) return false;
+      const ga = k*PI/6;
+      return Math.hypot(x-Math.sin(ga)*HW_OUT, z-Math.cos(ga)*HW_OUT) <= PAD_R; } },
   { n:'THE ETERNAL CITY',       t:()=> true },
 ];
 
@@ -6919,7 +6964,7 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
     let onHighway = false;
     {
       const r0 = Math.hypot(px,pz);
-      if (r0 > WALL_R - 2 && r0 < HW_OUT + 8){
+      if (r0 > WALL_R - 2 && r0 < HW_OUT + PAD_R + 3){
         const a = angOf(px,pz);
         const k = Math.round(a / (PI/6));
         if (k !== 0){
@@ -6927,12 +6972,23 @@ function resolveCollisions(px, pz, prevR, pvx = player.pos.x, pvz = player.pos.z
           let cross = px*cs - pz*sn;
           let along = px*sn + pz*cs;
           if (along > WALL_R && along < HW_OUT + .6 && Math.abs(cross) <= HW_HALF) onHighway = true;
-          if (along > CITY_R && along < HW_OUT + 8 && Math.abs(cross) < HW_HALF + 6){
-            const half = HW_HALF - PR;
-            let changed = false;
-            if (Math.abs(cross) > half){ cross = Math.sign(cross)*half; changed = true; }
-            if (along > HW_OUT - PR){ along = HW_OUT - PR; changed = true; }
-            if (changed){ px = sn*along + cs*cross; pz = cs*along - sn*cross; onHighway = true; }
+          /* GHOST-BUILD-04 — the walkable region past the disc is the UNION
+             of the deck strip and the terminus pad disc; a stray point clamps
+             to whichever boundary is nearer (deck edge or the pad's rim rail) */
+          if (along > CITY_R && along < HW_OUT + PAD_R + 3 && Math.abs(cross) < PAD_R + 3){
+            const half = HW_HALF - PR, padR = PAD_R - PR;
+            const pd = Math.hypot(along - HW_OUT, cross);
+            const inDeck = Math.abs(cross) <= half && along <= HW_OUT;
+            if (!inDeck && pd > padR){
+              const cc = Math.max(-half, Math.min(half, cross));
+              const ca = Math.min(along, HW_OUT);
+              const dA = Math.hypot(cross - cc, along - ca);   /* to the deck strip */
+              const dB = pd - padR;                            /* to the pad rim */
+              if (dA <= dB){ cross = cc; along = ca; }
+              else { const s2 = padR / pd; along = HW_OUT + (along - HW_OUT)*s2; cross *= s2; }
+              px = sn*along + cs*cross; pz = cs*along - sn*cross;
+            }
+            onHighway = true;    /* in the corridor, or just clamped into it */
           }
         }
       }
