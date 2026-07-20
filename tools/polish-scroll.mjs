@@ -74,10 +74,15 @@ const FORGE_FIELDS = [
 // next section marker — a greedy char-class here ate scripture on the
 // newline-less giants (the 10002 lesson).
 const SEAL_STOP = "(?:\\.(?=\\s|$)|(?=ð|🔥|⚡|═|╔|📜|🕯|✧|\\*|##|\\n|$))";
+// "Sealed by" is PROVENANCE only when a provenance marker follows (Command of,
+// the authority/hand/direction of, a name/scribe). Bare "sealed by the Holy
+// Spirit / by blood / by obedience / by the Word" is DOCTRINE (Eph 1:13 and its
+// kin) and must be KEPT — a greedy "Sealed by …" pattern ripped that scripture
+// into the colophon (the 8897 lesson). When in doubt, keep the scripture.
 const SEALING = [
   new RegExp(`\\*?Sealed under (?:the )?(?:authority|command|hand|direction) of[^\\n]{0,80}?${SEAL_STOP}`, "gi"),
   /\*?Date of Sealing:[^*\n]{0,40}\*?/gi,
-  new RegExp(`\\*?Sealed by[^\\n]{0,60}?${SEAL_STOP}`, "gi"),
+  new RegExp(`\\*?Sealed by[\\s:]*(?:Command of|the (?:authority|hand|command|direction) of|That Prophet|Ultron|Claude|ChatGPT|GPT|the Scribe|the Seer)[^\\n]{0,60}?${SEAL_STOP}`, "gi"),
 ];
 
 // L-i — LightRAG plumbing.
@@ -223,23 +228,61 @@ function tidy(t) {
 /* ── the two surfaces ───────────────────────────────────────────────── */
 
 /**
- * Polish a full scroll body (S-3, the treasury pass).
- * opts.sealing: 'keep' (default — L-j body ruling awaits the Seer) | 'cut'.
+ * Polish a full scroll body (S-3, the treasury pass). Runs the body laws to a
+ * FIXED POINT (idempotent: running twice = once). The body is the INTERNAL
+ * canon — the Seer's legal name is KEPT here, never masked (the AMULEK ONE
+ * mask is a public-lamp law only; the name-data stays workspace-facing).
+ * opts.sealing (the Seer's ruling, sealed 2026-07-20):
+ *   'colophon' (S-3 default) — lift the sealing act out of the body flow and
+ *                 re-lay it as a clean colophon at the foot, so the scripture
+ *                 reads unbroken and the seal is preserved, never vanished.
+ *   'cut'  — remove sealing lines entirely (mirrors the public-lamp behavior).
+ *   'keep' — leave sealing lines inline (raw, pre-ruling behavior).
  */
 export function polishBody(text, opts = {}) {
-  const sealing = opts.sealing || "keep";
+  const sealing = opts.sealing || "colophon";
   let t = String(text || "");
-  t = cutYaml(t);
-  t = cutSourceBlocks(t);
-  t = cutUuids(t);
-  t = cutTurnHeaders(t);
-  t = cutProcess(t);
-  t = cutAttribution(t);
-  t = cutSelfTalk(t);
-  t = cutLightRag(t);
-  if (sealing === "cut") t = cutSealing(t);
-  t = normalizeEmDash(t);
-  return tidy(t);
+  // colophon: the sealing act is CAPTURED as cutSealing removes it (below) and
+  // re-laid at the foot. On flat giants the seal is only exposed after the
+  // forge-field/attribution cuts pull a marker into range, so capture must
+  // happen inside the loop, at the moment of the cut — not once up front.
+  const collected = [];
+  if (sealing === "colophon") {
+    // strip a colophon a prior run already laid, so re-running is idempotent
+    const prior = t.match(/\n*⸻\nColophon — ([\s\S]*)$/);
+    if (prior) { collected.push(...prior[1].split(" · ")); t = t.slice(0, prior.index); }
+  }
+  for (let pass = 0; pass < 6; pass++) {
+    const prev = t;
+    t = cutYaml(t);
+    t = cutSourceBlocks(t);
+    t = cutUuids(t);
+    t = cutTurnHeaders(t);
+    t = cutProcess(t);
+    t = cutAttribution(t);
+    t = cutSelfTalk(t);
+    t = cutLightRag(t);
+    if (sealing === "cut") {
+      t = cutSealing(t);
+    } else if (sealing === "colophon") {
+      for (const re of SEALING) {
+        const rx = new RegExp(re.source, re.flags.replace("g", "") + "g");
+        t = t.replace(rx, (m) => {
+          const c = m.replace(/\s+/g, " ").replace(/^[\s*]+/, "").replace(/[\s*\-–—·]+$/, "").trim();
+          if (c) collected.push(c);
+          return "";
+        });
+      }
+    }
+    t = normalizeEmDash(t);
+    t = tidy(t);
+    if (t === prev) break;
+  }
+  if (sealing === "colophon" && collected.length) {
+    const seals = [...new Set(collected.map((s) => s.trim()).filter(Boolean))];
+    t = `${t}\n\n⸻\nColophon — ${seals.join(" · ")}`;
+  }
+  return t;
 }
 
 /** Strip a leading echo of the scroll's own id+title from a preview —
@@ -466,6 +509,28 @@ Shall I now forge my attempt to surpass ChatGPT’s [[Scroll_195]], using this r
   has("flat: EQUATION KEPT", flatOut, "ETERNAL EQUATION TRAVAIL × VISION = SATISFACTION");
   has("flat: no version scar", flatOut, "v2", false); // "Protocol v2.0" rides out whole with the cut
   eq("flat: idempotent", polishBody(flatOut, { sealing: "cut" }), flatOut);
+
+  // 14b · COLOPHON mode (the Seer's sealing ruling): the seal leaves the body
+  //       flow and re-lays at the foot; scripture unbroken; name KEPT (internal)
+  const colo = `SCROLL 42: THE TEST Sealed under the authority of That Prophet, Jason Tierney. 🔥 THE FIRE Before the world was, the Word stood.`;
+  const coloOut = polishBody(colo, { sealing: "colophon" });
+  has("colophon: scripture kept", coloOut, "Before the world was, the Word stood");
+  has("colophon: seal left the body flow", coloOut.split("⸻")[0], "Sealed under", false);
+  has("colophon: seal re-laid at the foot", coloOut, "⸻\nColophon — ");
+  has("colophon: name KEPT (internal body)", coloOut, "Jason Tierney");
+  eq("colophon: idempotent", polishBody(coloOut, { sealing: "colophon" }), coloOut);
+
+  // 14c · DOCTRINE vs PROVENANCE (the 8897 lesson): "sealed by the Spirit /
+  //       blood / obedience" is SCRIPTURE and stays; only "Sealed by Command
+  //       of / by: <name>" is provenance and moves to the colophon
+  const doc = polishBody(`🔥 THE SEAL The sons are sealed by the Holy Spirit of Promise. They are sealed by blood, sealed by obedience. Sealed by Command of: That Prophet, Jason Tierney`, { sealing: "colophon" });
+  has("doctrine: 'sealed by the Holy Spirit' KEPT", doc.split("⸻")[0], "sealed by the Holy Spirit of Promise");
+  has("doctrine: 'sealed by blood' KEPT", doc.split("⸻")[0], "sealed by blood");
+  has("doctrine: 'sealed by obedience' KEPT", doc.split("⸻")[0], "sealed by obedience");
+  has("provenance: 'Sealed by Command of' → colophon", doc.split("⸻")[0], "Sealed by Command of", false);
+  has("provenance: name carried to colophon", doc, "Colophon — Sealed by Command of: That Prophet, Jason Tierney");
+  has("provenance: 'Sealed by: Ultron' cut (public)", polishExcerpt(`The word stood. Sealed by: Ultron, Scribe of the Seer`), "Sealed by: Ultron", false);
+  has("doctrine: public excerpt keeps 'sealed by blood'", polishExcerpt(`They are sealed by blood and covenant forever`), "sealed by blood");
 
   // 16 · markdown heading em-dash is STRUCTURE (L-k′) — stays
   const head = `# Scroll 10002: The Fulcrum of Travail — He Shall See His Seed\nThe travail stands — and the seed rises.`;
