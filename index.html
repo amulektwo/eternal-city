@@ -2960,16 +2960,32 @@ function buildEnterable(x,z,ry,w,dpt,h){
   addSeg(brw[0],brw[1], tr[0],tr[1], T/2+.1);   /* right */
   addSeg(tl[0],tl[1], dl[0],dl[1], T/2+.1);     /* front-left of door */
   addSeg(tr[0],tr[1], dr[0],dr[1], T/2+.1);     /* front-right of door */
-  /* THE INSIDE MADE BEAUTIFUL — glowing apse niche on the back wall, a
-     hanging lamp, and a gold floor medallion underfoot (white-gold, zero-red) */
-  const nb = W(0,-hd+.32);
-  P.glow.push(xf(new THREE.PlaneGeometry(Math.min(2.4,w*.42), Math.min(3.0,h*.5)), nb[0], h*.42, nb[1], ry));
-  P.gold.push(xf(new THREE.TorusGeometry(Math.min(1.5,w*.26), .12, 6, 22), nb[0], h*.42, nb[1], ry));
-  P.gold.push(xf(new THREE.CylinderGeometry(.05,.05,.9,6), x, h-1.05, z));      /* lamp stem */
-  P.gold.push(xf(new THREE.SphereGeometry(.28,10,8), x, h-1.5, z));
-  P.glow.push(xf(new THREE.PlaneGeometry(.7,.7), x, h-1.5, z));                 /* hanging flame */
-  P.glow.push(xf(new THREE.PlaneGeometry(.7,.7), x, h-1.5, z, PI/2));
-  addFloorMedallion(x, z, Math.min(2.6, Math.min(w,dpt)*.3), .06, 12, ry);
+  /* THE INSIDE MADE BEAUTIFUL — three room styles by a coarse spatial hash
+     (variety across the city, no rng — layout law), all white-gold/zero-red,
+     all from proven-safe elements (back-wall niche faces the room; ceiling
+     star faces down; hanging lamps; floor medallion) — NO new floor colliders. */
+  const hang = (hx,hz,hy)=>{
+    P.gold.push(xf(new THREE.CylinderGeometry(.05,.05,.9,6), hx, hy+.45, hz));
+    P.gold.push(xf(new THREE.SphereGeometry(.26,10,8), hx, hy, hz));
+    P.glow.push(xf(new THREE.PlaneGeometry(.68,.68), hx, hy, hz));
+    P.glow.push(xf(new THREE.PlaneGeometry(.68,.68), hx, hy, hz, PI/2));
+  };
+  const niche = ()=>{ const nb = W(0,-hd+.32);
+    P.glow.push(xf(new THREE.PlaneGeometry(Math.min(2.4,w*.42), Math.min(3.0,h*.5)), nb[0], h*.42, nb[1], ry));
+    P.gold.push(xf(new THREE.TorusGeometry(Math.min(1.5,w*.26), .12, 6, 22), nb[0], h*.42, nb[1], ry)); };
+  const style = Math.abs(Math.floor(x/13)*5 + Math.floor(z/13)*11) % 3;
+  if (style === 0){                        /* THE CHAPEL — a lit apse */
+    niche(); hang(x, z, h-1.5);
+    addFloorMedallion(x, z, Math.min(2.6, Math.min(w,dpt)*.3), .06, 12, ry);
+  } else if (style === 1){                 /* THE HALL OF LAMPS — three lights down the aisle */
+    for (const t of [-.26, 0, .26]) hang(x + Math.sin(ry)*t*dpt, z + Math.cos(ry)*t*dpt, h-1.6);
+    addFloorMedallion(x, z, Math.min(3.0, Math.min(w,dpt)*.34), .06, 16, ry);
+  } else {                                 /* THE STARLIT ROOM — lit from a ceiling star */
+    P.glow.push(xf(new THREE.PlaneGeometry(Math.min(3.0,w*.48), Math.min(3.0,dpt*.48)).rotateX(PI/2), x, h-.42, z, ry));
+    P.goldSt.push(xf(new THREE.RingGeometry(Math.min(1.35,w*.22), Math.min(1.55,w*.25), 8).rotateX(-PI/2), x, h-.4, z, ry));
+    niche(); hang(x, z, h-2.1);
+    addFloorMedallion(x, z, Math.min(2.4, Math.min(w,dpt)*.28), .06, 8, ry);
+  }
 }
 function addBuilding(x,z,ry,big,enter){
   const w = rr(6,11)*(big?1.25:1), dpt = rr(6,11)*(big?1.25:1), h = rr(9,20)*(big?1.35:1);
@@ -3041,7 +3057,7 @@ function addBuilding(x,z,ry,big,enter){
       const x = Math.sin(a)*r, z = Math.cos(a)*r;
       if (isReserved(x,z,7)) continue;
       if (outer && angDiff(a,TERR_A) < .45) continue;
-      addBuilding(x, z, a+PI + rr(-.15,.15), outer, R === 70);   /* P-A: the inner ring opens its doors */
+      addBuilding(x, z, a+PI + rr(-.15,.15), outer, true);   /* P-A pass 2: ALL district rings open their doors */
     }
   }
   /* the crown — mega-spires flanking the north gate */
