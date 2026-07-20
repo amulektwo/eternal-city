@@ -2123,14 +2123,50 @@ function addFloorMedallion(x, z, r, y = .075, spokes = 12, phase = 0){
    of a wall of anonymous "Mesh @(0,y,0)" rows, and pass 3's interior
    enlistment can identify a door-invisible payer by name, never by guess.
    Naming is zero render cost; the map is the rescue's foundation. */
+/* THE SPATIAL SPLIT (WO-20260720 · the pool refactor): the old bake fused each
+   material into ONE city-spanning mesh. Its bounds cover the whole city, so it
+   ALWAYS intersects the view frustum — the half-city behind you keeps drawing, in
+   BOTH the camera pass and the shadow pass. Now the pools that actually pay for it —
+   shadow-casters (white/ivory/gold) and any heavy pool (≥12k tris) — are bucketed by
+   XZ cell (?cell=NN, default 64) into per-cell merged meshes; frustumCulled stays
+   default-true, so cells outside the view cull. The larger saving is the SHADOW pass:
+   cells outside the light's shadow frustum stop being re-rendered as casters. City-
+   SPANNING source geometries (floor discs, ring courses) would poison a cell's bounds
+   and never cull, so any geom wider/deeper than 2·CELL routes to an always-drawn per-
+   material SPINE — exactly today's behaviour for those pieces, so the split is never
+   worse than before. The small COSMETIC pools (glow, pearl, crimson, glowArch — a few
+   k tris, no shadow) stay ONE mesh each: splitting them would add ~100 draw calls for
+   a negligible tri saving. Names keep the 'P.<k>' prefix (cells add '#cx,cz') so the
+   F-4 Atlas census stays legible; MAT/castShadow/receiveShadow are preserved. */
 function bake(){
+  const CELL = (()=>{ const v = parseFloat(qs.get('cell')); return (isFinite(v) && v>=16 && v<=200) ? v : 64; })();
+  const SPAN = CELL * 2;
+  const _bb = new THREE.Box3(), _c = new THREE.Vector3(), _sz = new THREE.Vector3();
+  const triCount = g => (g.index ? g.index.count : g.attributes.position.count) / 3;
   for (const k in P){
     if (!P[k].length) continue;
-    const m = new THREE.Mesh(mergeGeometries(P[k]), MAT[k]);
-    m.name = 'P.' + k;                       /* P.white · P.gold · P.ivory · P.glow · P.crimson · P.goldSt · … */
-    m.castShadow = SHADOWS && (k==='white'||k==='ivory'||k==='gold');
-    m.receiveShadow = SHADOWS;
-    scene.add(m);
+    const casts = SHADOWS && (k==='white'||k==='ivory'||k==='gold');
+    const add = (geos, name) => {
+      const m = new THREE.Mesh(mergeGeometries(geos), MAT[k]);
+      m.name = name;                          /* P.white#cx,cz (cell) · P.white (spine / cosmetic whole) */
+      m.castShadow = casts;
+      m.receiveShadow = SHADOWS;
+      scene.add(m);
+    };
+    let poolTris = 0; for (const g of P[k]) poolTris += triCount(g);
+    if (!(casts || poolTris >= 12000)){ add(P[k], 'P.' + k); continue; }  /* cosmetic pool: one always-drawn mesh */
+    const cells = new Map();                   /* cellKey -> [geometry] : the localised fabric, cullable */
+    const spine = [];                          /* city-spanning geometry -> one always-drawn mesh */
+    for (const g of P[k]){
+      g.computeBoundingBox(); _bb.copy(g.boundingBox); _bb.getSize(_sz);
+      if (_sz.x > SPAN || _sz.z > SPAN){ spine.push(g); continue; }
+      _bb.getCenter(_c);
+      const key = Math.floor(_c.x/CELL) + ',' + Math.floor(_c.z/CELL);
+      let arr = cells.get(key); if (!arr){ arr = []; cells.set(key, arr); }
+      arr.push(g);
+    }
+    for (const [key, geos] of cells) add(geos, 'P.' + k + '#' + key);
+    if (spine.length) add(spine, 'P.' + k);
   }
 }
 
