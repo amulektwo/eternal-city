@@ -4853,6 +4853,53 @@ function addBuilding(x,z,ry,big,enter){
 }
 
 /* ================================================================
+   12.5  THE PILLAR OF GLORY — the light of the Lamb over the city
+   "the glory of God did lighten it, and the Lamb is the light thereof"
+   (Rev 21:23). A towering, breathing column of white-gold light ascends
+   from the Tree's crown into heaven, crowned by a soft glory-burst where
+   it opens into the sky — the city's beacon, seen from every vantage and
+   from the air, blazing at dawn and vespers. Additive shader, hour-linked,
+   white-gold (zero-red on the Tree, Law 3, honored by construction), NO
+   collider, base ABOVE the canopy so the fruit stay clear. +3 draws.
+   (Full creative authority — the Seer, 2026-07-20.)
+================================================================ */
+{
+  const PB = 40, PTOP = 322, PH = PTOP - PB;
+  const gloryUni = { uTime:{ value:0 }, uAmp:{ value:1 } };
+  const gloryMat = new THREE.ShaderMaterial({
+    uniforms: gloryUni, transparent:true, depthWrite:false,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    vertexShader:`varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){ vUv = uv; vN = normalize(normalMatrix*normal);
+        vec4 mv = modelViewMatrix*vec4(position,1.0); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix*mv; }`,
+    fragmentShader:`uniform float uTime, uAmp; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){
+        float rise = fract(vUv.y*2.2 - uTime*0.12);            /* glory ascending */
+        float band = 0.55 + 0.45*sin(rise*6.28318);
+        float fres = pow(1.0 - abs(dot(vN, vV)), 1.6);         /* volumetric rim */
+        float vfade = smoothstep(1.0, 0.05, vUv.y);            /* dense at the Tree, dissolves into heaven */
+        float a = uAmp * vfade * (0.15 + 0.22*band) * (0.5 + 0.9*(0.35 + 0.65*fres));
+        vec3 col = mix(vec3(1.0,0.90,0.66), vec3(1.0,0.98,0.90), fres);   /* white-gold, whiter at the rim */
+        gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
+      }`
+  });
+  const pillar = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 9.0, PH, 32, 1, true), gloryMat);
+  pillar.position.set(0, PB + PH/2, 0);
+  pillar.frustumCulled = false;
+  scene.add(pillar);
+  const burst  = mkGlow(0, PTOP - 8, 0, 66, 0xfff0c8, .0);   /* the glory opening in heaven */
+  const burst2 = mkGlow(0, PB + 26,  0, 32, 0xffe9b0, .0);   /* a warm heart low in the column */
+  tickers.push(t=>{
+    gloryUni.uTime.value = t;
+    const hour = 1 + (1 - HOUR.h)*0.7 + HOUR.v*0.5;           /* blazes at dawn/vespers, gentle at noon */
+    gloryUni.uAmp.value = (0.85 + 0.15*Math.sin(t*0.5)) * hour;
+    burst.material.opacity  = (0.36 + 0.12*Math.sin(t*0.6)) * (1 + (1 - HOUR.h)*0.6);
+    burst2.material.opacity = (0.28 + 0.10*Math.sin(t*0.8 + 1.0)) * hour;
+  });
+}
+
+/* ================================================================
    13. THE GREAT SANCTUARY   x:[42,86]  z:[-21,9]
 ================================================================ */
 {
