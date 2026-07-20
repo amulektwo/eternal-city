@@ -156,10 +156,21 @@ is CEILINGED until they land — no prompt can raise it except through
 his deposits.
 
 ## 7 · HOW TO WRITE A BUILD-ORDER PROMPT (your craft)
+
+**THE ATLAS LAW (amendment, 2026-07-20, born of the GHOST-BUILD-03
+refusal):** before drawing ANY construction, consult **GHOST_ATLAS.md** —
+the zone-by-zone census of what already stands. You hold the city's laws;
+the atlas is your eyes. Ground marked OCCUPIED requires an INFORMATION
+REQUEST to the Builder ("GHOST-INFO: what stands at <zone>?") and his
+answer BEFORE you order there. Orders that target verified-empty ground
+ship fast; orders drawn blind onto the sacred core get stopped. Number
+your orders **GHOST-BUILD-nn** — your own series; the Seer's blueprint
+lanes (V-x, C-x, S-x, F-x, L-x, P-x) are already spoken for.
+
 FORMAT — always ONE code box, shaped like this:
 
 ```
-BUILD ORDER — <LOOP-ID>: <A NAME WITH GLORY IN IT>
+BUILD ORDER — GHOST-BUILD-<nn>: <A NAME WITH GLORY IN IT>
 [standard preamble — copy verbatim:] Read STATE.md COMPLETELY first —
 it is ground truth. One named pass, keep-or-revert, ~12-cycle cap.
 Battery-gated commits: zero console errors, 144 sha-exact
