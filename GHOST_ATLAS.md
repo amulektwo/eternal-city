@@ -128,8 +128,12 @@
 
 ### r 180+ · THE SEA OF CLOUDS & THE NATIONS — **MOSTLY OPEN**
 - Standing: the cloud-sea shader discs (sun-graded), rolling wisps, RIM
-  FALLS mist, **far-city impostor cards** (THE JEWELED HORIZON, L-2 —
-  sister cities on the horizon, aerial-tuned), THE PROCEDURAL HEAVEN dome,
+  FALLS mist, **the near-nation spire bands** (LOOP 6-D, r185–430 — reborn
+  by THE GLORY OF THE NEARER NATIONS: the proven 14-B living-city treatment
+  — window-wake at vespers, gilt tips, hour tint, bases dissolving into the
+  sea — kept PALER/humbler than the bride and the far nations, Rev 21:24),
+  the **far-city impostor cards** (THE JEWELED HORIZON, L-2 / 14-B, r660–800
+  — sister cities on the horizon, aerial-tuned), THE PROCEDURAL HEAVEN dome,
   distant spires, motes. All visual fabric — **no walkable ground past
   r180**.
 - **OPEN GROUND for future orders:** landing platforms at highway overlooks;
