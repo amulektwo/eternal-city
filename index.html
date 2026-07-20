@@ -6801,6 +6801,49 @@ const PAD_R = 6.0;   /* GHOST-BUILD-04 — the overlook landing pads at each ter
     const ac = W(HW_OUT - 5, 0);
     P.white.push(xf(new THREE.TorusGeometry(3.0, .22, 6, 14, PI), ac[0], 5.3, ac[1], ga)); /* the arch */
     P.gold.push(xf(new THREE.BoxGeometry(.5, .5, .6), ac[0], 8.5, ac[1], ga));             /* gold keystone */
+
+    /* ===== GHOST-BUILD-05 — HIGHWAY TERRACES & UNDERSIDE PIERS =====
+       Beneath the deck (all y<0) a central aqueduct arcade rises out of
+       the cloud sea: tapered hexagonal marble piers diving into the mist,
+       round marble arch-ribs springing between them just under the deck.
+       Beneath the overlook pad, a terraced inverted-octagonal marble
+       buttress with gold step-trim tapers to a tip in the cloud. NO
+       colliders, NO platform closures — topside decks, groundAt, and
+       resolveCollisions are 100% untouched. All geometry folds into the
+       baked P.white / P.goldSt merges: +0 new draw calls by construction.
+       The cloud-sea plane sits at y-24; pier feet and the footing tip dip
+       into it and dissolve in mist. Axis: piers ride the true spoke ga,
+       arch-rib planes are turned along the spoke by ry = ga - PI/2. */
+    {
+      /* THE UNDERSIDE ARCADE — 4 piers r132..175, 3 arch-ribs between.
+         One central line reads as a marching arcade in silhouette against
+         the cloud (Law 38: silhouette against sky is a proven reader). */
+      const P_R0 = 132, P_R1 = 175, NP = 4;
+      const pTop = -0.3, pBot = -22, pYC = (pTop + pBot)/2, pH = pTop - pBot;
+      const stn = [];
+      for (let i = 0; i < NP; i++){
+        const rr = P_R0 + (P_R1 - P_R0)*i/(NP - 1); stn.push(rr);
+        const wc = W(rr, 0);
+        P.white.push(xf(new THREE.CylinderGeometry(1.5, 0.5, pH, 6), wc[0], pYC, wc[1], ga)); /* tapered pier */
+      }
+      for (let i = 0; i < stn.length - 1; i++){
+        const mid = (stn[i] + stn[i+1])/2, R = (stn[i+1] - stn[i])/2;
+        const wc = W(mid, 0), crown = -0.55, yc = crown - R;   /* apex = yc+R = crown, just under the deck */
+        P.white.push(xf(new THREE.TorusGeometry(R, 0.34, 6, 16, PI), wc[0], yc, wc[1], ga - PI/2)); /* arch-rib */
+      }
+      /* THE OVERLOOK FOOTING — terraced inverted-octagonal buttress under
+         the pad (pc0 @ r180), gold trim at each step, tip in the cloud. */
+      const oct = ga + PI/8;                                   /* match the pad octagon (line ~6781) */
+      const tiers = [[6.0, 4.4,  -0.5,  -6.5],
+                     [4.7, 3.1,  -6.5, -13.5],                 /* rTop>prev rBot => a stepped lip */
+                     [3.4, 1.8, -13.5, -20.5],
+                     [2.1, 0.2, -20.5, -25.5]];                /* tip dissolves in the -24 cloud */
+      for (const [rt, rb, yt, yb] of tiers){
+        const h = yt - yb, yc = (yt + yb)/2;
+        P.white.push(xf(new THREE.CylinderGeometry(rt, rb, h, 8), pc0[0], yc, pc0[1], oct));
+        P.goldSt.push(xf(new THREE.RingGeometry(rt - 0.16, rt + 0.02, 8).rotateX(-PI/2), pc0[0], yt - 0.02, pc0[1], oct)); /* gold step-trim */
+      }
+    }
   }
   /* THE FLOOR — one closure serves all eleven corridors (r WALL_R..HW_OUT,
      within HW_HALF of a gate spoke); the disc already floors r<CITY_R */
