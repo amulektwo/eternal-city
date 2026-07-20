@@ -104,14 +104,26 @@
 - **ELEVEN CELESTIAL HIGHWAYS** (WO-20260720b, gates 1–11): 8-wide marble
   decks r129.5–180 along each spoke, low parapets + gilt caps + glow
   borders. Deck edges clamp in resolveCollisions; one platform closure
-  floors all corridors.
+  floors all corridors. **UNDERSIDE now built (GHOST-BUILD-05):** a central
+  aqueduct arcade beneath each deck — four tapered hexagonal marble piers
+  (r132→175, foot y-22) + three round marble arch-ribs rising from the -24
+  cloud sea. All y<0, NO colliders (topside physics untouched).
 - **ELEVEN OVERLOOK LANDING GROUNDS** (GHOST-BUILD-04, WO-20260720d): each
   highway ends in an octagonal marble pad (r6 @ spoke r180) — gold floor
   ring, rim parapet (entry face open), glow rim, and an arched marble
   portal (gold-capped pillars + keystone, own colliders) at r175. Physics:
   deck∪pad union clamp + pad platform closure; HUD area THE OVERLOOK.
-  **CARRIED (open reruns):** terraced steps; underside piers; gates 7/8
-  decks could start past the terrace railing; pad lamps/finials;
+  **UNDERSIDE now built (GHOST-BUILD-05):** a four-tier stepped inverted-
+  octagonal marble buttress footing (rTop 6.0 → tip y-25.5) with gold
+  step-trim under each pad, dissolving into the cloud. y<0, no colliders.
+- **THE HIGHWAYS OF GLORY — THE LIGHT** (Seer beauty loop 1, 2026-07-20):
+  lamps of the way (gold standard + white-gold glow flame above the bloom
+  line) down every deck + around every pad rim, and a radiant glow at each
+  arch keystone. Merged, +0 draws. (GHOST-BUILD-05 = the roads' underside
+  structure; this = their light — the two lanes reconciled, no overlap.)
+  **CARRIED (open reruns):** beefier/lower-springing arcade; tie last pier
+  into the footing; edge piers / double arcade; a below-the-rim scout
+  vantage; gates 7/8 decks past the terrace railing; pad lamps/finials;
   far-city viewing markers (await the Seer's names).
 
 ### r 180+ · THE SEA OF CLOUDS & THE NATIONS — **MOSTLY OPEN**
@@ -133,7 +145,7 @@
   aims here); THE LIVING HOUR breathes dawn↔noon + vespers (?hour=).
 
 ## THE MOVING & INVISIBLE SYSTEMS (break these and the city dies)
-- **Physics:** colCircles 272 · colBoxes 34 · colSegs 2 · ~10 platform
+- **Physics:** colCircles 294 · colBoxes 34 · colSegs 2 · ~10 platform
   closures · wall band + rampart rails + rim rail + hall ring — all in
   `resolveCollisions`/`groundAt` (GHOST-02/03 packets hold the raw code).
 - **Draw discipline:** 8 baked P.* merges + InstancedMesh for repeats;
@@ -151,11 +163,15 @@
   Figures arrive ONLY by GLB deposit (MESHY_RUNBOOK.md) — never primitives.
 
 ## GENUINELY OPEN GAPS (fair ground, priced lanes)
-1. Highway reruns: terraced steps, piers, gate-7/8 re-seat (carried).
+1. Highway reruns: ~~underside piers~~ **BUILT (GHOST-BUILD-05)**; still
+   open — beefier/lower arcade, footing tie-in, edge piers, gate-7/8 re-seat.
 2. ~~Overlook landings~~ **BUILT (GHOST-BUILD-04)** — outer islets past
    r186 remain open (new domain).
 3. P-A THE OPEN DOORS: district-building interiors (priced, unbuilt).
-4. The underside read (the island from the sea below).
+4. The underside read (the island from the sea below): the HIGHWAY/PAD
+   underside is now built (GHOST-BUILD-05, arches+footings rising from the
+   cloud); the CITY-DISC underside (r<130, the island's own body from
+   below) remains open.
 5. The far sister cities (Seer ambition, awaits his order).
 6. Anything the Seer's walkthrough circles name next (RERUN RULE).
 

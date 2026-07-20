@@ -3023,6 +3023,21 @@ function addBuilding(x,z,ry,big){
     P.gold.push(xf(arch, sx, 2.48, z + 3));
   }
 
+  /* ===== THE LAMPLIT STREET (Seer beauty loop 2) — processional lamps
+     down the golden avenue so the whole arrival way is ONE path of light:
+     causeway lamps → gate → this street → the Tree. Freestanding gold
+     standards just inside the arcade (±5.4, clear of the centre walk),
+     white-gold glow flames above the 1.8 bloom line — merged into
+     P.gold/P.glow (+0 draws), deterministic (no rng — layout law), thin
+     poles off the walk (no collider, the causeway precedent). */
+  const streetLamp = (lx, lz)=>{
+    P.gold.push(xf(new THREE.CylinderGeometry(.07, .11, 3.0, 6), lx, 1.5, lz));   /* standard */
+    P.gold.push(xf(new THREE.CylinderGeometry(.22, .09, .3, 6), lx, 3.15, lz));   /* cup */
+    P.glow.push(xf(new THREE.PlaneGeometry(.4, .7), lx, 3.5, lz));                /* white-gold flame */
+    P.glow.push(xf(new THREE.PlaneGeometry(.4, .7), lx, 3.5, lz, PI/2));
+  };
+  for (let z = 43; z <= 79; z += 6) for (const sx of [-5.4, 5.4]) streetLamp(sx, z);
+
   /* golden canopies over the walks */
   const canMat = new THREE.MeshStandardMaterial({ map:canopyStripeTex, roughness:.65, side:THREE.DoubleSide });
   const canParts = [];
@@ -6801,6 +6816,72 @@ const PAD_R = 6.0;   /* GHOST-BUILD-04 — the overlook landing pads at each ter
     const ac = W(HW_OUT - 5, 0);
     P.white.push(xf(new THREE.TorusGeometry(3.0, .22, 6, 14, PI), ac[0], 5.3, ac[1], ga)); /* the arch */
     P.gold.push(xf(new THREE.BoxGeometry(.5, .5, .6), ac[0], 8.5, ac[1], ga));             /* gold keystone */
+
+    /* ===== GHOST-BUILD-05 — HIGHWAY TERRACES & UNDERSIDE PIERS =====
+       Beneath the deck (all y<0) a central aqueduct arcade rises out of
+       the cloud sea: tapered hexagonal marble piers diving into the mist,
+       round marble arch-ribs springing between them just under the deck.
+       Beneath the overlook pad, a terraced inverted-octagonal marble
+       buttress with gold step-trim tapers to a tip in the cloud. NO
+       colliders, NO platform closures — topside decks, groundAt, and
+       resolveCollisions are 100% untouched. All geometry folds into the
+       baked P.white / P.goldSt merges: +0 new draw calls by construction.
+       The cloud-sea plane sits at y-24; pier feet and the footing tip dip
+       into it and dissolve in mist. Axis: piers ride the true spoke ga,
+       arch-rib planes are turned along the spoke by ry = ga - PI/2. */
+    {
+      /* THE UNDERSIDE ARCADE — 4 piers r132..175, 3 arch-ribs between.
+         One central line reads as a marching arcade in silhouette against
+         the cloud (Law 38: silhouette against sky is a proven reader). */
+      const P_R0 = 132, P_R1 = 175, NP = 4;
+      const pTop = -0.3, pBot = -22, pYC = (pTop + pBot)/2, pH = pTop - pBot;
+      const stn = [];
+      for (let i = 0; i < NP; i++){
+        const rr = P_R0 + (P_R1 - P_R0)*i/(NP - 1); stn.push(rr);
+        const wc = W(rr, 0);
+        P.white.push(xf(new THREE.CylinderGeometry(1.5, 0.5, pH, 6), wc[0], pYC, wc[1], ga)); /* tapered pier */
+      }
+      for (let i = 0; i < stn.length - 1; i++){
+        const mid = (stn[i] + stn[i+1])/2, R = (stn[i+1] - stn[i])/2;
+        const wc = W(mid, 0), crown = -0.55, yc = crown - R;   /* apex = yc+R = crown, just under the deck */
+        P.white.push(xf(new THREE.TorusGeometry(R, 0.34, 6, 16, PI), wc[0], yc, wc[1], ga - PI/2)); /* arch-rib */
+      }
+      /* THE OVERLOOK FOOTING — terraced inverted-octagonal buttress under
+         the pad (pc0 @ r180), gold trim at each step, tip in the cloud. */
+      const oct = ga + PI/8;                                   /* match the pad octagon (line ~6781) */
+      const tiers = [[6.0, 4.4,  -0.5,  -6.5],
+                     [4.7, 3.1,  -6.5, -13.5],                 /* rTop>prev rBot => a stepped lip */
+                     [3.4, 1.8, -13.5, -20.5],
+                     [2.1, 0.2, -20.5, -25.5]];                /* tip dissolves in the -24 cloud */
+      for (const [rt, rb, yt, yb] of tiers){
+        const h = yt - yb, yc = (yt + yb)/2;
+        P.white.push(xf(new THREE.CylinderGeometry(rt, rb, h, 8), pc0[0], yc, pc0[1], oct));
+        P.goldSt.push(xf(new THREE.RingGeometry(rt - 0.16, rt + 0.02, 8).rotateX(-PI/2), pc0[0], yt - 0.02, pc0[1], oct)); /* gold step-trim */
+      }
+    }
+    /* ===== THE HIGHWAYS OF GLORY (Seer beauty loop) — THE LIGHT =====
+       GHOST-BUILD-05 (above) gave the roads their underside structure;
+       this gives them their LIGHT: lamps of the way down every deck and
+       around every pad rim, and a radiant glow at each arch keystone.
+       All folded into the baked P.gold/P.glow merges (+0 draws); the
+       white-gold flames sit above the 1.8 bloom line and blaze at vespers.
+       Poles clear the ±3.45 walkable clamp — no collider (causeway law). */
+    {
+      const lamp = (lx, lz)=>{
+        P.gold.push(xf(new THREE.CylinderGeometry(.05, .08, 1.9, 6), lx, .95, lz));   /* standard */
+        P.gold.push(xf(new THREE.CylinderGeometry(.17, .07, .22, 6), lx, 2.02, lz));  /* cup */
+        P.glow.push(xf(new THREE.PlaneGeometry(.28, .55), lx, 2.34, lz));             /* white-gold flame */
+        P.glow.push(xf(new THREE.PlaneGeometry(.28, .55), lx, 2.34, lz, PI/2));
+      };
+      for (const al of [141, 156, 171])                     /* three stations, both parapets */
+        for (const s of [-1, 1]){ const p = W(al, s*(HW_HALF - .35)); lamp(p[0], p[1]); }
+      for (let i = 0; i < 8; i++){                          /* the pad rim ring (entry face dark) */
+        const ph = i*PI/4; if (Math.cos(ph) < -0.92) continue;
+        const vc = W(HW_OUT + 5.7*Math.cos(ph), 5.7*Math.sin(ph)); lamp(vc[0], vc[1]);
+      }
+      P.glow.push(xf(new THREE.PlaneGeometry(.95, .95), ac[0], 8.5, ac[1], ga));      /* keystone glow */
+      P.glow.push(xf(new THREE.PlaneGeometry(.95, .95), ac[0], 8.5, ac[1], ga + PI/2));
+    }
   }
   /* THE FLOOR — one closure serves all eleven corridors (r WALL_R..HW_OUT,
      within HW_HALF of a gate spoke); the disc already floors r<CITY_R */
@@ -8613,6 +8694,12 @@ function buildGateVaults(index){
     roughness:.8, metalness:.04, side:THREE.BackSide });
   const lampCoreMat = new THREE.MeshStandardMaterial({   /* below the 1.8 bloom line */
     color:0xfff3d6, emissive:0xffe9b8, emissiveIntensity:1.4, roughness:.4 });
+  /* Loop 36 · THE SHAFT OF THE WORD — faint gold light falling from the
+     oculus (board 05: light poured through the threshold). Additive, no
+     depth write, one shared material across all twelve houses. */
+  const shaftMat = new THREE.MeshBasicMaterial({
+    color:0xffdf9a, transparent:true, opacity:.17, depthWrite:false,
+    blending:THREE.AdditiveBlending, side:THREE.DoubleSide });
   const libRng = mulberry32(4405);
   function dressLibrary(st, px, pz, gateAng){
     const g = st.group;
@@ -8706,7 +8793,13 @@ function buildGateVaults(index){
     og.setAttribute('aSeed', new THREE.BufferAttribute(oseed,1));
     const orbs = new THREE.Points(og, orbMat);
     orbs.frustumCulled = false;
-    g.add(wall, mMesh, gMesh, bMesh, glow, orbs, domeIn, lampCore, lampGlow);
+    /* Loop 36 — the shaft: a cone of light widening from the oculus mouth
+       (r.55) to a soft pool on the floor (r1.6), descending through the
+       house onto the Word. Reveal-gated with the group; near-free hidden. */
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 1.6, 4.5, 16, 1, true), shaftMat);
+    shaft.position.set(px, 2.35, pz);
+    g.add(wall, mMesh, gMesh, bMesh, glow, orbs, domeIn, lampCore, lampGlow, shaft);
     addCircle(dx, dz, .5);   /* the desk stands solid */
     /* ── Loop 35 · THE HOUSE MADE SOLID — the flagged apse colliders:
        eight circle-arcs trace the 150-degree case at r2.35; the mouth
