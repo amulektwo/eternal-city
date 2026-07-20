@@ -2998,6 +2998,22 @@ function buildEnterable(x,z,ry,w,dpt,h){
   addSeg(brw[0],brw[1], tr[0],tr[1], T/2+.1);   /* right */
   addSeg(tl[0],tl[1], dl[0],dl[1], T/2+.1);     /* front-left of door */
   addSeg(tr[0],tr[1], dr[0],dr[1], T/2+.1);     /* front-right of door */
+  /* P-A pass 8 — THE DIGNIFIED DOOR: a marble porch frames each entrance —
+     two gold-ringed columns flanking the DW-wide door (clear of the
+     opening) + a gold-edged canopy over the lintel. Exterior fabric
+     (always-drawn P.white/P.gold, per-cell bucketed since THE SPATIAL
+     SPLIT); one base collider per column. */
+  {
+    const pz = hd + 0.6, ppx = DW/2 + 0.55, cH = DH + 0.4;
+    for (const sgn of [-1,1]){ const pc = W(sgn*ppx, pz);
+      P.white.push(xf(new THREE.CylinderGeometry(.22,.26,cH,8), pc[0], cH/2, pc[1]));
+      P.gold .push(xf(new THREE.TorusGeometry(.28,.055,6,10).rotateX(PI/2), pc[0], cH-.18, pc[1]));  /* capital */
+      P.gold .push(xf(new THREE.TorusGeometry(.30,.065,6,10).rotateX(PI/2), pc[0], .18, pc[1]));     /* base */
+      addCircle(pc[0], pc[1], .32); }
+    const hc = W(0, pz);
+    P.white.push(xf(new THREE.BoxGeometry(DW+1.9, .34, 1.1), hc[0], cH+.02, hc[1], ry));   /* canopy slab */
+    P.gold .push(xf(new THREE.BoxGeometry(DW+2.1, .11, 1.25), hc[0], cH-.16, hc[1], ry));  /* gold fascia */
+  }
   /* ===== THE INTERIOR — accumulated into II, then built as ONE cullable
      GROUP shown only when the walker is within 40m (P-A pass 4). The roof
      occludes all of this from outside/aerial, so hiding it from the GPU when
