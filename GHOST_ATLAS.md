@@ -116,6 +116,11 @@
   **UNDERSIDE now built (GHOST-BUILD-05):** a four-tier stepped inverted-
   octagonal marble buttress footing (rTop 6.0 → tip y-25.5) with gold
   step-trim under each pad, dissolving into the cloud. y<0, no colliders.
+- **THE HIGHWAYS OF GLORY — THE LIGHT** (Seer beauty loop 1, 2026-07-20):
+  lamps of the way (gold standard + white-gold glow flame above the bloom
+  line) down every deck + around every pad rim, and a radiant glow at each
+  arch keystone. Merged, +0 draws. (GHOST-BUILD-05 = the roads' underside
+  structure; this = their light — the two lanes reconciled, no overlap.)
   **CARRIED (open reruns):** beefier/lower-springing arcade; tie last pier
   into the footing; edge piers / double arcade; a below-the-rim scout
   vantage; gates 7/8 decks past the terrace railing; pad lamps/finials;

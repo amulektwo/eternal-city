@@ -6844,6 +6844,29 @@ const PAD_R = 6.0;   /* GHOST-BUILD-04 — the overlook landing pads at each ter
         P.goldSt.push(xf(new THREE.RingGeometry(rt - 0.16, rt + 0.02, 8).rotateX(-PI/2), pc0[0], yt - 0.02, pc0[1], oct)); /* gold step-trim */
       }
     }
+    /* ===== THE HIGHWAYS OF GLORY (Seer beauty loop) — THE LIGHT =====
+       GHOST-BUILD-05 (above) gave the roads their underside structure;
+       this gives them their LIGHT: lamps of the way down every deck and
+       around every pad rim, and a radiant glow at each arch keystone.
+       All folded into the baked P.gold/P.glow merges (+0 draws); the
+       white-gold flames sit above the 1.8 bloom line and blaze at vespers.
+       Poles clear the ±3.45 walkable clamp — no collider (causeway law). */
+    {
+      const lamp = (lx, lz)=>{
+        P.gold.push(xf(new THREE.CylinderGeometry(.05, .08, 1.9, 6), lx, .95, lz));   /* standard */
+        P.gold.push(xf(new THREE.CylinderGeometry(.17, .07, .22, 6), lx, 2.02, lz));  /* cup */
+        P.glow.push(xf(new THREE.PlaneGeometry(.28, .55), lx, 2.34, lz));             /* white-gold flame */
+        P.glow.push(xf(new THREE.PlaneGeometry(.28, .55), lx, 2.34, lz, PI/2));
+      };
+      for (const al of [141, 156, 171])                     /* three stations, both parapets */
+        for (const s of [-1, 1]){ const p = W(al, s*(HW_HALF - .35)); lamp(p[0], p[1]); }
+      for (let i = 0; i < 8; i++){                          /* the pad rim ring (entry face dark) */
+        const ph = i*PI/4; if (Math.cos(ph) < -0.92) continue;
+        const vc = W(HW_OUT + 5.7*Math.cos(ph), 5.7*Math.sin(ph)); lamp(vc[0], vc[1]);
+      }
+      P.glow.push(xf(new THREE.PlaneGeometry(.95, .95), ac[0], 8.5, ac[1], ga));      /* keystone glow */
+      P.glow.push(xf(new THREE.PlaneGeometry(.95, .95), ac[0], 8.5, ac[1], ga + PI/2));
+    }
   }
   /* THE FLOOR — one closure serves all eleven corridors (r WALL_R..HW_OUT,
      within HW_HALF of a gate spoke); the disc already floors r<CITY_R */
