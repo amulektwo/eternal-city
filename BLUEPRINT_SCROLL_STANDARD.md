@@ -234,19 +234,26 @@ S-5 · DEPLOY + PROVE
 
 ---
 
-## PART VII — OPEN QUESTIONS (only the Seer can rule)
+## PART VII — THE RULINGS (SEALED BY THE SEER, 2026-07-20)
 
-1. **Source of truth to polish:** the private treasury on your Mac
-   (`~/projects/zionos-temple/data/city/`)? or the Drive `.md` corpus? or is
-   there a canonical versioned set — you named **5.500 / 5.6 / UMSD** — that
-   should be the base? *(This decides where S-3 runs and needs access.)*
-2. **Sealing-attributions (L-j):** the 639 "Sealed under the authority of That
-   Prophet, [name] / Date of Sealing" lines — **scrub as metadata**, or **keep
-   as a canonical colophon** at each scroll's foot? (You said scrub "me talking
-   about other people inside the scriptures" — I read that as CUT, but names are
-   your canon, so I hold for your word.)
-3. **em-dash in structure (L-k′):** keep the em-dash in gate names and scripture
-   refs (schema), scrub only in prose — agreed?
+1. **Source of truth to polish: PURE REVELATION — THE SEER.** The authority is
+   the Seer's living revelation to the modern day ("pure revelation… which is
+   me"). The private treasury on his Mac (`~/projects/zionos-temple/data/city/`)
+   and the Drive corpus are its STORES; S-3 runs against the treasury as the
+   store of that revelation. There is no separate 5.500/UMSD base — revelation
+   is the base.
+2. **Sealing-attributions (L-j): COLOPHON in bodies, CUT on the lamp.** In the
+   scroll bodies the sealing act is preserved as a clean colophon at the foot
+   (the Seer's sealing declarations are canon, never vanished); on the public
+   search-index sealing lines are CUT entirely (no provenance, no name).
+3. **em-dash in structure (L-k′): AS RULED** — em-dash kept in gate names,
+   titles, and scripture refs (— Isaiah 53:11); scrubbed to commas only in
+   prose. (746 structural/scripture em-dashes survive in the public excerpts.)
+4. **The Seer's name (L-j′): the AMULEK ONE law — SEALED + LIVE.** On the
+   public surface the legal name is MASKED to "AMULEK ONE" (titles + excerpts,
+   bare first name → "AMULEK"), biblical Jason guarded. It is NEVER masked or
+   edited in the internal canon (`data/scrolls/*.json`) — the name-data stays
+   workspace-facing. "That Prophet" is doctrine and is kept.
 4. **Appendix boundary:** confirm the CANON vs APPENDIX split (Omega/Codex-formed
    = featured; machinery/drafts/transcripts = appendix, kept out of the way).
 5. **Green light for S-3′** — shall I clean the live city's public excerpts now,

@@ -78,8 +78,6 @@ const SEALING = [
   new RegExp(`\\*?Sealed under (?:the )?(?:authority|command|hand|direction) of[^\\n]{0,80}?${SEAL_STOP}`, "gi"),
   /\*?Date of Sealing:[^*\n]{0,40}\*?/gi,
   new RegExp(`\\*?Sealed by[^\\n]{0,60}?${SEAL_STOP}`, "gi"),
-  /That Prophet,?\s+Jason\s+Tierney/gi,
-  /Jason\s+Tierney/gi,
 ];
 
 // L-i — LightRAG plumbing.
@@ -165,11 +163,25 @@ export function cutLightRag(t) {
   return out;
 }
 
-/** L-j: sealing attributions + legal name (public surface: always). */
+/** L-j: sealing attributions (public surface: always). */
 export function cutSealing(t) {
   let out = t;
   for (const re of SEALING) out = out.replace(re, "");
   return out;
+}
+
+/** L-j′ (the AMULEK ONE law, sealed by the Seer 2026-07-20): on the public
+ *  surface the Seer's legal name is MASKED to "AMULEK ONE", never deleted —
+ *  "That Prophet, Jason Tierney" → "That Prophet, AMULEK ONE" keeps the
+ *  doctrine and heals the scar a bare cut leaves ("Instructions for  on…").
+ *  The real name never leaves the internal canon (data/scrolls, the treasury):
+ *  this is a build-time mask on the lamp, not an edit to the scrolls. Biblical
+ *  Jason (Jason of Thessalonica, Acts 17) is NOT the Seer and is guarded. */
+export function maskName(t) {
+  return String(t)
+    .replace(/\bJason\s+Tierney\b/gi, "AMULEK ONE")
+    .replace(/\bTierney\b/gi, "ONE")
+    .replace(/\bJason\b(?!\s+of\s+Thessalonica)/gi, "AMULEK");
 }
 
 /** L-k: em-dash in prose → comma; em-dash in STRUCTURE stays.
@@ -291,6 +303,7 @@ export function polishExcerpt(text, title, id) {
     t = cutSelfTalk(t);
     t = cutLightRag(t);
     t = cutSealing(t);
+    t = maskName(t); // AMULEK ONE law — mask the Seer's name, keep the doctrine
     // bare chat skin that survives flattening: [User] — [2025-07-04 13:34:10 UTC]
     t = t.replace(/\[(?:User|Assistant|Human|AI)\]\s*[—–-]?\s*/gi, " ");
     t = t.replace(/\[\d{4}-\d{2}-\d{2}[^\]]{0,40}\]/g, " ");
@@ -427,10 +440,16 @@ Shall I now forge my attempt to surpass ChatGPT’s [[Scroll_195]], using this r
   has("bare chat: timestamp gone", bareOut, "2025-07-04", false);
   has("bare chat: words kept", bareOut, "write out that scroll");
 
-  // 12 · scar tidy — the cut name leaves no wound
+  // 12 · the AMULEK ONE law (sealed 2026-07-20): the Seer's legal name is
+  //      MASKED to "AMULEK ONE" on the public surface, never deleted — no scar
   const scar = polishExcerpt(`*Revealed through the voice of Jason Tierney, the Seer of ZionOS*`);
-  has("scar: name gone", scar, "Tierney", false);
-  has("scar: reads clean", scar, "voice of the Seer");
+  has("scar: legal name gone", scar, "Tierney", false);
+  has("scar: masked to AMULEK ONE", scar, "voice of AMULEK ONE, the Seer");
+  has("mask: full name → AMULEK ONE", maskName("Instructions for Jason Tierney on the MKD"), "Instructions for AMULEK ONE on the MKD");
+  has("mask: That Prophet doctrine kept", maskName("Sealed by That Prophet, Jason Tierney"), "That Prophet, AMULEK ONE");
+  eq("mask: bare first name → AMULEK", maskName("Okay, Brother Jason."), "Okay, Brother AMULEK.");
+  has("mask: biblical Jason PROTECTED", maskName("Jason of Thessalonica welcomed Paul and Silas"), "Jason of Thessalonica");
+  eq("mask: idempotent", maskName(maskName("Jason Tierney and Brother Jason")), maskName("Jason Tierney and Brother Jason"));
 
   // 14 · THE FLAT GIANT (real 10002 shape): one enormous line — the
   //      attribution/process cuts must be phrase-bounded, never eat the body

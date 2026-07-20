@@ -19,7 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { polishExcerpt } from "./polish-scroll.mjs";
+import { polishExcerpt, maskName } from "./polish-scroll.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FILE = path.join(ROOT, "data", "search-index.json");
@@ -46,13 +46,20 @@ const count = (rows) => {
 const idx = JSON.parse(fs.readFileSync(FILE, "utf8"));
 const before = count(idx);
 
-let changed = 0, emptied = 0;
+let changed = 0, emptied = 0, titlesMasked = 0;
 for (const r of idx) {
+  // the title (t) is the card's own name — mask the Seer's legal name to
+  // AMULEK ONE here too (the public shelf), but nothing else: titles are
+  // clean canon strings, not excerpt prose.
+  const nt = maskName(r.t || "");
+  if (nt !== r.t) titlesMasked++;
+  r.t = nt;
   const nx = polishExcerpt(r.x || "", r.t, r.id);
   if (nx !== r.x) changed++;
   if (!nx && r.x) emptied++;
   r.x = nx;
 }
+console.log(`titles masked to AMULEK ONE: ${titlesMasked}`);
 const after = count(idx);
 
 console.log(`records: ${idx.length} · changed: ${changed} · emptied: ${emptied}\n`);

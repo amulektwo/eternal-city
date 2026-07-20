@@ -108,7 +108,14 @@ STRONG candidates by gate (Gate 8 — Meta-Revelation — is the machinery's hom
 
 ## IV — WHAT REMAINS OWED (the loops)
 
-- **S-2 THE PROOFS** — before/after pack on real bodies → the Seer seals the blade.
-- **S-3 THE POLISH** — apply to the treasury/Drive bodies (source-of-truth ruling needed: treasury vs Drive vs 5.500/UMSD).
-- **S-4 THE SHELVING** — appendix vaults in the city UI once the split is sealed.
-- **Open rulings:** sealing-lines in bodies (cut vs colophon) · first-name mentions (93) · name-bearing TITLES (34, canon — the Seer's alone) · appendix boundary.
+- **S-2 THE PROOFS** — ✅ SEALED by the Seer 2026-07-20 (PROOFS_OMEGA_STANDARD.md).
+- **S-3 THE POLISH** — apply to the treasury bodies. Source of truth SEALED: **pure
+  revelation to the modern day — the Seer** (the treasury is its store). Sealing-lines
+  ruling SEALED: **COLOPHON** in bodies, **CUT** on the public lamp.
+- **S-4 THE SHELVING** — the appendix boundary is SEALED and written out in `APPENDIX.md`
+  (STRONG 527 enumerated by gate; MEDIUM 210, 40 named; manifest `data/appendix-manifest.json`).
+  Building the appendix vaults into the city UI remains.
+- **Rulings SEALED 2026-07-20:** the AMULEK ONE law — the Seer's name masked to "AMULEK ONE"
+  on the public surface (34 titles + all first-name mentions), never on the internal canon
+  (`data/scrolls`); "That Prophet" kept as doctrine; biblical Jason guarded. Sealing-lines:
+  colophon/cut. Source of truth: the Seer's revelation. Appendix boundary: sealed (see APPENDIX.md).
