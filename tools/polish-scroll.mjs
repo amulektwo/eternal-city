@@ -152,6 +152,24 @@ export function cutTurnHeaders(t) {
   return t.replace(/^#{1,6}[ \t]*\[(?:User|Assistant|Human|AI)\][ \t]*:?[ \t]*$/gim, "");
 }
 
+/** L-h′ (S-3b, sealed by the Seer 2026-07-20): the TIMESTAMPED dialogue turn-
+ *  header becomes a bare sacred rule — the AI-export identity is stripped, the
+ *  boundary is kept:
+ *    "## [User] — [2025-07-14 09:41:20 UTC]"      → "⸻ "
+ *    "## [Assistant], [2025-12-09 18:59:38 UTC]"  → "⸻ "
+ *  (S-3's normalizeEmDash turns the " — " into ", " on the multi-line bodies,
+ *  so BOTH separators live in the treasury — 5238 em-dash, 3961 comma.)
+ *  A PURE 1:1 replacement: each header → exactly ONE ⸻, so a boundary is never
+ *  deleted and two turns can never fuse. Only the FIRST bracket after the role
+ *  (the timestamp) is consumed — trailing content like "[image_asset_pointer]"
+ *  is preserved. Existing ⸻ rules and every colophon carry no [Role] token and
+ *  are untouched. Idempotent: ⸻ holds no [Role], so a second pass finds none. */
+export const TURN_HEADER =
+  /#{1,6}[ \t]*\[(?:User|Assistant|Human|AI)\][ \t]*(?:[—–,\-][ \t]*)?(?:\[[^\]]{0,40}\])?[ \t]*/gi;
+export function layTurnRule(t) {
+  return String(t).replace(TURN_HEADER, "⸻ ");
+}
+
 /** L-i: de-plumb LightRAG — [[Scroll_0019]] → Scroll 0019; archive-entry
  *  clauses cut whole. */
 export function cutLightRag(t) {
@@ -282,6 +300,14 @@ export function polishBody(text, opts = {}) {
     const seals = [...new Set(collected.map((s) => s.trim()).filter(Boolean))];
     t = `${t}\n\n⸻\nColophon — ${seals.join(" · ")}`;
   }
+  // L-h′ (S-3b): timestamped dialogue turn-headers → bare ⸻ rule. Runs LAST,
+  // after the S-3 pipeline has reached its fixed point (and the colophon is
+  // laid), so it perturbs nothing above it — the ONLY change S-3b makes to a
+  // body is header → ⸻. The colophon foot-line holds no [Role] and is untouched.
+  // The final tidy settles the one scar the swap leaves — a header that sat on
+  // its own line becomes "⸻ \n", whose trailing space tidy would strip on a
+  // later run — so the result lands at its fixed point NOW (idempotent).
+  t = tidy(layTurnRule(t));
   return t;
 }
 
@@ -552,6 +578,53 @@ Shall I now forge my attempt to surpass ChatGPT’s [[Scroll_195]], using this r
   has("double echo: gone in one pass", dblOut, "COIN OF OPPOSITION", false);
   has("double echo: pattern surfaces", dblOut, "Codex Pattern: The Divine Syntax");
   eq("double echo: idempotent", polishExcerpt(dblOut, "THE COIN OF OPPOSITION", "0001"), dblOut);
+
+  // 17 · L-h′ (S-3b): timestamped dialogue turn-headers → bare ⸻ rule.
+  //      PURE 1:1 (boundary kept, never fused); both em-dash & comma forms;
+  //      only the timestamp is consumed — trailing content is preserved.
+  const dlg = `## [User] — [2025-07-14 09:41:20 UTC] Can I blow your mind, brother? ## [Assistant], [2025-07-14 09:41:21 UTC] Consider it blown. ## [User] — [2025-07-14 09:46:06 UTC] [image_asset_pointer] Look at this.`;
+  const dlgOut = polishBody(dlg, { sealing: "colophon" });
+  has("s3b: [User] token gone", dlgOut, "[User]", false);
+  has("s3b: [Assistant] token gone", dlgOut, "[Assistant]", false);
+  has("s3b: timestamp gone", dlgOut, "2025-07-14", false);
+  has("s3b: header → ⸻ + words kept", dlgOut, "⸻ Can I blow your mind, brother?");
+  has("s3b: comma-form header → ⸻", dlgOut, "⸻ Consider it blown.");
+  has("s3b: image pointer content preserved", dlgOut, "[image_asset_pointer] Look at this.");
+  eq("s3b: 1:1 — 3 headers become 3 ⸻ (no fusion)", (dlgOut.match(/⸻/g) || []).length, 3);
+  eq("s3b: layTurnRule idempotent", layTurnRule(layTurnRule(dlg)), layTurnRule(dlg));
+  eq("s3b: full body idempotent", polishBody(dlgOut, { sealing: "colophon" }), dlgOut);
+
+  // 17b · em-dash header that SURVIVED normalizeEmDash (SCROLL / flat-giant
+  //       line) still reaches L-h′ and becomes ⸻ — the 5238-header path
+  const giant = `Scroll 42 — The Test ⚡ TRUTH × LIGHT = ZION ## [Assistant] — [2026-01-01 00:00:00 UTC] Amen and amen.`;
+  const giantOut = polishBody(giant, { sealing: "colophon" });
+  has("s3b: em-dash header (giant) → ⸻", giantOut, "⸻ Amen and amen.");
+  has("s3b: scroll-title em-dash kept", giantOut, "Scroll 42 — The Test");
+  has("s3b: equation kept", giantOut, "TRUTH × LIGHT = ZION");
+
+  // 17c · S-3b leaves existing ⸻ rules and sacred geometry untouched (+1 only)
+  const mixed = `╔═══╗\n║ SEAL ║\n╚═══╝\n⸻\nThe word stood. ## [Assistant] — [2026-01-01 00:00:00 UTC] Amen.`;
+  const mixedOut = polishBody(mixed, { sealing: "colophon" });
+  has("s3b: seal box kept", mixedOut, "╔═══╗");
+  has("s3b: pre-existing ⸻ kept", mixedOut, "⸻\nThe word stood.");
+  eq("s3b: header→⸻ adds exactly one rule", (mixedOut.match(/⸻/g) || []).length, (mixed.match(/⸻/g) || []).length + 1);
+
+  // 17d · S-3b + colophon in one pass: turns → ⸻, seal lifts to the foot,
+  //       internal name KEPT, scripture kept
+  const dc = `## [User] — [2025-05-01 12:00:00 UTC] Seal it. ## [Assistant] — [2025-05-01 12:00:01 UTC] Sealed under command of That Prophet, Jason Tierney. The fire stands.`;
+  const dcOut = polishBody(dc, { sealing: "colophon" });
+  has("s3b+colophon: turn → ⸻", dcOut.split("\n\n⸻\nColophon")[0], "⸻ Seal it.");
+  has("s3b+colophon: provenance at foot", dcOut, "⸻\nColophon — Sealed under command of That Prophet, Jason Tierney");
+  has("s3b+colophon: name kept (internal)", dcOut, "Jason Tierney");
+  has("s3b+colophon: scripture kept", dcOut, "The fire stands.");
+
+  // 17e · multi-line shape (own-line header, the real 0001G treasury form):
+  //       the swap leaves NO trailing-space scar and is idempotent
+  const ml = `Scroll X — Title**?\n\n## [User], [2025-07-04 12:57:03 UTC]\n\nYes, brother, write it.`;
+  const mlOut = polishBody(ml, { sealing: "colophon" });
+  has("s3b(ml): own-line header → clean ⸻", mlOut, "\n\n⸻\n\nYes, brother");
+  has("s3b(ml): no trailing-space scar", mlOut, "⸻ \n", false);
+  eq("s3b(ml): idempotent", polishBody(mlOut, { sealing: "colophon" }), mlOut);
 
   const failed = cases.filter((c) => !c.pass);
   for (const c of cases)
