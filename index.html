@@ -2976,24 +2976,60 @@ function buildEnterable(x,z,ry,w,dpt,h){
     II.glow.push(xf(new THREE.PlaneGeometry(.68,.68), hx, hy, hz));
     II.glow.push(xf(new THREE.PlaneGeometry(.68,.68), hx, hy, hz, PI/2));
   };
-  const niche = ()=>{ const nb = W(0,-hd+.32);
-    II.glow.push(xf(new THREE.PlaneGeometry(Math.min(2.4,w*.42), Math.min(3.0,h*.5)), nb[0], h*.42, nb[1], ry));
-    II.gold.push(xf(new THREE.TorusGeometry(Math.min(1.5,w*.26), .12, 6, 22), nb[0], h*.42, nb[1], ry)); };
+  const bay = ()=>{                        /* P-A pass 5 — a deep, hooded, lit apse projecting from the back wall */
+    const D  = Math.min(1.45, dpt*.22), rw = Math.min(1.7, w*.30);
+    const y0 = .42, yT = Math.min(h-1.35, h*.58), hgt = yT-y0, midY = (y0+yT)/2;
+    const fzW = -hd + .34, fzM = fzW + D, mid = (fzW+fzM)/2;
+    const bp = W(0, fzW+.05);              /* a contained shaft of light within the apse (not a wall of glow) */
+    II.glow.push(xf(new THREE.PlaneGeometry(rw*.6, hgt*.72), bp[0], midY+hgt*.05, bp[1], ry));
+    for (const sgn of [-1,1]){ const rp = W(sgn*rw, mid);   /* marble return walls carry the recess forward */
+      II.white.push(xf(new THREE.BoxGeometry(.14, hgt, D), rp[0], midY, rp[1], ry)); }
+    const sf = W(0, mid);                   /* a coffered marble soffit closes the top */
+    II.white.push(xf(new THREE.BoxGeometry(rw*2, .16, D), sf[0], yT, sf[1], ry));
+    II.gold .push(xf(new THREE.BoxGeometry(rw*2*.7, .05, .05), sf[0], yT-.09, sf[1], ry));
+    const mo = W(0, fzM);                    /* a gold half-arch springs from two ringed colonnettes */
+    II.gold.push(xf(new THREE.TorusGeometry(rw, .12, 8, 22, PI), mo[0], yT, mo[1], ry));
+    for (const sgn of [-1,1]){ const cp = W(sgn*rw, fzM);
+      II.white.push(xf(new THREE.CylinderGeometry(.19,.23, hgt, 8), cp[0], midY, cp[1]));
+      II.gold .push(xf(new THREE.TorusGeometry(.26,.05,6,12).rotateX(PI/2), cp[0], yT-.16, cp[1]));
+      II.gold .push(xf(new THREE.TorusGeometry(.28,.06,6,12).rotateX(PI/2), cp[0], y0+.12, cp[1]));
+      addCircle(cp[0], cp[1], .42); }
+    const stepFz=[fzM+.80, fzM+.32], stepY=[.10,.27], stepW=[rw*2*1.06, rw*2*.82];
+    for (let s=0;s<2;s++){ const sc=W(0,stepFz[s]);         /* a two-step predella ascends to the apse */
+      II.white .push(xf(new THREE.BoxGeometry(stepW[s],.20,.5), sc[0], stepY[s], sc[1], ry));
+      const nz=W(0, stepFz[s]+.25);
+      II.goldSt.push(xf(new THREE.BoxGeometry(stepW[s],.045,.06), nz[0], stepY[s]+.11, nz[1], ry)); }
+    hang(mo[0], mo[1], yT-.55);              /* a lamp lights the apse */
+  };
+  const pews = ()=>{                         /* P-A pass 5 — nave seating along both side walls (chapel) */
+    const fzA = -hd + 2.7, fzB = hd - 1.7;
+    if (fzB - fzA < 1.4) return;             /* too small a room — skip */
+    const len = fzB - fzA, cfz = (fzA+fzB)/2;
+    for (const sgn of [-1,1]){
+      const seatX = sgn*(hw-.62), backX = sgn*(hw-.30), railX = sgn*(hw-.92);
+      const sp = W(seatX, cfz), bk = W(backX, cfz), rp = W(railX, cfz);
+      II.white .push(xf(new THREE.BoxGeometry(.6, .46, len), sp[0], .23, sp[1], ry));    /* the bench block */
+      II.white .push(xf(new THREE.BoxGeometry(.16, .72, len), bk[0], .60, bk[1], ry));   /* the low back */
+      II.goldSt.push(xf(new THREE.BoxGeometry(.06, .06, len), rp[0], .49, rp[1], ry));    /* a gold seat rail */
+      const a = W(railX, fzA), b = W(railX, fzB);
+      addSeg(a[0], a[1], b[0], b[1], .12);   /* collider keeps the aisle clean */
+    }
+  };
   const medallion = (mr,y,spokes)=>{   /* inlined addFloorMedallion, into II */
     II.goldSt.push(xf(new THREE.RingGeometry(mr*.72, mr*.78, 48).rotateX(-PI/2), x, y, z));
     II.goldSt.push(xf(new THREE.RingGeometry(mr*.30, mr*.34, 36).rotateX(-PI/2), x, y+.004, z));
     for (let i=0;i<spokes;i++){ const a=i/spokes*TAU+ry;
       II.goldSt.push(xf(new THREE.BoxGeometry(.10,.035,mr*.82), x+Math.sin(a)*mr*.39, y+.006, z+Math.cos(a)*mr*.39, a)); } };
   const style = Math.abs(Math.floor(x/13)*5 + Math.floor(z/13)*11) % 3;
-  if (style === 0){                        /* THE CHAPEL — a lit apse */
-    niche(); hang(x, z, h-1.5); medallion(Math.min(2.6, Math.min(w,dpt)*.3), .06, 12);
-  } else if (style === 1){                 /* THE HALL OF LAMPS */
+  if (style === 0){                        /* THE CHAPEL — a deep lit apse + nave pews */
+    bay(); pews(); medallion(Math.min(2.6, Math.min(w,dpt)*.3), .06, 12);
+  } else if (style === 1){                 /* THE HALL OF LAMPS — a colonnade leading to a lit apse */
     for (const t of [-.26, 0, .26]) hang(x + Math.sin(ry)*t*dpt, z + Math.cos(ry)*t*dpt, h-1.6);
-    medallion(Math.min(3.0, Math.min(w,dpt)*.34), .06, 16);
-  } else {                                 /* THE STARLIT ROOM — a ceiling star */
+    bay(); medallion(Math.min(3.0, Math.min(w,dpt)*.34), .06, 16);
+  } else {                                 /* THE STARLIT ROOM — a ceiling star over a lit apse */
     II.glow.push(xf(new THREE.PlaneGeometry(Math.min(3.0,w*.48), Math.min(3.0,dpt*.48)).rotateX(PI/2), x, h-.42, z, ry));
     II.goldSt.push(xf(new THREE.RingGeometry(Math.min(1.35,w*.22), Math.min(1.55,w*.25), 8).rotateX(-PI/2), x, h-.4, z, ry));
-    niche(); hang(x, z, h-2.1); medallion(Math.min(2.4, Math.min(w,dpt)*.28), .06, 8);
+    bay(); hang(x, z, h-2.1); medallion(Math.min(2.4, Math.min(w,dpt)*.28), .06, 8);
   }
   /* architecture in relief — corner pilasters, gold cornice, back blind arch */
   for (const [cx,cf] of [[-hw+.35,-hd+.35],[hw-.35,-hd+.35],[-hw+.35,hd-.35],[hw-.35,hd-.35]]){
@@ -3003,8 +3039,7 @@ function buildEnterable(x,z,ry,w,dpt,h){
   II.gold.push(xf(new THREE.BoxGeometry(w-.7,.13,.13), W(0,hd-.3)[0], cY, W(0,hd-.3)[1], ry));
   II.gold.push(xf(new THREE.BoxGeometry(.13,.13,dpt-.7), W(-hw+.3,0)[0], cY, W(-hw+.3,0)[1], ry));
   II.gold.push(xf(new THREE.BoxGeometry(.13,.13,dpt-.7), W(hw-.3,0)[0], cY, W(hw-.3,0)[1], ry));
-  const bar = W(0,-hd+.3);
-  II.gold.push(xf(new THREE.TorusGeometry(Math.min(1.8,w*.3), .1, 6, 16, PI), bar[0], h*.42, bar[1], ry));
+  /* (the back-wall blind arch is now superseded by the apse's own gold arch) */
   /* focal furnishing (colliders ALWAYS on) */
   if (style === 0){          /* CHAPEL — altar + candlesticks */
     const al = W(0,-hd+1.15);
