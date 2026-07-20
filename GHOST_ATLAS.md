@@ -64,10 +64,15 @@
   stations total serve 3,846 scrolls in shelves.
 
 ### r 70–110 · THE DISTRICTS & GATE PLAZAS — **OCCUPIED**
-- **THE DISTRICTS** (§9): seeded gothic blocks between the avenues —
-  facades w/ lancet glow windows (MAT.glowArch), buttresses, pinnacle
-  forest (~160, one InstancedMesh), campanile needles, spires. Deterministic
-  placement (rng-stream law: never disturb the global draw order).
+- **THE DISTRICTS** (§9): seeded gothic blocks between the avenues (three
+  rings R=70/86/103) — facades w/ lancet glow windows (MAT.glowArch),
+  buttresses, pinnacle forest (~160, one InstancedMesh), campanile needles,
+  spires. Deterministic placement (rng-stream law: never disturb the draw
+  order). **P-A THE OPEN DOORS (in progress):** the INNER ring (R=70, 18
+  buildings) is now ENTERABLE — hollow marble shells via `buildEnterable`,
+  a door facing the core, interior ceiling, glowing apse niche + hanging
+  lamp + floor medallion; the circle collider replaced by 5 wall colSegs
+  with the doorway open. Rings R=86/103 still solid backdrop (open them next).
 - **TWELVE GATE PLAZAS** (§16) at r≈100 on each spoke: gold rings +
   medallions, pilgrim clusters, vault reveal grounds (each gate's scroll
   vault helix appears at ~15m), plaza circuits (keep 13.2m clear of centres).

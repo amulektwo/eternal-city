@@ -2930,9 +2930,51 @@ function isReserved(x,z,m){
   return false;
 }
 
-function addBuilding(x,z,ry,big){
+/* P-A THE OPEN DOORS (Seer beauty loop) — an enterable district building:
+   a HOLLOW shell (four walls, a door facing the core, an interior ceiling)
+   with wall-segment colliders that leave the doorway open, and an interior
+   made beautiful (a glowing apse niche, a hanging lamp, a gold floor
+   medallion). The ground disc already floors the interior at y0. Deterministic
+   — NO rng (layout law); the caller's w/dpt/h are already drawn. Walls/ceiling
+   fold into the baked P merges; +5 wall colSegs per house (no circle). */
+function buildEnterable(x,z,ry,w,dpt,h){
+  const c = Math.cos(ry), s = Math.sin(ry);
+  const W = (rx,fz)=> [x + c*rx + s*fz, z - s*rx + c*fz];   /* local(right,front)->world; +front faces the core */
+  const T = .5, hw = w/2, hd = dpt/2;
+  const DW = Math.min(3.4, w*.45), DH = Math.min(4.3, h-1.5);
+  const bk = W(0,-hd), lf = W(-hw,0), rt = W(hw,0);
+  P.white.push(xf(new THREE.BoxGeometry(w, h, T), bk[0], h/2, bk[1], ry));      /* back wall */
+  P.white.push(xf(new THREE.BoxGeometry(T, h, dpt), lf[0], h/2, lf[1], ry));    /* left wall */
+  P.white.push(xf(new THREE.BoxGeometry(T, h, dpt), rt[0], h/2, rt[1], ry));    /* right wall */
+  const fpw = (w - DW)/2;
+  const fl = W(-(DW/2 + fpw/2), hd), fr = W(DW/2 + fpw/2, hd), ln = W(0, hd);
+  P.white.push(xf(new THREE.BoxGeometry(fpw, h, T), fl[0], h/2, fl[1], ry));    /* front, left of door */
+  P.white.push(xf(new THREE.BoxGeometry(fpw, h, T), fr[0], h/2, fr[1], ry));    /* front, right of door */
+  P.white.push(xf(new THREE.BoxGeometry(DW, h-DH, T), ln[0], DH+(h-DH)/2, ln[1], ry)); /* lintel over the door */
+  P.gold.push(xf(new THREE.BoxGeometry(DW+.3, .2, T+.12), ln[0], DH, ln[1], ry));      /* gold door lintel */
+  P.ivory.push(xf(new THREE.BoxGeometry(w-T, .3, dpt-T), x, h-.15, z, ry));     /* interior ceiling */
+  /* wall colliders — the front split leaves the door open */
+  const bl=W(-hw,-hd), brw=W(hw,-hd), tl=W(-hw,hd), tr=W(hw,hd), dl=W(-DW/2,hd), dr=W(DW/2,hd);
+  addSeg(bl[0],bl[1], brw[0],brw[1], T/2+.1);   /* back */
+  addSeg(bl[0],bl[1], tl[0],tl[1], T/2+.1);     /* left */
+  addSeg(brw[0],brw[1], tr[0],tr[1], T/2+.1);   /* right */
+  addSeg(tl[0],tl[1], dl[0],dl[1], T/2+.1);     /* front-left of door */
+  addSeg(tr[0],tr[1], dr[0],dr[1], T/2+.1);     /* front-right of door */
+  /* THE INSIDE MADE BEAUTIFUL — glowing apse niche on the back wall, a
+     hanging lamp, and a gold floor medallion underfoot (white-gold, zero-red) */
+  const nb = W(0,-hd+.32);
+  P.glow.push(xf(new THREE.PlaneGeometry(Math.min(2.4,w*.42), Math.min(3.0,h*.5)), nb[0], h*.42, nb[1], ry));
+  P.gold.push(xf(new THREE.TorusGeometry(Math.min(1.5,w*.26), .12, 6, 22), nb[0], h*.42, nb[1], ry));
+  P.gold.push(xf(new THREE.CylinderGeometry(.05,.05,.9,6), x, h-1.05, z));      /* lamp stem */
+  P.gold.push(xf(new THREE.SphereGeometry(.28,10,8), x, h-1.5, z));
+  P.glow.push(xf(new THREE.PlaneGeometry(.7,.7), x, h-1.5, z));                 /* hanging flame */
+  P.glow.push(xf(new THREE.PlaneGeometry(.7,.7), x, h-1.5, z, PI/2));
+  addFloorMedallion(x, z, Math.min(2.6, Math.min(w,dpt)*.3), .06, 12, ry);
+}
+function addBuilding(x,z,ry,big,enter){
   const w = rr(6,11)*(big?1.25:1), dpt = rr(6,11)*(big?1.25:1), h = rr(9,20)*(big?1.35:1);
-  P.white.push(xf(new THREE.BoxGeometry(w,h,dpt), x, h/2, z, ry));
+  if (enter) buildEnterable(x,z,ry,w,dpt,h);
+  else P.white.push(xf(new THREE.BoxGeometry(w,h,dpt), x, h/2, z, ry));
   P.gold.push(xf(new THREE.BoxGeometry(w+.5,.45,dpt+.5), x, h, z, ry));
   /* PASS D (FACADES) — ROOFLINE VARIETY: the identical square pyramids
      break into spires, domes, and hipped ridges (board-05). Type chosen by
@@ -2986,8 +3028,8 @@ function addBuilding(x,z,ry,big){
     P.ivory.push(xf(new THREE.ConeGeometry(1.25,4.5,6), sxp, sh+2.2, szp));
     P.gold.push(xf(new THREE.ConeGeometry(.35,1.8,6), sxp, sh+5.1, szp));
   }
-  addCircle(x, z, Math.hypot(w,dpt)*.52);
-  bldRecords.push({ x, z, ry, w, dpt, h });
+  if (!enter) addCircle(x, z, Math.hypot(w,dpt)*.52);   /* enterable houses use wall colliders + an open door */
+  bldRecords.push({ x, z, ry, w, dpt, h, enter: !!enter });
 }
 
 {
@@ -2999,7 +3041,7 @@ function addBuilding(x,z,ry,big){
       const x = Math.sin(a)*r, z = Math.cos(a)*r;
       if (isReserved(x,z,7)) continue;
       if (outer && angDiff(a,TERR_A) < .45) continue;
-      addBuilding(x, z, a+PI + rr(-.15,.15), outer);
+      addBuilding(x, z, a+PI + rr(-.15,.15), outer, R === 70);   /* P-A: the inner ring opens its doors */
     }
   }
   /* the crown — mega-spires flanking the north gate */
