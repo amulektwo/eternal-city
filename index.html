@@ -3022,11 +3022,17 @@ function buildEnterable(x,z,ry,w,dpt,h){
      ride here. Colliders (walls above; furniture below) stay ALWAYS on. */
   const II = { white:[], gold:[], glow:[], goldSt:[], ivory:[], crimson:[] };
   II.ivory.push(xf(new THREE.BoxGeometry(w-T, .3, dpt-T), x, h-.15, z, ry));   /* interior ceiling */
-  const hang = (hx,hz,hy)=>{
-    II.gold.push(xf(new THREE.CylinderGeometry(.05,.05,.9,6), hx, hy+.45, hz));
-    II.gold.push(xf(new THREE.SphereGeometry(.26,10,8), hx, hy, hz));
-    II.glow.push(xf(new THREE.PlaneGeometry(.68,.68), hx, hy, hz));
-    II.glow.push(xf(new THREE.PlaneGeometry(.68,.68), hx, hy, hz, PI/2));
+  const hang = (hx,hz,hy)=>{               /* P-A — a caged hanging lantern (reforged from the plain pendant) */
+    II.gold.push(xf(new THREE.CylinderGeometry(.026,.026,.86,6), hx, hy+.45, hz));         /* the chain */
+    II.gold.push(xf(new THREE.ConeGeometry(.25,.22,6), hx, hy+.26, hz));                    /* the crown roof */
+    II.gold.push(xf(new THREE.TorusGeometry(.2,.028,5,10).rotateX(PI/2), hx, hy+.16, hz));  /* upper ring */
+    II.gold.push(xf(new THREE.TorusGeometry(.2,.028,5,10).rotateX(PI/2), hx, hy-.16, hz));  /* lower ring */
+    for (let k=0;k<4;k++){ const a=k*PI/2+PI/4;                                             /* four cage ribs */
+      II.gold.push(xf(new THREE.CylinderGeometry(.016,.016,.36,4), hx+Math.sin(a)*.2, hy, hz+Math.cos(a)*.2)); }
+    II.gold.push(xf(new THREE.ConeGeometry(.07,.16,6), hx, hy-.27, hz));                    /* the finial */
+    II.glow.push(xf(new THREE.SphereGeometry(.13,8,6), hx, hy, hz));                        /* the warm core, glowing through the cage */
+    II.glow.push(xf(new THREE.PlaneGeometry(.6,.6), hx, hy, hz));                           /* soft halo */
+    II.glow.push(xf(new THREE.PlaneGeometry(.6,.6), hx, hy, hz, PI/2));
   };
   const bay = ()=>{                        /* P-A pass 5 — a deep, hooded, lit apse projecting from the back wall */
     const D  = Math.min(1.45, dpt*.22), rw = Math.min(1.7, w*.30);
