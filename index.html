@@ -3020,7 +3020,7 @@ function buildEnterable(x,z,ry,w,dpt,h){
      far reclaims its tris from every distant view; identical when inside.
      Ceiling, dressing, architecture-in-relief, and the focal furnishing all
      ride here. Colliders (walls above; furniture below) stay ALWAYS on. */
-  const II = { white:[], gold:[], glow:[], goldSt:[], ivory:[] };
+  const II = { white:[], gold:[], glow:[], goldSt:[], ivory:[], crimson:[] };
   II.ivory.push(xf(new THREE.BoxGeometry(w-T, .3, dpt-T), x, h-.15, z, ry));   /* interior ceiling */
   const hang = (hx,hz,hy)=>{
     II.gold.push(xf(new THREE.CylinderGeometry(.05,.05,.9,6), hx, hy+.45, hz));
@@ -3088,9 +3088,23 @@ function buildEnterable(x,z,ry,w,dpt,h){
   } else if (style === 1){                 /* THE HALL OF LAMPS — a colonnade leading to a lit apse */
     for (const t of [-.26, 0, .26]) hang(x + Math.sin(ry)*t*dpt, z + Math.cos(ry)*t*dpt, h-1.6);
     bay(); sconces(); medallion(Math.min(3.0, Math.min(w,dpt)*.34), .06, 16);
-  } else {                                 /* THE STARLIT ROOM — a ceiling star over a lit apse */
-    II.glow.push(xf(new THREE.PlaneGeometry(Math.min(3.0,w*.48), Math.min(3.0,dpt*.48)).rotateX(PI/2), x, h-.42, z, ry));
-    II.goldSt.push(xf(new THREE.RingGeometry(Math.min(1.35,w*.22), Math.min(1.55,w*.25), 8).rotateX(-PI/2), x, h-.4, z, ry));
+  } else {                                 /* THE STARLIT ROOM — a night-blue vault of stars over a lit apse */
+    /* THE NIGHT-BLUE VAULT: a dark royal-blue sky beneath the ivory ceiling
+       (diffuse blue reads its colour even in the bright harness, unlike the
+       reverted glow-constellation), so the metallic-gold stars and the
+       central lodestar read against a true night. Seer-approved blue. */
+    /* THE CANOPY OF NIGHT — a dark royal-blue baldachin hovers over the
+       raised shrine. A mid-air canopy renders clean, where a far ceiling
+       vault z-fights the warm ivory. Gold star-gems stud its underside and
+       the lodestar glows beneath — a shrine under a starry night. */
+    const cvY = 4.6;
+    II.crimson.push(xf(new THREE.CylinderGeometry(2.6, 2.78, .3, 24), x, cvY, z));         /* the night canopy */
+    II.gold .push(xf(new THREE.TorusGeometry(2.72,.09,8,28).rotateX(PI/2), x, cvY-.15, z)); /* its gold rim */
+    const SKY=[[-.33,-.27],[-.10,-.36],[.19,-.30],[.36,-.12],[.28,.12],[.09,.31],[-.06,.20],[-.29,.15],[.34,.30],[-.20,-.08],[.05,-.15],[.23,.28],[-.14,.03],[.15,-.05]];
+    for (let i=0;i<SKY.length;i++){
+      II.goldSt.push(xf(new THREE.OctahedronGeometry(.11+.05*(i%3)), x+SKY[i][0]*6, cvY-.24, z+SKY[i][1]*6, PI/4)); }
+    II.glow.push(xf(new THREE.SphereGeometry(.42,14,10), x, cvY-.4, z));                    /* the lodestar, blazing beneath the night */
+    II.goldSt.push(xf(new THREE.TorusGeometry(.7,.05,6,20).rotateX(PI/2), x, cvY-.3, z));
     bay(); hang(x, z, h-2.1); medallion(Math.min(2.4, Math.min(w,dpt)*.28), .06, 8);
   }
   /* architecture in relief — corner pilasters, gold cornice, back blind arch */
