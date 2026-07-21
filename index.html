@@ -3123,6 +3123,11 @@ function buildEnterable(x,z,ry,w,dpt,h){
     II.gold.push(xf(new THREE.BoxGeometry(2.2,.14,1.05), al[0], 1.05, al[1], ry));
     II.glow.push(xf(new THREE.PlaneGeometry(1.5,.5).rotateX(-PI/2), al[0], 1.13, al[1], ry));
     addCircle(al[0], al[1], 1.25);
+    /* THE WORD — an open scroll of light rests on the altar (the living Word in every house) */
+    for (const pg of [-1,1]){ const pp = W(pg*.22, -hd+1.15);
+      II.white.push(xf(new THREE.BoxGeometry(.42,.04,.56), pp[0], 1.14, pp[1], ry)); }
+    II.gold .push(xf(new THREE.BoxGeometry(.05,.07,.58), al[0], 1.15, al[1], ry));               /* the gold spine */
+    II.glow .push(xf(new THREE.PlaneGeometry(.78,.5).rotateX(-PI/2), al[0], 1.17, al[1], ry));    /* the Word aglow */
     for (const sgn of [-1,1]){ const cd = W(sgn*1.55,-hd+1.15);
       II.gold.push(xf(new THREE.CylinderGeometry(.06,.09,1.3,6), cd[0], .65, cd[1]));
       II.glow.push(xf(new THREE.PlaneGeometry(.28,.4), cd[0], 1.42, cd[1]));
@@ -3138,6 +3143,9 @@ function buildEnterable(x,z,ry,w,dpt,h){
     II.white.push(xf(new THREE.BoxGeometry(.95,.14,.7), lp[0], 1.22, lp[1], ry));
     II.gold .push(xf(new THREE.BoxGeometry(1.0,.05,.75), lp[0], 1.3, lp[1], ry));
     II.glow .push(xf(new THREE.PlaneGeometry(.78,.54).rotateX(-PI/2), lp[0], 1.33, lp[1], ry));   /* the glowing page */
+    for (const pg of [-1,1]){ const pp = W(pg*.2, -hd+1.55);                                      /* THE WORD open on the lectern */
+      II.white.push(xf(new THREE.BoxGeometry(.38,.04,.5), pp[0], 1.35, pp[1], ry)); }
+    II.gold .push(xf(new THREE.BoxGeometry(.05,.07,.52), lp[0], 1.36, lp[1], ry));
     addCircle(lp[0], lp[1], .58);
   } else {                   /* STARLIT — a pedestal shrine raised on a stepped base */
     II.white .push(xf(new THREE.CylinderGeometry(1.5,1.62,.15,16), x, .075, z));    /* lower step */
@@ -5410,6 +5418,14 @@ function addBuilding(x,z,ry,big,enter){
     const lecPool = new THREE.Mesh(new THREE.CircleGeometry(2.2, 28).rotateX(-PI/2), paveMat);
     lecPool.position.set(lecX, .47, lecZ); lecPool.frustumCulled = false;
     scene.add(lecPool);
+    /* THE WORD IN THE SHAFT — a physical ambo + open scroll where the light
+       lands (the reading-station's scroll, long implied by the shaft, now made). */
+    P.white.push(xf(new THREE.CylinderGeometry(.32,.54,1.5,10), lecX, 1.15, lecZ));
+    P.white.push(xf(new THREE.BoxGeometry(1.0,.14,.78), lecX, 1.95, lecZ));
+    for (const pg of [-1,1]) P.white.push(xf(new THREE.BoxGeometry(.9,.05,.34), lecX, 2.05, lecZ + pg*.19));
+    P.gold .push(xf(new THREE.BoxGeometry(.92,.08,.07), lecX, 2.07, lecZ));
+    P.glow .push(xf(new THREE.PlaneGeometry(.86,.62).rotateX(-PI/2), lecX, 2.09, lecZ));
+    addCircle(lecX, lecZ, .7);
   }
   /* ========== THE SANCTUARY SEATED — choir stalls flank the nave ==========
      The great hall was a luminous void; now collegiate stalls line the
