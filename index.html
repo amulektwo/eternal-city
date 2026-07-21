@@ -5379,6 +5379,29 @@ function addBuilding(x,z,ry,big,enter){
     lecPool.position.set(lecX, .47, lecZ); lecPool.frustumCulled = false;
     scene.add(lecPool);
   }
+  /* ========== THE SANCTUARY SEATED — choir stalls flank the nave ==========
+     The great hall was a luminous void; now collegiate stalls line the
+     central aisle (facing each other across the processional light). Marble
+     seat + back + gold cap-rail + dividers, into P.white / P.gold (per-cell
+     bucketed), deterministic. Each run is a solid mass (four colliders) so
+     the walker can never be trapped; the central and side aisles stay clear. */
+  {
+    const sx0=51, sx1=74, sLen=sx1-sx0, sMid=(sx0+sx1)/2, fy=.4;
+    for (const s of [-1,1]){
+      const zc = CZ + s*4.2, zBack = zc + s*.5, zFront = zc - s*.5;
+      P.white.push(xf(new THREE.BoxGeometry(sLen, .55, 1.0), sMid, fy+.275, zc));      /* seat block */
+      P.white.push(xf(new THREE.BoxGeometry(sLen, 1.35, .18), sMid, fy+.675, zBack));  /* the back */
+      P.gold .push(xf(new THREE.BoxGeometry(sLen, .1, .34), sMid, fy+1.38, zBack));     /* gold cap-rail */
+      P.gold .push(xf(new THREE.BoxGeometry(sLen, .07, .07), sMid, fy+.58, zFront));    /* gold seat-rail */
+      for (let dx=sx0; dx<=sx1+.01; dx+=sLen/6){                                        /* stall dividers + knobs */
+        P.white.push(xf(new THREE.BoxGeometry(.16, 1.55, 1.0), dx, fy+.775, zc));
+        P.gold .push(xf(new THREE.ConeGeometry(.12,.24,6), dx, fy+1.62, zc)); }
+      addSeg(sx0, zFront, sx1, zFront, .18);   /* enclose the run — a solid mass, never a trap */
+      addSeg(sx0, zBack,  sx1, zBack,  .18);
+      addSeg(sx0, zFront, sx0, zBack,  .18);
+      addSeg(sx1, zFront, sx1, zBack,  .18);
+    }
+  }
 }
 
 /* ================================================================
