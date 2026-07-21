@@ -3403,12 +3403,30 @@ function addBuilding(x,z,ry,big,enter){
      P.gold/P.glow (+0 draws), deterministic (no rng — layout law), thin
      poles off the walk (no collider, the causeway precedent). */
   const streetLamp = (lx, lz)=>{
-    P.gold.push(xf(new THREE.CylinderGeometry(.07, .11, 3.0, 6), lx, 1.5, lz));   /* standard */
-    P.gold.push(xf(new THREE.CylinderGeometry(.22, .09, .3, 6), lx, 3.15, lz));   /* cup */
-    P.glow.push(xf(new THREE.PlaneGeometry(.4, .7), lx, 3.5, lz));                /* white-gold flame */
-    P.glow.push(xf(new THREE.PlaneGeometry(.4, .7), lx, 3.5, lz, PI/2));
+    /* THE STANDARD OF GOLD (beauty loop — board 02's ornate lanterns): a molded
+       plinth, a slender shaft with a mid-collar, a caged lantern whose warm core
+       glows through gold ribs, crowned by a little roof and a needle finial. All
+       merged into P.gold / P.glow (+0 draws), no collider (thin, off the walk). */
+    P.gold.push(xf(new THREE.CylinderGeometry(.34, .44, .20, 12), lx, .10, lz));  /* plinth foot */
+    P.gold.push(xf(new THREE.CylinderGeometry(.24, .30, .46, 12), lx, .43, lz));  /* plinth drum */
+    P.gold.push(xf(new THREE.CylinderGeometry(.28, .28, .07, 12), lx, .70, lz));  /* ring molding */
+    P.gold.push(xf(new THREE.CylinderGeometry(.08, .12, 2.30, 8), lx, 1.90, lz)); /* slender shaft */
+    P.gold.push(xf(new THREE.CylinderGeometry(.135,.135,.10, 8), lx, 1.95, lz));  /* mid collar */
+    P.gold.push(xf(new THREE.CylinderGeometry(.22, .24, .10, 8), lx, 3.10, lz));  /* lantern base */
+    P.gold.push(xf(new THREE.CylinderGeometry(.20, .20, .08, 8), lx, 3.74, lz));  /* lantern top ring */
+    for (let i = 0; i < 4; i++){ const a = i/4*TAU + PI/8;                        /* four gold corner ribs */
+      P.gold.push(xf(new THREE.BoxGeometry(.035, .62, .035), lx + Math.sin(a)*.185, 3.42, lz + Math.cos(a)*.185)); }
+    P.glow.push(xf(new THREE.CylinderGeometry(.15, .15, .56, 8), lx, 3.42, lz));  /* the warm core, glowing through the cage */
+    P.gold.push(xf(new THREE.ConeGeometry(.27, .24, 8), lx, 3.92, lz));           /* little gold roof */
+    P.gold.push(xf(new THREE.ConeGeometry(.05, .34, 6), lx, 4.22, lz));           /* needle finial */
   };
   for (let z = 43; z <= 79; z += 6) for (const sx of [-5.4, 5.4]) streetLamp(sx, z);
+  /* THE STANDARDS RING THE COURT (board 02 — lanterns around the Tree plaza):
+     eight ornate standards on the open ring just beyond the witnesses (r24.6,
+     Law 15), set at the inter-cardinal azimuths so the four aisles stay clear.
+     Same no-collider glyph; gold/glow cull with the spatial split. */
+  for (let i = 0; i < 8; i++){ const a = (i + .5) / 8 * TAU;
+    streetLamp(Math.sin(a) * 24.6, Math.cos(a) * 24.6); }
 
   /* golden canopies over the walks */
   const canMat = new THREE.MeshStandardMaterial({ map:canopyStripeTex, roughness:.65, side:THREE.DoubleSide });
