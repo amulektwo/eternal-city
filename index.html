@@ -3004,15 +3004,21 @@ function buildEnterable(x,z,ry,w,dpt,h){
      (always-drawn P.white/P.gold, per-cell bucketed since THE SPATIAL
      SPLIT); one base collider per column. */
   {
-    const pz = hd + 0.6, ppx = DW/2 + 0.55, cH = DH + 0.4;
+    const pz = hd + 0.62, ppx = DW/2 + 0.55, cH = DH + 0.4;
     for (const sgn of [-1,1]){ const pc = W(sgn*ppx, pz);
-      P.white.push(xf(new THREE.CylinderGeometry(.22,.26,cH,8), pc[0], cH/2, pc[1]));
-      P.gold .push(xf(new THREE.TorusGeometry(.28,.055,6,10).rotateX(PI/2), pc[0], cH-.18, pc[1]));  /* capital */
-      P.gold .push(xf(new THREE.TorusGeometry(.30,.065,6,10).rotateX(PI/2), pc[0], .18, pc[1]));     /* base */
+      P.white.push(xf(new THREE.BoxGeometry(.5,.16,.5), pc[0], .08, pc[1], ry));                     /* base plinth */
+      P.gold .push(xf(new THREE.TorusGeometry(.3,.05,6,8).rotateX(PI/2), pc[0], .2, pc[1]));         /* base torus */
+      P.white.push(xf(new THREE.CylinderGeometry(.2,.24,cH-.36,8), pc[0], .18+(cH-.36)/2, pc[1]));   /* the shaft */
+      P.gold .push(xf(new THREE.CylinderGeometry(.34,.22,.2,8), pc[0], cH-.24, pc[1]));              /* flared gold capital */
+      P.white.push(xf(new THREE.BoxGeometry(.46,.13,.46), pc[0], cH-.08, pc[1], ry));                /* the abacus */
       addCircle(pc[0], pc[1], .32); }
     const hc = W(0, pz);
-    P.white.push(xf(new THREE.BoxGeometry(DW+1.9, .34, 1.1), hc[0], cH+.02, hc[1], ry));   /* canopy slab */
-    P.gold .push(xf(new THREE.BoxGeometry(DW+2.1, .11, 1.25), hc[0], cH-.16, hc[1], ry));  /* gold fascia */
+    P.white.push(xf(new THREE.BoxGeometry(DW+1.9, .3, 1.05), hc[0], cH+.1, hc[1], ry));              /* architrave */
+    P.gold .push(xf(new THREE.BoxGeometry(DW+2.1, .1, 1.2), hc[0], cH-.04, hc[1], ry));              /* gold fascia */
+    P.white.push(xf(new THREE.BoxGeometry(DW+1.1, .24, .68), hc[0], cH+.37, hc[1], ry));             /* the attic crown */
+    P.gold .push(xf(new THREE.ConeGeometry(.15,.38,8), hc[0], cH+.68, hc[1]));                       /* central acroterion */
+    for (const sgn of [-1,1]){ const fc = W(sgn*(DW/2+0.85), pz);
+      P.gold .push(xf(new THREE.ConeGeometry(.09,.24,6), fc[0], cH+.44, fc[1])); }                   /* corner finials */
   }
   /* ===== THE INTERIOR — accumulated into II, then built as ONE cullable
      GROUP shown only when the walker is within 40m (P-A pass 4). The roof
@@ -3332,6 +3338,9 @@ function addBuilding(x,z,ry,big,enter){
     P.glow.push(xf(new THREE.PlaneGeometry(.92,1.7), x, 3.95, z));                    /* the ceremonial flame, clear of the rim */
     P.glow.push(xf(new THREE.PlaneGeometry(.92,1.7), x, 3.95, z, PI/2));
     P.glow.push(xf(new THREE.PlaneGeometry(.6,.6), x, 3.35, z));                      /* the ember heart */
+    for (let t=0;t<8;t++){ const ta=t*PI/4;                                           /* POLISH — gold fire-tines crown the bowl (read by day) */
+      P.gold.push(xf(new THREE.ConeGeometry(.055,.34,4), x+Math.sin(ta)*.6, 3.24, z+Math.cos(ta)*.6)); }
+    P.glow.push(xf(new THREE.SphereGeometry(.24,8,6), x, 3.02, z));                    /* POLISH — a bolder ember core glowing among the tines */
     addCircle(x, z, .72);
   }
 
