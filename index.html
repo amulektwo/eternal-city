@@ -3191,6 +3191,13 @@ function buildEnterable(x,z,ry,w,dpt,h){
         II.white.push(xf(new THREE.CylinderGeometry(.15,.15,.025,12), sp[0], .975, sp[1]));        /* a charger */
         II.gold .push(xf(new THREE.CylinderGeometry(.06,.085,.17,8), sp[0], 1.06, sp[1]));         /* a chalice */
         II.glow .push(xf(new THREE.SphereGeometry(.05,8,6), sp[0], 1.17, sp[1])); }                /* the wine's light */
+      II.goldSt.push(xf(new THREE.BoxGeometry(tw*.34,.02,tLen*.94), tc[0], .968, tc[1], ry));       /* POLISH — gold table-runner */
+      II.gold .push(xf(new THREE.CylinderGeometry(.24,.3,.06,12), tc[0], .99, tc[1]));              /* epergne base dish */
+      II.gold .push(xf(new THREE.CylinderGeometry(.04,.04,.32,8), tc[0], 1.15, tc[1]));             /* epergne stem */
+      II.gold .push(xf(new THREE.CylinderGeometry(.18,.1,.05,12), tc[0], 1.31, tc[1]));             /* epergne upper dish */
+      II.glow .push(xf(new THREE.SphereGeometry(.1,8,6), tc[0], 1.42, tc[1]));                       /* the fruit of light crowning it */
+      for (let i=0;i<n;i++){ const bp = W(.24, fzA + tLen*((i+.5)/n));
+        II.white.push(xf(new THREE.BoxGeometry(.16,.07,.1), bp[0], 1.0, bp[1], ry)); }               /* the bread at each place */
       for (const sgn of [-1,1]){ const cp = W(sgn*ehw*.5, fzA+.1);                                 /* head candlesticks */
         II.gold.push(xf(new THREE.CylinderGeometry(.05,.08,1.1,6), cp[0], 1.45, cp[1]));
         II.glow.push(xf(new THREE.PlaneGeometry(.26,.4), cp[0], 2.1, cp[1]));

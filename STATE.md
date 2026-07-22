@@ -1101,3 +1101,8 @@ Keep-polishing. The bench-seating refined from plain boxes into carved seating.
 - **CHOIR STALLS (sanctuary):** the dividers become carved stall-ends with pinnacle finials (a collar + gold spire), and a gold CRESTING of eleven little spires runs along each back. Sanctuary nave 617,315 tris / 417 draws, 60fps.
 - **PEWS (chapels):** carved PEW-ENDS with gold poppy-head finials cap each run, + a gold back-molding. Culled II pools (+0 draws).
 - **PROVEN (real glass):** compositor — the sanctuary choir now finialed + crested (a proper collegiate choir); the chapel pews with poppy-head ends flanking the aisle to the apse. Zero-red (white + gold). Collision unchanged (decorative, above the existing colliders). data/ untouched -> 144-sha unaffected.
+
+## THE POLISH SWEEP, cont. — the feast table lavished — 2026-07-21 · KEPT + DEPLOYED
+Keep-polishing. The marriage-supper table, sparsely set, is now laid in full: a gold table-RUNNER down its length, a tiered gold CENTREPIECE crowned with a FRUIT OF LIGHT (echoing the Tree of Life), and BREAD at every place beside the chalices. Into the culled II pools (+0 draws).
+- **PRICE:** feast interior view 399,929 tris / 255 draws, 60fps; culled.
+- **PROVEN (real glass):** compositor — the long table with its glowing tiered centrepiece + head candlesticks + settings + bread, running to the apse light-shaft, benches flanking. Zero-red (white + gold + warm glow). data/ untouched -> 144-sha unaffected.
