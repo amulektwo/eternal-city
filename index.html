@@ -3083,10 +3083,14 @@ function buildEnterable(x,z,ry,w,dpt,h){
     const n = Math.max(2, Math.min(4, Math.round(dpt/3.0)));
     const yS = Math.min(h-1.9, h*.5);
     for (const sgn of [-1,1]) for (let i=0;i<n;i++){
-      const p = W(sgn*(hw-.32), -hd + dpt*((i+.5)/n));
-      II.gold.push(xf(new THREE.CylinderGeometry(.13,.06,.26,8), p[0], yS, p[1]));       /* the gold cup */
-      II.glow.push(xf(new THREE.PlaneGeometry(.3,.46), p[0], yS+.32, p[1]));             /* crossed warm flame */
-      II.glow.push(xf(new THREE.PlaneGeometry(.3,.46), p[0], yS+.32, p[1], PI/2));
+      const fz = -hd + dpt*((i+.5)/n);
+      const wp = W(sgn*(hw-.13), fz), cp = W(sgn*(hw-.34), fz);
+      II.gold.push(xf(new THREE.BoxGeometry(.12,.72,.32), wp[0], yS+.06, wp[1], ry));      /* POLISH — gold backplate */
+      II.gold.push(xf(new THREE.ConeGeometry(.07,.16,6), wp[0], yS+.5, wp[1]));            /* backplate finial */
+      II.gold.push(xf(new THREE.CylinderGeometry(.14,.05,.24,8), cp[0], yS, cp[1]));       /* the cup */
+      II.gold.push(xf(new THREE.CylinderGeometry(.19,.19,.03,10), cp[0], yS-.13, cp[1]));  /* the drip-pan */
+      II.glow.push(xf(new THREE.PlaneGeometry(.34,.52), cp[0], yS+.34, cp[1]));            /* crossed warm flame */
+      II.glow.push(xf(new THREE.PlaneGeometry(.34,.52), cp[0], yS+.34, cp[1], PI/2));
     }
   };
   const medallion = (mr,y,spokes)=>{   /* inlined addFloorMedallion, into II */
