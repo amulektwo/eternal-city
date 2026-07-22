@@ -3088,13 +3088,13 @@ function buildEnterable(x,z,ry,w,dpt,h){
     II.goldSt.push(xf(new THREE.RingGeometry(mr*.30, mr*.34, 36).rotateX(-PI/2), x, y+.004, z));
     for (let i=0;i<spokes;i++){ const a=i/spokes*TAU+ry;
       II.goldSt.push(xf(new THREE.BoxGeometry(.10,.035,mr*.82), x+Math.sin(a)*mr*.39, y+.006, z+Math.cos(a)*mr*.39, a)); } };
-  const style = Math.abs(Math.floor(x/13)*5 + Math.floor(z/13)*11) % 3;
+  const style = Math.abs(Math.floor(x/13)*5 + Math.floor(z/13)*11) % 4;
   if (style === 0){                        /* THE CHAPEL — a deep lit apse + nave pews */
     bay(); pews(); sconces(); medallion(Math.min(2.6, Math.min(w,dpt)*.3), .06, 12);
   } else if (style === 1){                 /* THE HALL OF LAMPS — a colonnade leading to a lit apse */
     for (const t of [-.26, 0, .26]) hang(x + Math.sin(ry)*t*dpt, z + Math.cos(ry)*t*dpt, h-1.6);
     bay(); sconces(); medallion(Math.min(3.0, Math.min(w,dpt)*.34), .06, 16);
-  } else {                                 /* THE STARLIT ROOM — a night-blue vault of stars over a lit apse */
+  } else if (style === 2){                 /* THE STARLIT ROOM — a night-blue vault of stars over a lit apse */
     /* THE NIGHT-BLUE VAULT: a dark royal-blue sky beneath the ivory ceiling
        (diffuse blue reads its colour even in the bright harness, unlike the
        reverted glow-constellation), so the metallic-gold stars and the
@@ -3112,6 +3112,8 @@ function buildEnterable(x,z,ry,w,dpt,h){
     II.glow.push(xf(new THREE.SphereGeometry(.42,14,10), x, cvY-.4, z));                    /* the lodestar, blazing beneath the night */
     II.goldSt.push(xf(new THREE.TorusGeometry(.7,.05,6,20).rotateX(PI/2), x, cvY-.3, z));
     bay(); hang(x, z, h-2.1); medallion(Math.min(2.4, Math.min(w,dpt)*.28), .06, 8);
+  } else {                                 /* THE FEAST HALL — set for the marriage supper of the Lamb */
+    bay(); sconces(); medallion(Math.min(2.6, Math.min(w,dpt)*.3), .06, 12);
   }
   /* architecture in relief — corner pilasters, gold cornice, back blind arch */
   for (const [cx,cf] of [[-hw+.35,-hd+.35],[hw-.35,-hd+.35],[-hw+.35,hd-.35],[hw-.35,hd-.35]]){
@@ -3153,7 +3155,7 @@ function buildEnterable(x,z,ry,w,dpt,h){
       II.white.push(xf(new THREE.BoxGeometry(.38,.04,.5), pp[0], 1.35, pp[1], ry)); }
     II.gold .push(xf(new THREE.BoxGeometry(.05,.07,.52), lp[0], 1.36, lp[1], ry));
     addCircle(lp[0], lp[1], .58);
-  } else {                   /* STARLIT — a pedestal shrine raised on a stepped base */
+  } else if (style === 2){   /* STARLIT — a pedestal shrine raised on a stepped base */
     II.white .push(xf(new THREE.CylinderGeometry(1.5,1.62,.15,16), x, .075, z));    /* lower step */
     II.goldSt.push(xf(new THREE.TorusGeometry(1.5,.035,6,32).rotateX(PI/2), x, .16, z));
     II.white .push(xf(new THREE.CylinderGeometry(1.12,1.22,.16,16), x, .23, z));    /* upper step */
@@ -3163,6 +3165,29 @@ function buildEnterable(x,z,ry,w,dpt,h){
     II.glow.push(xf(new THREE.PlaneGeometry(.62,.62), x, 1.8, z));                  /* the orb */
     II.glow.push(xf(new THREE.PlaneGeometry(.62,.62), x, 1.8, z, PI/2));
     addCircle(x, z, 1.6);
+  } else {                   /* THE FEAST HALL — the long table of the marriage supper, set and waiting */
+    const ehw = Math.min(1.25, w*.16), fzA = -hd+2.6, fzB = hd-1.9;
+    if (fzB-fzA >= 2.2){
+      const tLen = fzB-fzA, tcz = (fzA+fzB)/2, tc = W(0,tcz), tw = Math.min(1.05, ehw*.82);
+      II.white.push(xf(new THREE.BoxGeometry(tw*.55,.82,tLen*.86), tc[0], .41, tc[1], ry));       /* trestle base */
+      II.white.push(xf(new THREE.BoxGeometry(tw,.13,tLen), tc[0], .9, tc[1], ry));                /* the table top */
+      II.gold .push(xf(new THREE.BoxGeometry(tw+.05,.04,tLen+.05), tc[0], .975, tc[1], ry));       /* gold table-edge */
+      const n = Math.max(3, Math.floor(tLen/1.5));
+      for (let i=0;i<n;i++){ const sp = W(0, fzA + tLen*((i+.5)/n));
+        II.white.push(xf(new THREE.CylinderGeometry(.15,.15,.025,12), sp[0], .975, sp[1]));        /* a charger */
+        II.gold .push(xf(new THREE.CylinderGeometry(.06,.085,.17,8), sp[0], 1.06, sp[1]));         /* a chalice */
+        II.glow .push(xf(new THREE.SphereGeometry(.05,8,6), sp[0], 1.17, sp[1])); }                /* the wine's light */
+      for (const sgn of [-1,1]){ const cp = W(sgn*ehw*.5, fzA+.1);                                 /* head candlesticks */
+        II.gold.push(xf(new THREE.CylinderGeometry(.05,.08,1.1,6), cp[0], 1.45, cp[1]));
+        II.glow.push(xf(new THREE.PlaneGeometry(.26,.4), cp[0], 2.1, cp[1]));
+        II.glow.push(xf(new THREE.PlaneGeometry(.26,.4), cp[0], 2.1, cp[1], PI/2)); }
+      for (const sgn of [-1,1]){ const bs = W(sgn*ehw, tcz), bb = W(sgn*(ehw+.2), tcz);            /* flanking benches */
+        II.white.push(xf(new THREE.BoxGeometry(.42,.5,tLen*.92), bs[0], .25, bs[1], ry));
+        II.white.push(xf(new THREE.BoxGeometry(.12,.82,tLen*.92), bb[0], .41, bb[1], ry)); }
+      const seg=(ax,az,bx2,bz2)=>{ const a=W(ax,az), b=W(bx2,bz2); addSeg(a[0],a[1],b[0],b[1],.2); };
+      seg(-ehw-.3,fzA-.2, ehw+.3,fzA-.2); seg(-ehw-.3,fzB+.2, ehw+.3,fzB+.2);
+      seg(-ehw-.3,fzA-.2, -ehw-.3,fzB+.2); seg(ehw+.3,fzA-.2, ehw+.3,fzB+.2);
+    }
   }
   /* one cullable group per building — hidden until the walker draws near */
   const IG = new THREE.Group();
