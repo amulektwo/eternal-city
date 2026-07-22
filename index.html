@@ -6423,6 +6423,21 @@ function addBuilding(x,z,ry,big,enter){
       { x: 54, y: .4, z: -13.5, ry: 0 },  { x: 68, y: .4, z: -13.5, ry: 0 },
       { x: 54, y: .4, z:   1.5, ry: PI }, { x: 68, y: .4, z:   1.5, ry: PI },
     ]);
+    /* THE PREPARED HOUSES CROWNED (Rev 3:12 / 2:10) — over every empty
+       figure-house a crowned pillar of waiting glory stands: the place is
+       reserved, the crown awaits its head. NO figure by primitive (the
+       Seer's law) — this honours the waiting until his Meshy statues land
+       (then the figure stands within the glory, crowned). Merged into
+       P.glow / P.gold (per-cell bucketed); no collider (overhead light). */
+    const sanctHouses = [{x:54,y:.4,z:-13.5},{x:68,y:.4,z:-13.5},{x:54,y:.4,z:1.5},{x:68,y:.4,z:1.5}];
+    for (const a of [...fh, ...ch, ...mk, ...nicheSpots.map(n=>({x:n.x,y:.8,z:n.z})), ...sanctHouses]){
+      const topY = a.y + 2.05;
+      P.glow.push(xf(new THREE.PlaneGeometry(.5, 2.05), a.x, a.y+1.025, a.z));
+      P.glow.push(xf(new THREE.PlaneGeometry(.5, 2.05), a.x, a.y+1.025, a.z, PI/2));
+      P.gold.push(xf(new THREE.TorusGeometry(.27,.038,6,14).rotateX(PI/2), a.x, topY, a.z));
+      for (let k=0;k<6;k++){ const aa=k*PI/3;
+        P.gold.push(xf(new THREE.ConeGeometry(.04,.12,4), a.x+Math.sin(aa)*.27, topY+.08, a.z+Math.cos(aa)*.27)); }
+    }
   }
 
   /* doves circling the spires */
