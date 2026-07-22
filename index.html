@@ -3077,6 +3077,10 @@ function buildEnterable(x,z,ry,w,dpt,h){
       II.goldSt.push(xf(new THREE.BoxGeometry(.06, .06, len), rp[0], .49, rp[1], ry));    /* a gold seat rail */
       const a = W(railX, fzA), b = W(railX, fzB);
       addSeg(a[0], a[1], b[0], b[1], .12);   /* collider keeps the aisle clean */
+      for (const ez of [fzA, fzB]){ const ep = W(seatX, ez);                             /* POLISH — carved pew-ends + poppy-head finials */
+        II.white.push(xf(new THREE.BoxGeometry(.6, .96, .13), ep[0], .48, ep[1], ry));
+        II.gold .push(xf(new THREE.ConeGeometry(.08,.2,6), ep[0], 1.02, ep[1])); }
+      II.gold.push(xf(new THREE.BoxGeometry(.18, .05, len), bk[0], .97, bk[1], ry));      /* a gold back-molding */
     }
   };
   const sconces = ()=>{                       /* P-A pass 6 — processional wall-lights down both side walls */
@@ -5485,9 +5489,12 @@ function addBuilding(x,z,ry,big,enter){
       P.white.push(xf(new THREE.BoxGeometry(sLen, 1.35, .18), sMid, fy+.675, zBack));  /* the back */
       P.gold .push(xf(new THREE.BoxGeometry(sLen, .1, .34), sMid, fy+1.38, zBack));     /* gold cap-rail */
       P.gold .push(xf(new THREE.BoxGeometry(sLen, .07, .07), sMid, fy+.58, zFront));    /* gold seat-rail */
-      for (let dx=sx0; dx<=sx1+.01; dx+=sLen/6){                                        /* stall dividers + knobs */
-        P.white.push(xf(new THREE.BoxGeometry(.16, 1.55, 1.0), dx, fy+.775, zc));
-        P.gold .push(xf(new THREE.ConeGeometry(.12,.24,6), dx, fy+1.62, zc)); }
+      for (let dx=sx0; dx<=sx1+.01; dx+=sLen/6){                                        /* POLISH — carved stall-ends with pinnacle finials */
+        P.white.push(xf(new THREE.BoxGeometry(.18, 1.7, 1.02), dx, fy+.85, zc));
+        P.gold .push(xf(new THREE.CylinderGeometry(.1,.12,.08,8), dx, fy+1.7, zc));      /* finial collar */
+        P.gold .push(xf(new THREE.ConeGeometry(.11,.34,6), dx, fy+1.9, zc)); }           /* finial spire */
+      for (let c=0;c<=10;c++){                                                           /* POLISH — a gold cresting of spires along the back */
+        P.gold.push(xf(new THREE.ConeGeometry(.05,.2,4), sx0 + sLen*(c/10), fy+1.53, zBack)); }
       addSeg(sx0, zFront, sx1, zFront, .18);   /* enclose the run — a solid mass, never a trap */
       addSeg(sx0, zBack,  sx1, zBack,  .18);
       addSeg(sx0, zFront, sx0, zBack,  .18);

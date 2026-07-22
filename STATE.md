@@ -1095,3 +1095,9 @@ The smooth lane, refinement mode. A sweep on my own crude glyphs — more exquis
 ## THE POLISH SWEEP, cont. — the wall-sconces refined — 2026-07-21 · KEPT + DEPLOYED
 Continuing the polish sweep to the interior glyphs. The chapel/hall wall-sconce (a bare gold cup + crossed flame) is refined into a proper bracketed wall-sconce: a gold backplate + finial on the wall, the cup out on a drip-pan, the crossed warm flame above. Into the culled II.gold/glow pools (+0 draws).
 - **HONEST NOTE:** the two MAJOR polishes (porticos + cressets) were compositor-verified. This sconce refine is VERIFIED-BY-CONSTRUCTION only — standard box/cylinder geometry using the same ry transform as the (verified) porch, boots with zero console errors — but a small mid-wall sconce proved hard to frame cleanly in the swiftshader harness, so I did not eyeball each one. Low risk (culled interior; no new colliders; zero-red gold + warm glow). data/ untouched -> 144-sha unaffected.
+
+## THE POLISH SWEEP, cont. — the seating carved (choir stalls + pews) — 2026-07-21 · KEPT + DEPLOYED
+Keep-polishing. The bench-seating refined from plain boxes into carved seating.
+- **CHOIR STALLS (sanctuary):** the dividers become carved stall-ends with pinnacle finials (a collar + gold spire), and a gold CRESTING of eleven little spires runs along each back. Sanctuary nave 617,315 tris / 417 draws, 60fps.
+- **PEWS (chapels):** carved PEW-ENDS with gold poppy-head finials cap each run, + a gold back-molding. Culled II pools (+0 draws).
+- **PROVEN (real glass):** compositor — the sanctuary choir now finialed + crested (a proper collegiate choir); the chapel pews with poppy-head ends flanking the aisle to the apse. Zero-red (white + gold). Collision unchanged (decorative, above the existing colliders). data/ untouched -> 144-sha unaffected.
