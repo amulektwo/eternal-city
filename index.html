@@ -614,9 +614,14 @@ scene.fog = new THREE.Fog(0xd8bd94, 165, 780);   /* LOOP 13-C: deepened from bri
 const camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.1, 2000);
 camera.position.set(0, 1.7, 108);
 
-const hemi = new THREE.HemisphereLight(0xfff0d4, 0xd8ba8c, 0.45);
+/* L-3 THE MASTER LIGHT (third run) — THE LIGHT THAT NEVER LEAVES:
+   the key is no longer a sun, it is the Lamb's light (Rev 21:23) — high,
+   constant, never dimming; the fill rises so unlit faces sit within ~1
+   stop of lit faces (key:fill 3.3/0.45 ≈ 7.3:1 → 2.2/1.6 ≈ 1.4:1) */
+const hemi = new THREE.HemisphereLight(0xfff0d4, 0xd8ba8c, 1.6);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffd9a0, 3.3);
+const sun = new THREE.DirectionalLight(0xffd9a0, 2.2);
+sun.color.setHSL(.075, .30, .78);   /* constant warm white-gold — set once, no hour rewrite */
 sun.position.set(-180, 90, 150);
 if (SHADOWS){
   sun.castShadow = true;
@@ -664,10 +669,15 @@ if (TIER === 2 && qs.get('ssao') === '1'){
   ssaoPass.maxDistance = 0.001;
   composer.addPass(ssaoPass);
 }
-/* Bloom is SELECTIVE by threshold: sunlit white marble sits at linear ~1.6-1.9
-   and must NOT bloom (that was the milk — it hazed every marble vantage); only
-   genuine glory-emitters (fruit, windows, god-rays, the sun) are lifted above
-   the threshold so the glow concentrates on them, not the stone. */
+/* Bloom is SELECTIVE by threshold: lit white marble must NOT bloom (that was
+   the milk — it hazed every marble vantage); only genuine glory-emitters
+   (fruit, windows, god-rays, the sun) are lifted above the threshold so the
+   glow concentrates on them, not the stone. L-3 third run, measured on the
+   linear pre-tonemap buffer (Rec601, the high-pass's own luma): broad lit
+   marble ~0.9-1.4, sunlit floor ~1.1; the IBL-hot tail was pulled back
+   below the shipped population by the white/ivory envMapIntensity trim
+   (Law 37 — marble >1.8 fraction 11.8/14.6/7.9/9.2% shipped →
+   6.6/11.9/6.6/5.9% after, per-vantage). */
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.24, 0.55, 1.8);   /* LOOP 13-C: strength 0.28→0.24 — the glory-emitters still bloom, the blown halos on hot marble/water calm */
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
@@ -704,9 +714,9 @@ const gradePass = new ShaderPass({
       float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
       /* V-6: inside the sanctuary/hall the pivot dips and the slope deepens —
          the compressed high-key interior gains true mid-value body */
-      float gpv = 0.74 - 0.05*uZone;
-      float gsl = 1.22 + 0.34*uZone;
-      float lc = gpv + (lum - gpv)*gsl;   /* LOOP 13-C: pivot 0.78→0.74, slope 1.16→1.22 — more body in the mids, whites still roll off (value contrast, luma-only, Law 30) */
+      float gpv = 0.70 - 0.05*uZone;
+      float gsl = 1.10 + 0.17*uZone;
+      float lc = gpv + (lum - gpv)*gsl;   /* L-3 third run: pivot 0.74→0.70, slope 1.22→1.10, interior slope term halved — DEPTH WITHOUT DARKNESS: body must come from warmth and hue separation, not from crushing mids (value contrast, luma-only, Law 30) */
       float l3 = clamp(lc, 0.0, 1.0);
       lc = mix(lc, l3*l3*(3.0 - 2.0*l3), 0.22);
       c *= lc / max(lum, 1e-4);
@@ -726,19 +736,21 @@ const gradePass = new ShaderPass({
       /* a breath of saturation, fully held where pigment already sings */
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, mix(1.10, 1.00, sat));
-      /* quiet vignette */
+      /* quiet vignette — halved by L-3 third run (no darkness at the frame's edge) */
       float v = length(vUv - 0.5);
-      c *= 1.0 - smoothstep(0.42, 0.85, v) * 0.16;
+      c *= 1.0 - smoothstep(0.42, 0.85, v) * 0.08;
       gl_FragColor = vec4(mix(tex.rgb, clamp(c, 0.0, 1.0), uAmt), tex.a);
     }`
 });
 composer.addPass(gradePass);
 
-/* GOAL 5 — THE LIVING HOUR (boards 02+04): a slow 10-minute arc between
-   deep-gold dawn (h=0) and white-gold noon (h=1). One value drives the
-   sun's elevation (12°→24°), its color, the cloud cover, the god-rays'
-   length and strength, and the GRADE's warmth. ?hour=fixed freezes at
-   the mean for verification stills; ?hour=<0..1> freezes a chosen phase;
+/* GOAL 5 — THE LIVING HOUR (boards 02+04), remade by L-3 third run
+   (THE LIGHT THAT NEVER LEAVES): a slow arc between pearl-gold vespers
+   (v), deep-gold dawn (h=0) and white-gold noon (h=1). The hour drives
+   COLOR AND CHARACTER ONLY — sky, cloud cover, god-ray length, grade
+   warmth, emitters; the key light's intensity and color are constant
+   and the light level never falls. ?hour=fixed freezes at the mean for
+   verification stills; ?hour=<-1..1> freezes a chosen phase;
    __CITY.setHour(x|null) live-tunes. */
 const HOUR = { fixed: null, h: .5, v: 0, rayMat: null, stars: null };
 /* LOOP 7 · PASS B — interior/exterior visibility: objects tagged
@@ -1032,8 +1044,8 @@ const roseTex = canvasTex(512, (g,w,h)=>{
 const THE_PURGE = true;
 
 const MAT = {
-  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.66 }),
-  ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.4 }),
+  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.53 }),   /* L-3 third run, Law 37: .66→.53 — the raised fill re-crossed the 1.8 bloom line on IBL-hot walls (sun proven inert: hot fraction unchanged with sun OFF); env on white/ivory is the lever that works */
+  ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.32 }),   /* L-3 third run, Law 37: .40→.32 (same measured trim as white) */
   gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.30, metalness:1.0, envMapIntensity:.95 }),
   goldSt: new THREE.MeshStandardMaterial({ color:0xf5c569, roughness:.34, metalness:.95, envMapIntensity:1.0,
             polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 }),
@@ -10232,41 +10244,40 @@ function animate(){
   applyGlide(t);
   applyFlight(t, dt);
 
-  /* GOAL 5 — THE LIVING HOUR: a sun that never leaves golden hour, but
-     the hour itself now LIVES — a slow 10-minute arc between deep-gold
-     dawn (h=0, el 12°, full cloud, long strong rays, warm grade) and
-     white-gold noon (h=1, el 24°, thinned cloud, drawn-in rays, whiter
-     grade). The old ±9° azimuth breath rides on top. ?hour freezes it. */
-  /* LOOP 5 · PASS C — VESPERS: the SAME clock, a longer arc. One sine
-     phase s ∈ [−1,1] walks noon(+1) → dawn(0) → warm twilight(−1) on a
-     15-minute round. h = max(0,s) keeps every dawn↔noon meaning intact;
-     v = max(0,−s) deepens: sun to 5° amber, zenith to indigo, the
-     starfield emerges, warmth rises. Exposure floors at .88 — the city
-     never goes dark enough to lose the word (THE LEGIBLE WORD). */
+  /* L-3 THE MASTER LIGHT (third run) — THE LIGHT THAT NEVER LEAVES
+     (Rev 21:23 / 22:5): the hour is no longer a solar day, it is a
+     color/character breath — pearl-gold (v) → white-gold (h) → deep-gold —
+     and the LIGHT LEVEL NEVER FALLS. The same 15-minute clock walks
+     s ∈ [−1,1]; h = max(0,s) is the white-gold peak, v = max(0,−s) is
+     VESPERS kept as beauty only: zenith to indigo, the starfield wakes,
+     windows blaze, warmth rises — but the key never sinks, never
+     reddens, never dims (DEPTH WITHOUT DARKNESS). ?hour freezes it. */
   const cyc = t/240*TAU;
   const s = HOUR.fixed !== null ? HOUR.fixed : Math.sin(t/900*TAU);
   const h = Math.max(0, s), v = Math.max(0, -s);
   HOUR.h = h; HOUR.v = v;
-  const el = (12 + 12*h - 7*v + .6*Math.sin(cyc)) * D2R;
-  const az = (232 + 9*Math.sin(cyc*.7)) * D2R;
+  const el = (32 + 8*h + 2*Math.sin(cyc)) * D2R;   /* floor raised 12°→32°, no vespers sink — the Lamb's light stands high */
+  const az = (232 + 9*Math.sin(cyc*.25)) * D2R;    /* the ±9° swing stays, slowed to a breath */
   _sd.set(Math.sin(az)*Math.cos(el), Math.sin(el), Math.cos(az)*Math.cos(el));
   skyUni.uSunDir.value.copy(_sd);
   skyUni.uTime.value = t;
   skyUni.uCoverBias.value = .11*h;                     /* the decks thin at the peak */
   skyUni.uVesp.value = v;                              /* zenith → indigo, horizon → amber */
   sun.position.copy(_sd).multiplyScalar(320);
-  sun.color.setHSL(.075 + .035*h - .018*v + .008*Math.sin(cyc), .62 - .24*h + .16*v, .72 + .12*h - .10*v);
+  /* sun.color is CONSTANT (set once at construction) — the Lamb's light
+     does not redden and does not dim (RULING 2); the hour's character
+     now lives in the sky, the grade's warmth, and the emitters alone */
   sunSprite.position.copy(_sd).multiplyScalar(780);
   /* V-6 — THE MASTER LIGHT WITHIN: under a roof the sky's full exposure
      compresses every value into the highlights (sanctuary mean measured
      215/255 — milk without clipping). Inside the sanctuary or the hall
      the exposure eases down with the bright hours (nothing at vespers —
-     the .88 LEGIBLE-WORD floor governs there), restoring the mid-value
+     the .93 LEGIBLE-WORD floor governs there), restoring the mid-value
      body the vision's interiors live on. Eased, never snapped. */
   const _inSanct = camera.position.x > 41 && camera.position.x < 87 &&
                    camera.position.z > -22 && camera.position.z < 10 && camera.position.y < 18;
   INTZ.z += (((HALL.inside || _inSanct) ? 1 : 0) - INTZ.z) * Math.min(1, dt*2.4);
-  renderer.toneMappingExposure = Math.max(.88, 0.93 + .04*Math.sin(cyc*.5) + .015*h - .07*v);   /* LOOP 13-C law intact — V-6 works purely in the display-space grade */
+  renderer.toneMappingExposure = Math.max(.93, 0.95 + .03*Math.sin(cyc*.5) + .01*h);   /* THE LIGHT THAT NEVER LEAVES: the old floor is the new baseline — no vespers term, never below .93 — V-6 works purely in the display-space grade */
   gradePass.uniforms.uZone.value = INTZ.z * (.35 + .65*h);   /* body deepens at the bright hours, gentle at vespers */
   gradePass.uniforms.uWarm.value = 1.35 - .8*h + .25*v;   /* warmth tracks the hour (Law 30 gate inside) */
   if (HOUR.rayMat) HOUR.rayMat.uniforms.uLen.value = .62 - .28*h + .10*v;
