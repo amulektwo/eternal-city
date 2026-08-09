@@ -609,18 +609,25 @@ renderer.info.autoReset = false;   /* reset once per frame in animate — else t
                                       composer's last pass masks the real call count */
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xd8bd94, 165, 780);   /* LOOP 13-C: deepened from bright cream 0xffd9a4 — distant towers now keep value contrast against the sky instead of dissolving into milk; far is tier-managed in applyTier */
+scene.fog = new THREE.Fog(0xd8bd94, 200, 900);   /* LOOP 13-C: deepened from bright cream 0xffd9a4 — distant towers now keep value contrast against the sky instead of dissolving into milk; far is tier-managed in applyTier. TUNE 1: 165/780→200/900 — the scene brightened while the fog stood still, so distance read milky; color untouched */
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.1, 2000);
 camera.position.set(0, 1.7, 108);
 
 /* L-3 THE MASTER LIGHT (third run) — THE LIGHT THAT NEVER LEAVES:
    the key is no longer a sun, it is the Lamb's light (Rev 21:23) — high,
-   constant, never dimming; the fill rises so unlit faces sit within ~1
-   stop of lit faces (key:fill 3.3/0.45 ≈ 7.3:1 → 2.2/1.6 ≈ 1.4:1) */
-const hemi = new THREE.HemisphereLight(0xfff0d4, 0xd8ba8c, 1.6);
+   constant, never dimming; the fill keeps unlit faces clear of darkness.
+   TUNE 1 (THE LIGHT KEEPS ITS FORM): the first cut (2.2/1.6 ≈ 1.4:1)
+   cured the dark walls but flattened the city — the ratio re-spreads so
+   faces turned from the key read VISIBLY SOFTER (~0.55-0.65 of lit),
+   never gloomy: form returns, darkness stays dead. Landed at 2.1/1.12
+   (measured k:f 1.7:1): the asked-for 1.9-2.2:1 is unreachable here —
+   the deep porticos are fed by exactly the fill+IBL budget Law 37 caps,
+   so the 0.55 shadowed/lit hard floor binds first (grid-measured; the
+   prescribed 2.5/1.15 start read 0.53 in the cathedral shade) */
+const hemi = new THREE.HemisphereLight(0xfff0d4, 0xd8ba8c, 1.12);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffd9a0, 2.2);
+const sun = new THREE.DirectionalLight(0xffd9a0, 2.1);
 sun.color.setHSL(.075, .30, .78);   /* constant warm white-gold — set once, no hour rewrite */
 sun.position.set(-180, 90, 150);
 if (SHADOWS){
@@ -715,8 +722,8 @@ const gradePass = new ShaderPass({
       /* V-6: inside the sanctuary/hall the pivot dips and the slope deepens —
          the compressed high-key interior gains true mid-value body */
       float gpv = 0.70 - 0.05*uZone;
-      float gsl = 1.10 + 0.17*uZone;
-      float lc = gpv + (lum - gpv)*gsl;   /* L-3 third run: pivot 0.74→0.70, slope 1.22→1.10, interior slope term halved — DEPTH WITHOUT DARKNESS: body must come from warmth and hue separation, not from crushing mids (value contrast, luma-only, Law 30) */
+      float gsl = 1.16 + 0.17*uZone;
+      float lc = gpv + (lum - gpv)*gsl;   /* L-3 third run: pivot 0.74→0.70, interior slope term halved (DEPTH WITHOUT DARKNESS); TUNE 1: slope 1.10→1.16, halfway back to the shipped 1.22 — the full soften flattened form (value contrast, luma-only, Law 30) */
       float l3 = clamp(lc, 0.0, 1.0);
       lc = mix(lc, l3*l3*(3.0 - 2.0*l3), 0.22);
       c *= lc / max(lum, 1e-4);
@@ -887,7 +894,7 @@ function applyTier(t){
   /* raising out of LOW ends any emergency dressing cut */
   if (t > 0) emergency = false;
   /* fog reach + light shafts */
-  scene.fog.far = (t===0 && emergency) ? 360 : (t===0 ? 480 : 780);
+  scene.fog.far = (t===0 && emergency) ? 360 : (t===0 ? 554 : 900);   /* TUNE 1: 480/780→554/900, LOW scaled by the same 900/780 proportion; emergency untouched */
   for (const m of TR.shafts) m.uniforms.uOp.value = m.userData.baseOp * (t===0 ? .45 : 1);
   /* sky dome quality: octaves + the high veil follow the tier
      (first applyTier call is at init, well after skyUni exists) */
@@ -1044,8 +1051,8 @@ const roseTex = canvasTex(512, (g,w,h)=>{
 const THE_PURGE = true;
 
 const MAT = {
-  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.53 }),   /* L-3 third run, Law 37: .66→.53 — the raised fill re-crossed the 1.8 bloom line on IBL-hot walls (sun proven inert: hot fraction unchanged with sun OFF); env on white/ivory is the lever that works */
-  ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.32 }),   /* L-3 third run, Law 37: .40→.32 (same measured trim as white) */
+  white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.57 }),   /* L-3 Law 37: .66→.53 when the raised fill re-crossed the 1.8 bloom line (sun proven inert; env on white/ivory is the lever that works); TUNE 1: .53→.57 — material response half-restored; .60 sat AT the tree-vantage bloom baseline and .62+ broke it (measured), .57 keeps 1.3-4.4pt margin under baseline at every vantage */
+  ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.34 }),   /* L-3 Law 37 .40→.32; TUNE 1: .32→.34 (same measured restore as white) */
   gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.30, metalness:1.0, envMapIntensity:.95 }),
   goldSt: new THREE.MeshStandardMaterial({ color:0xf5c569, roughness:.34, metalness:.95, envMapIntensity:1.0,
             polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 }),
