@@ -1053,6 +1053,11 @@ const THE_PURGE = true;
 const MAT = {
   white:  new THREE.MeshStandardMaterial({ color:0xf8f4ea, map:marbleTex, roughness:.52, metalness:.04, envMapIntensity:.57 }),   /* L-3 Law 37: .66→.53 when the raised fill re-crossed the 1.8 bloom line (sun proven inert; env on white/ivory is the lever that works); TUNE 1: .53→.57 — material response half-restored; .60 sat AT the tree-vantage bloom baseline and .62+ broke it (measured), .57 keeps 1.3-4.4pt margin under baseline at every vantage */
   ivory:  new THREE.MeshStandardMaterial({ color:0xf3ecd8, roughness:.62, metalness:.03, envMapIntensity:.34 }),   /* L-3 Law 37 .40→.32; TUNE 1: .32→.34 (same measured restore as white) */
+  soffit: new THREE.MeshStandardMaterial({ color:0xf2e9d8, roughness:.85, metalness:.02, envMapIntensity:.30,
+            emissive:0xf6ecdc, emissiveIntensity:.50 }),   /* THE SOFFITS OF GOLD: down-faces get no key and almost
+            no IBL — the last darkness in the city lived on porch canopies and room ceilings. The INNER FIRE idiom
+            (a quiet self-luminance floor in the stone's own color, far beneath the 1.8 bloom line) keeps every
+            covered ceiling warm ivory; the law: soffit luma 55-100% of the adjacent wall, NEVER above it */
   gold:   new THREE.MeshStandardMaterial({ color:0xffc964, roughness:.30, metalness:1.0, envMapIntensity:.95 }),
   goldSt: new THREE.MeshStandardMaterial({ color:0xf5c569, roughness:.34, metalness:.95, envMapIntensity:1.0,
             polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 }),
@@ -2127,7 +2132,7 @@ function addSeg(ax,az,bx,bz,r){ colSegs.push({ax,az,bx,bz,r}); }
 /* ================================================================
    6. MERGED-GEOMETRY ACCUMULATORS
 ================================================================ */
-const P = { white:[], ivory:[], gold:[], glow:[], glowArch:[], pearl:[], goldSt:[], crimson:[] };
+const P = { white:[], ivory:[], gold:[], glow:[], glowArch:[], pearl:[], goldSt:[], crimson:[], soffit:[] };   /* soffit: THE SOFFITS OF GOLD — non-casting, one cosmetic pool mesh */
 function addFloorMedallion(x, z, r, y = .075, spokes = 12, phase = 0){
   P.goldSt.push(xf(new THREE.RingGeometry(r*.72, r*.78, 48).rotateX(-PI/2), x, y, z));
   P.goldSt.push(xf(new THREE.RingGeometry(r*.30, r*.34, 36).rotateX(-PI/2), x, y+.004, z));
@@ -3112,6 +3117,12 @@ function buildEnterable(x,z,ry,w,dpt,h){
     const hc = W(0, pz);
     P.white.push(xf(new THREE.BoxGeometry(DW+1.9, .3, 1.05), hc[0], cH+.1, hc[1], ry));              /* architrave */
     P.gold .push(xf(new THREE.BoxGeometry(DW+2.1, .1, 1.2), hc[0], cH-.04, hc[1], ry));              /* gold fascia */
+    /* THE SOFFITS OF GOLD — the canopy's underside was the doorway's own
+       patch of night: a warm ivory soffit panel (down-facing plane) with
+       two gold coffer ribs turns it into a carved ceiling (+0 draws) */
+    P.soffit.push(xf(new THREE.PlaneGeometry(DW+2.0, 1.14).rotateX(PI/2), hc[0], cH-.13, hc[1], ry));   /* .04 clear of the fascia underside — no z-fight */
+    for (const rs of [-1,1]){ const rp = W(rs*(DW/2-.1), pz);
+      P.gold.push(xf(new THREE.BoxGeometry(.06,.05,1.1), rp[0], cH-.155, rp[1], ry)); }
     P.white.push(xf(new THREE.BoxGeometry(DW+1.1, .24, .68), hc[0], cH+.37, hc[1], ry));             /* the attic crown */
     P.gold .push(xf(new THREE.ConeGeometry(.15,.38,8), hc[0], cH+.68, hc[1]));                       /* central acroterion */
     for (const sgn of [-1,1]){ const fc = W(sgn*(DW/2+0.85), pz);
@@ -3123,8 +3134,21 @@ function buildEnterable(x,z,ry,w,dpt,h){
      far reclaims its tris from every distant view; identical when inside.
      Ceiling, dressing, architecture-in-relief, and the focal furnishing all
      ride here. Colliders (walls above; furniture below) stay ALWAYS on. */
-  const II = { white:[], gold:[], glow:[], goldSt:[], ivory:[], crimson:[] };
+  const II = { white:[], gold:[], glow:[], goldSt:[], ivory:[], crimson:[], soffit:[] };
   II.ivory.push(xf(new THREE.BoxGeometry(w-T, .3, dpt-T), x, h-.15, z, ry));   /* interior ceiling */
+  /* THE SOFFITS OF GOLD — the room's ceiling gets no key and almost no
+     IBL; every chapel, hall, shrine and feast hall stood under a slab of
+     night. A warm soffit panel + a gold coffer grid (rooms ≥5m) turn the
+     ceiling into finished architecture. Rides the II merge (+1 cullable
+     mesh per near interior; culled beyond 40m with the rest). */
+  II.soffit.push(xf(new THREE.PlaneGeometry(w-T-.08, dpt-T-.08).rotateX(PI/2), x, h-.34, z, ry));   /* .04 clear of the ceiling slab — no z-fight */
+  if (Math.min(w, dpt) >= 5){
+    const cfY = h-.365;
+    for (const t of [-.25, 0, .25]){ const cp = W(0, t*dpt*.8);
+      II.gold.push(xf(new THREE.BoxGeometry(w-T-.5, .045, .07), cp[0], cfY, cp[1], ry)); }
+    for (const s of [-.3, .3]){ const cp = W(s*w*.8, 0);
+      II.gold.push(xf(new THREE.BoxGeometry(.07, .045, dpt-T-.5), cp[0], cfY, cp[1], ry)); }
+  }
   const hang = (hx,hz,hy)=>{               /* P-A — a caged hanging lantern (reforged from the plain pendant) */
     II.gold.push(xf(new THREE.CylinderGeometry(.026,.026,.86,6), hx, hy+.45, hz));         /* the chain */
     II.gold.push(xf(new THREE.ConeGeometry(.25,.22,6), hx, hy+.26, hz));                    /* the crown roof */
@@ -3603,7 +3627,10 @@ function addBuilding(x,z,ry,big,enter){
     streetLamp(Math.sin(a) * 24.6, Math.cos(a) * 24.6); }
 
   /* golden canopies over the walks */
-  const canMat = new THREE.MeshStandardMaterial({ map:canopyStripeTex, roughness:.65, side:THREE.DoubleSide });
+  const canMat = new THREE.MeshStandardMaterial({ map:canopyStripeTex, roughness:.65, side:THREE.DoubleSide,
+    emissive:0xfff1da, emissiveIntensity:.14 });   /* THE SOFFITS OF GOLD: the awnings' undersides read as dark
+    slabs over the market walks (DoubleSide backs get no key, no sky) — a whisper of the fabric's own warmth
+    lifts them; far beneath the 1.8 bloom line, and the sunlit tops rise imperceptibly */
   const canParts = [];
   for (const sx of [-6.5,6.5]) for (let z=43; z<=79; z+=12){
     const g = new THREE.PlaneGeometry(4.6,4.2);
@@ -5880,7 +5907,11 @@ function addBuilding(x,z,ry,big,enter){
      draw, world-anchored noise, flow +z toward the doors). */
   {
     P.white.push(xf(new THREE.BoxGeometry(1.5, .34, .55), 2.12, .17, -72.85));
-    P.gold.push(xf(new THREE.BoxGeometry(1.56, .1, .2), 2.12, .38, -72.98));
+    /* THE SOFFITS OF GOLD (micro-kill): the lip was a flat-topped gold box —
+       one horizontal metal plate that read as a floating BLACK plank at
+       grazing view indoors (2026-08-11 audit). A rounded rim rod catches a
+       highlight from every angle; no flat face can fall dark. */
+    P.gold.push(xf(new THREE.CylinderGeometry(.09, .09, 1.56, 10).rotateZ(PI/2), 2.12, .38, -72.98));
     P.crimson.push(xf(new THREE.BoxGeometry(.5, .05, 17.4), 2.12, .026, -64.05));
     for (const s2 of [-1, 1])
       P.white.push(xf(new THREE.BoxGeometry(.1, .13, 17.4), 2.12 + s2*.28, .065, -64.05));
@@ -7078,13 +7109,30 @@ const laceGold = new THREE.MeshStandardMaterial({
     const uw = (b.w + b.dpt) * 1.4;   /* tile factor ~perimeter */
     /* projecting stone cornice at the roofline */
     LS.push(tileUV(xf(new THREE.BoxGeometry(b.w + .7, .55, b.dpt + .7), b.x, b.h - .5, b.z, b.ry), uw));
-    /* gilt belt at the cornice lip */
+    /* gilt belt at the cornice lip (hidden inside the ceiling slab in the
+       hollow houses — safe as a solid box) */
     LG2.push(tileUV(xf(new THREE.BoxGeometry(b.w + .55, .14, b.dpt + .55), b.x, b.h - .2, b.z, b.ry), uw));
-    /* mid-storey string course */
-    LG2.push(tileUV(xf(new THREE.BoxGeometry(b.w + .32, .13, b.dpt + .32), b.x, b.h * .52, b.z, b.ry), uw));
-    /* a lower course on the taller façades */
-    if (b.h > 15)
-      LG2.push(tileUV(xf(new THREE.BoxGeometry(b.w + .32, .13, b.dpt + .32), b.x, b.h * .30, b.z, b.ry), uw));
+    /* THE SOFFITS OF GOLD (root defect, 2026-08-11 audit): the storey
+       string courses were SOLID SLABS spanning the whole footprint — and
+       every district house is hollow and enterable since P-A pass 2, so a
+       gold plate sliced every room at mid-height and read from below as a
+       ceiling of night. Facade trim must never cross the interior: the
+       belts become hollow FRAMES hugging the walls (4 slats, same LACE
+       merge, zero new draws). */
+    const beltFrame = (y) => {
+      const fw = b.w + .32, fd = b.dpt + .32, t = .78;
+      const put = (lx, lz, sx, sz) => {
+        const wx = b.x + Math.cos(b.ry)*lx + Math.sin(b.ry)*lz;
+        const wz = b.z - Math.sin(b.ry)*lx + Math.cos(b.ry)*lz;
+        LG2.push(tileUV(xf(new THREE.BoxGeometry(sx, .13, sz), wx, y, wz, b.ry), uw));
+      };
+      put(0,  (fd - t)/2, fw, t);
+      put(0, -(fd - t)/2, fw, t);
+      put( (fw - t)/2, 0, t, fd - 2*t);
+      put(-(fw - t)/2, 0, t, fd - 2*t);
+    };
+    beltFrame(b.h * .52);                    /* mid-storey string course */
+    if (b.h > 15) beltFrame(b.h * .30);      /* a lower course on the taller façades */
   }
   /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
      Relief joins the LACE arrays BEFORE the merge — zero new draw calls.
