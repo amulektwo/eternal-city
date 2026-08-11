@@ -7003,6 +7003,25 @@ const laceGold = new THREE.MeshStandardMaterial({
       j++;
     }
   }
+  /* ===== THE CROWNED ROOFS (2026-08-11 audit, aerial evidence) — the
+     sanctuary's great gable read from the Seer's Wings as a bare pale
+     slab (ridge y26.4, eaves y20.67, ~30° pitch, raycast-measured).
+     A gilt ridge crest between the needle trios, two gilt tile-courses
+     per slope (the buttress lesson: gold is the read from the air),
+     and corner acroteria. LACE merges — zero new draws, non-casting. */
+  {
+    const rY = 26.4, eY = 20.67, rZ = SCZ, pitch = Math.atan2(rY - eY, 10);
+    LG2.push(tileUV(xf(new THREE.BoxGeometry(34, .20, .26), (SX0+SX1)/2, rY + .12, rZ), 12));
+    for (const s2 of [-1, 1]){
+      LG2.push(tileUV(xf(new THREE.ConeGeometry(.22, .9, 6), 47.5 + (s2 > 0 ? 33 : 0), rY + .55, rZ), 1));
+      for (const f2 of [.35, .72]){
+        const zc = rZ + s2 * 10 * f2, yc = rY - (rY - eY) * f2 + .06;
+        LG2.push(tileUV(xf(new THREE.BoxGeometry(34, .08, .34), (SX0+SX1)/2, yc, zc, 0, 1, null, null, -s2 * pitch), 12));
+      }
+      for (const xe of [46.5, 81.5])
+        LG2.push(tileUV(xf(new THREE.ConeGeometry(.18, .7, 6), xe, eY + .35, rZ + s2 * 9.6), 1));
+    }
+  }
   /* LOOP 14-C — THE LACE PARAPETS (San Diego pierced fretwork): a diamond-
      lattice crenellation crowns the sanctuary roofline and the throne-hall
      ring — pierced white stone reading against the SKY. Silhouette reads
@@ -7136,6 +7155,19 @@ const laceGold = new THREE.MeshStandardMaterial({
     };
     beltFrame(b.h * .52);                    /* mid-storey string course */
     if (b.h > 15) beltFrame(b.h * .30);      /* a lower course on the taller façades */
+    /* ===== THE CROWNED ROOFS — from the air the district roofs read as
+       one pale mass; a gilt band rides each pyramid and hip cone at .38
+       of its rise (the same transform as the roof itself, so the band
+       hugs the hip's 1.75 stretch). Spires and domes are already
+       articulated and stand untouched; apex heights untouched. */
+    {
+      const rt2 = Math.abs(Math.floor(b.x/26)*7 + Math.floor(b.z/26)*13) % 4;
+      if (rt2 === 3 || rt2 === 0){
+        const roofH2 = b.h * .42, rb2 = Math.max(b.w, b.dpt) * .74;
+        const band = new THREE.TorusGeometry(rb2 * .53, .085, 5, 10).rotateX(PI/2);   /* weaves: shows on faces, hides at hips */
+        LG2.push(tileUV(xf(band, b.x, b.h + roofH2 * .38, b.z, b.ry + PI/4, 1, 1, rt2 === 3 ? 1.75 : 1), 4));
+      }
+    }
     /* ===== THE CARVED FACES (2026-08-11 audit) — the mid-band prisms
        read as blank slabs at eye level (terrace evidence). The Throne-
        Hall-drum recipe carried to the streets: corner pilasters with
