@@ -7125,6 +7125,9 @@ const laceGold = new THREE.MeshStandardMaterial({
         const wx = b.x + Math.cos(b.ry)*lx + Math.sin(b.ry)*lz;
         const wz = b.z - Math.sin(b.ry)*lx + Math.cos(b.ry)*lz;
         LG2.push(tileUV(xf(new THREE.BoxGeometry(sx, .13, sz), wx, y, wz, b.ry), uw));
+        /* THE CARVED FACES: a stone shadow-ledge under every gilt line —
+           the belt gains the depth the buttress pass proved gold needs */
+        LS.push(tileUV(xf(new THREE.BoxGeometry(sx + .10, .11, sz + .10), wx, y - .13, wz, b.ry), uw));
       };
       put(0,  (fd - t)/2, fw, t);
       put(0, -(fd - t)/2, fw, t);
@@ -7133,7 +7136,66 @@ const laceGold = new THREE.MeshStandardMaterial({
     };
     beltFrame(b.h * .52);                    /* mid-storey string course */
     if (b.h > 15) beltFrame(b.h * .30);      /* a lower course on the taller façades */
+    /* ===== THE CARVED FACES (2026-08-11 audit) — the mid-band prisms
+       read as blank slabs at eye level (terrace evidence). The Throne-
+       Hall-drum recipe carried to the streets: corner pilasters with
+       gold capitals, and blind panel arcades on the three windowless
+       faces (the front already bears its lit windows). LACE merges —
+       zero new draws, non-casting. Scale-gated (h ≥ 11, face ≥ 8): the
+       small houses and the skyline silhouette stay untouched. */
+    if (b.h >= 11){
+      const W2 = (lx, lz) => [ b.x + Math.cos(b.ry)*lx + Math.sin(b.ry)*lz,
+                               b.z - Math.sin(b.ry)*lx + Math.cos(b.ry)*lz ];
+      const hw2 = b.w/2, hd2 = b.dpt/2;
+      for (const sx of [-1, 1]) for (const sz2 of [-1, 1]){
+        const pc = W2(sx*(hw2+.06), sz2*(hd2+.06));
+        LS.push(tileUV(xf(new THREE.BoxGeometry(.62, b.h*.70, .62), pc[0], b.h*.36, pc[1], b.ry), 2, 4));
+        LG2.push(tileUV(xf(new THREE.BoxGeometry(.76, .28, .76), pc[0], b.h*.72, pc[1], b.ry), 2));
+      }
+      const faces = [ [b.w,   0, -(hd2+.10), 0,     b.ry+PI   ],
+                      [b.dpt,  (hw2+.10), 0, PI/2,  b.ry+PI/2 ],
+                      [b.dpt, -(hw2+.10), 0, PI/2,  b.ry-PI/2 ] ];
+      for (const [fw, flx, flz, rot, outYaw] of faces){
+        if (fw < 8) continue;
+        const n = Math.max(2, Math.floor(fw/2.6));
+        const y0 = 1.1, ph = Math.min(b.h*.5, 6.2);
+        for (let i = 0; i <= n; i++){
+          const t2 = -fw/2 + .55 + i*(fw-1.1)/n;
+          const sp = rot === 0 ? W2(t2, flz) : W2(flx, t2);
+          LS.push(tileUV(xf(new THREE.BoxGeometry(.44, ph, .30), sp[0], y0+ph/2, sp[1], b.ry+rot), 1, 3));
+        }
+        /* the buttress lesson (Law: white-on-white will not read under this
+           IBL) — the header band and the panel arch-caps are GILT; the
+           stone strips carry the depth, the gold carries the read */
+        const hb = rot === 0 ? W2(0, flz) : W2(flx, 0);
+        LG2.push(tileUV(xf(new THREE.BoxGeometry(fw-.9, .26, .30), hb[0], y0+ph+.15, hb[1], b.ry+rot), 6));
+        for (let i = 0; i < n; i++){
+          const t2 = -fw/2 + .55 + (i+.5)*(fw-1.1)/n;
+          const off = .125;
+          const cp = rot === 0 ? W2(t2, flz + (flz < 0 ? -off + .10 : off - .10))
+                               : W2(flx + (flx > 0 ? off - .10 : -off + .10), t2);
+          const cap = new THREE.CircleGeometry(Math.min(.85, (fw-1.1)/n*.38), 8, 0, PI);
+          LG2.push(tileUV(xf(cap, cp[0], y0+ph-.05, cp[1], outYaw), 1));
+        }
+      }
+    }
   }
+  /* ===== THE CARVED FACES — the empty terrace fields gain sparse gold
+     inlay medallions (the standing addFloorMedallion idiom, deterministic
+     layout — no rng, rejecting reserved ground). Rides P.goldSt. */
+  for (const [mdDeg, mr] of [[-14, 2.6], [0, 3.2], [14, 2.6]]){
+    const ma = TERR_A + mdDeg*D2R;
+    for (const rr2 of [106, 100, 112, 95]){   /* first unreserved radius wins (deterministic) */
+      const mx = Math.sin(ma)*rr2, mz = Math.cos(ma)*rr2;
+      if (!isReserved(mx, mz, mr + .6)){ addFloorMedallion(mx, mz, mr, .075, 12, ma); break; }
+    }
+  }
+  for (const mdDeg of [45, 135, 315]){
+    const ma = mdDeg*D2R;
+    const mx = Math.sin(ma)*96, mz = Math.cos(ma)*96;
+    if (!isReserved(mx, mz, 3.4)) addFloorMedallion(mx, mz, 2.4, .075, 12, ma);
+  }
+
   /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
      Relief joins the LACE arrays BEFORE the merge — zero new draw calls.
      (1) Portal jamb pilasters: coffered stone bands flanking all 12 gates.
