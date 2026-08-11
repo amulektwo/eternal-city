@@ -1526,16 +1526,20 @@ const HORIZON = { u: null };
         float h = uHour.x, v = uHour.y;
         vec3 tint = mix(vec3(1.12,1.02,0.82), vec3(1.04,1.00,0.92), h);
         tint = mix(tint, vec3(0.82,0.86,1.05), v*0.70);
-        float hz = vHaze * (1.0 - 0.15*h + 0.10*v);
+        /* THE NATIONS BY DAY (2026-08-11 audit): the cards read as pale
+           cutouts under the constant celestial light. Day clarity rises
+           and the windows keep a living glint at every hour; the VESPERS
+           totals are preserved EXACTLY (each day-floor raise is paid for
+           by the same cut to the v-coefficient), and the day amplitudes
+           stay far below the shared 1.8 bloom line. */
+        float hz = vHaze * (1.0 - 0.38*h + 0.10*v);
         vec3 col = b.rgb * tint;
         col = mix(col, uFog*1.10, hz);
-        /* windows wake at VESPERS, humble by day — modest + hazed so the near
-           pinpricks never cross the shared bloom line (his r180 lamps untouched) */
-        float winAmp = 0.30 + 0.12*(1.0 - h) + 1.05*v;
+        float winAmp = 0.85 + 0.12*(1.0 - h) + 0.50*v;
         col += vec3(1.0,0.84,0.55) * glow.r * winAmp * (1.0 - hz*0.55);
         float tipAmp = max(0.70 + 0.55*(1.0 - h) - 0.30*v, 0.20);
         col += vec3(1.0,0.85,0.46) * glow.g * tipAmp * (1.0 - hz*0.55);
-        float gAmp = 0.40 + 0.32*(1.0 - h) + 0.55*v;
+        float gAmp = 0.78 + 0.32*(1.0 - h) + 0.17*v;
         col += vec3(1.0,0.93,0.74) * glow.b * gAmp * 0.32;
         gl_FragColor = vec4(col, b.a * (1.0 - hz*0.30));
       }`,
@@ -1889,20 +1893,21 @@ const FARCITY = { u: null };
            gold-ivory, never gray (L-2 rev 2) */
         vec3 tint = mix(vec3(1.16, 1.03, 0.80), vec3(1.06, 1.00, 0.90), h);
         tint = mix(tint, vec3(0.80, 0.85, 1.06), v*0.75);
-        float hz = vHaze * (1.0 - 0.18*h + 0.10*v);
+        /* THE NATIONS BY DAY: day clarity up, day windows alive — the
+           vespers totals preserved exactly (day-floor raise paid by the
+           same v-coefficient cut); amplitudes stay below the bloom line. */
+        float hz = vHaze * (1.0 - 0.42*h + 0.10*v);
         vec3 col = b.rgb * tint;
         /* haze lifts toward a LIT horizon (uFog alone pulled the nations
            DOWN to a gray silhouette against the bloomed sky) */
         col = mix(col, uFog*1.12, hz);
-        /* windows wake at vespers, and no longer whisper by day —
-           the Seer asked to SEE the nations from the air (L-2 rev 2) */
-        float winAmp = 0.62 + 0.24*(1.0 - h) + 1.65*v;
+        float winAmp = 1.30 + 0.24*(1.0 - h) + 0.97*v;
         col += vec3(1.0, 0.84, 0.55) * glow.r * winAmp * (1.0 - hz*0.45);
-        /* gilt tips catch the low sun */
+        /* gilt tips catch the constant key */
         float tipAmp = max(1.05 + 0.95*(1.0 - h) - 0.35*v, 0.30);
         col += vec3(1.0, 0.85, 0.46) * glow.g * tipAmp * (1.0 - hz*0.5);
         /* the god-glow over every city */
-        float gAmp = 0.62 + 0.5*(1.0 - h) + 0.85*v;
+        float gAmp = 1.10 + 0.5*(1.0 - h) + 0.37*v;
         col += vec3(1.0, 0.93, 0.74) * glow.b * gAmp * 0.48;
         gl_FragColor = vec4(col, b.a * (1.0 - hz*0.22));
       }`,
