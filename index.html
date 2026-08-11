@@ -2371,6 +2371,84 @@ async function initTransfiguration(){
     const { RGBELoader } = await import('three/addons/loaders/RGBELoader.js');
     const res = HIGH ? '2k' : '1k';
     const hdr = await new RGBELoader().loadAsync(`assets/hdri/golden_sky_${res}.hdr`);
+    /* L-5 THE EVEN HEAVEN — the golden heaven remains; the baked sun
+       does not. Forensic (2026-08-11, cos-weighted, solid-angle true):
+       the HDRI carries a horizon-level sunset lobe at city-az ~41°
+       (column peak/median 6.74:1, wall-irradiance spread 4.42:1) that
+       counter-lit the Lamb's light; L-4 proved pointing it elsewhere
+       just builds another sun. Here its azimuthal ENERGY is compressed:
+       gain(az) = clamp(median/E_smooth(az), .25, 3), one global factor
+       restoring total spherical energy EXACTLY (delta 0.00%). Scalar
+       per column: per-texel hue/saturation and each column's vertical
+       gradient are untouched by construction; the floor's irradiance is
+       invariant. Predicted wall spread 4.42:1 → 1.30:1 — the heaven
+       glows from every quarter and casts allegiance to no second sun.
+       (Honest cost, for the eye to judge: the lobe IS the warm half of
+       the sky, so the spherical mean cools, r/b 0.979 → 0.746; the
+       visible heaven is the procedural dome, untouched.) */
+    {
+      const img = hdr.image, EW = img.width, EH = img.height, D = img.data;
+      const HALF = D instanceof Uint16Array;   /* RGBELoader default HalfFloatType */
+      let dec = null;
+      if (HALF){
+        dec = new Float32Array(65536);
+        for (let h = 0; h < 65536; h++){
+          const e = (h & 0x7c00) >> 10, m = h & 0x03ff;
+          dec[h] = (h & 0x8000) ? 0 :
+            e === 0 ? m * 5.960464477539063e-8 :
+            e === 31 ? 65504 :
+            Math.pow(2, e - 15) * (1 + m / 1024);
+        }
+      }
+      const enc = f => {
+        if (!(f > 0)) return 0;
+        if (f >= 65504) return 0x7bff;
+        let e = Math.floor(Math.log2(f));
+        if (e < -14) return Math.round(f / 5.960464477539063e-8);
+        let m = Math.round((f / Math.pow(2, e) - 1) * 1024);
+        if (m === 1024){ m = 0; e++; }
+        return e > 15 ? 0x7bff : ((e + 15) << 10) | m;
+      };
+      const val = i => HALF ? dec[D[i]] : D[i];
+      /* pass 1 — cos-weighted mean luma per column (equal solid angle,
+         never raw pixel area: each row weighs cos(latitude)) */
+      const colE = new Float64Array(EW);
+      for (let y = 0; y < EH; y++){
+        const ct = Math.cos((0.5 - y / EH) * Math.PI);
+        let i = y * EW * 4;
+        for (let x = 0; x < EW; x++, i += 4)
+          colE[x] += (0.2126 * val(i) + 0.7152 * val(i + 1) + 0.0722 * val(i + 2)) * ct;
+      }
+      /* circular 15° boxcar — the gain must never band at column rate */
+      const rad = Math.max(1, (EW * 15 / 360 / 2) | 0), sm = new Float64Array(EW);
+      for (let x = 0; x < EW; x++){
+        let s = 0;
+        for (let dx = -rad; dx <= rad; dx++) s += colE[(x + dx + EW) % EW];
+        sm[x] = s / (2 * rad + 1);
+      }
+      const med = Array.from(colE).sort((a, b) => a - b)[EW >> 1];
+      const gain = new Float64Array(EW);
+      let before = 0, after = 0;
+      for (let x = 0; x < EW; x++){
+        gain[x] = Math.min(3, Math.max(.25, med / sm[x]));
+        before += colE[x]; after += colE[x] * gain[x];
+      }
+      const norm = before / after;   /* total spherical energy preserved exactly */
+      /* pass 2 — RGB' = RGB · gain(az): R/G/B together, alpha untouched */
+      for (let y = 0; y < EH; y++){
+        let i = y * EW * 4;
+        for (let x = 0; x < EW; x++, i += 4){
+          const g = gain[x] * norm;
+          if (HALF){
+            D[i]     = enc(dec[D[i]]     * g);
+            D[i + 1] = enc(dec[D[i + 1]] * g);
+            D[i + 2] = enc(dec[D[i + 2]] * g);
+          } else {
+            D[i] *= g; D[i + 1] *= g; D[i + 2] *= g;
+          }
+        }
+      }
+    }
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     const pm = new THREE.PMREMGenerator(renderer);
     const oldEnv = scene.environment;
