@@ -10405,7 +10405,8 @@ if (PROVING){
    ?mirror=1 forces on · ?mirror=0 forces off · default set by the
    battery verdict below. */
 const MIRROR = { on:false, near:false, rt:null, cam:null, meshes:[], mats:[],
-                 texMat:new THREE.Matrix4(), str:.32 };   /* LOOP 13-C: .5→.32 — the wet marble holds the city without becoming a white sheet of sky (the golden street ran too hot) */
+                 texMat:new THREE.Matrix4(), str:.32,   /* LOOP 13-C: .5→.32 — the wet marble holds the city without becoming a white sheet of sky (the golden street ran too hot) */
+                 cellR:240 };   /* LAW 28 × LAW 31 · THE UNBURDENED MIRROR: architecture cells farther than this reflect as fog-milk at grazing anyway — they leave the mirror render (R chosen by the 2026-08-12 sweep; the main render is untouched) */
 {
   const MIRROR_DEFAULT = true;    /* the battery kept it: 60fps ×7 HIGH with the
                                      mirror counted, worst 667.8k ≤ 700k (2026-07-08n) */
@@ -10509,9 +10510,29 @@ function renderMirror(){
           (1 + pe[10]) / pe[14]);
   _mClip.multiplyScalar(2 / _mClip.dot(_mQ));
   pe[2] = _mClip.x; pe[6] = _mClip.y; pe[10] = _mClip.z + 1 - .003; pe[14] = _mClip.w;
+  /* THE UNBURDENED MIRROR — the localized fabric cells ('P.*#cx,cz',
+     geometry world-baked at merge) are cached with their bounding
+     centers once; each mirror render drops the cells beyond cellR.
+     The spine merges, sky, Tree, hall and sanctuary are unsuffixed and
+     stay at every distance — the skyline never leaves the glass. */
+  if (!MIRROR.cells){
+    MIRROR.cells = [];
+    scene.traverse(o => {
+      if (o.isMesh && o.name && o.name.indexOf('P.') === 0 && o.name.indexOf('#') > 0){
+        if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+        const b = o.geometry.boundingSphere.center;
+        MIRROR.cells.push([o, b.x, b.z]);
+      }
+    });
+  }
   for (const o of MIRROR.meshes) o.visible = false;
   const hidden = [];
   for (const o of MIRROR.cull) if (o.visible){ o.visible = false; hidden.push(o); }
+  const _cr2 = MIRROR.cellR * MIRROR.cellR;
+  for (const [o, bx, bz] of MIRROR.cells){
+    const dx = bx - c.position.x, dz = bz - c.position.z;
+    if (o.visible && dx*dx + dz*dz > _cr2){ o.visible = false; hidden.push(o); }
+  }
   renderer.setRenderTarget(MIRROR.rt);
   renderer.clear();
   renderer.render(scene, m);
@@ -10769,7 +10790,7 @@ window.__CITY = {
     coverBias:+skyUni.uCoverBias.value.toFixed(3),
     rayLen: HOUR.rayMat ? +HOUR.rayMat.uniforms.uLen.value.toFixed(3) : null }; },
   setHour(x){ HOUR.fixed = (x === null || x === undefined) ? null : Math.max(-1, Math.min(1, +x)); },
-  get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str,
+  get mirror(){ return { on:MIRROR.on, near:MIRROR.near, str:MIRROR.str, cellR:MIRROR.cellR,
     res: MIRROR.rt ? [MIRROR.rt.width, MIRROR.rt.height] : null }; },
   get proving(){ return PROVING_RESULTS; },
   get hall(){ return { inside: HALL.inside, culled: HALL.cull.length, lastToggleMs: HALL.lastToggleMs,
@@ -10816,6 +10837,7 @@ window.__CITY = {
   },
   setMirrorStrength(x){ MIRROR.str = Math.max(0, Math.min(1, +x));
     for (const m of MIRROR.mats) m.uniforms.uStr.value = MIRROR.str; },
+  setMirrorCellR(x){ MIRROR.cellR = Math.max(60, +x || 240); },   /* THE UNBURDENED MIRROR: sweep handle */
   setBloom(threshold, strength, radius){
     if (isFinite(threshold)) bloomPass.threshold = threshold;
     if (isFinite(strength)) bloomPass.strength = strength;
