@@ -10467,23 +10467,90 @@ if (MIRROR.on){
 const _mv1 = new THREE.Vector3(), _mv2 = new THREE.Vector3(),
       _mv3 = new THREE.Vector3(), _mv4 = new THREE.Vector3(),
       _mPlane = new THREE.Plane(), _mClip = new THREE.Vector4(), _mQ = new THREE.Vector4();
-function renderMirror(){
-  /* LAW 31 · THE LIVING MIRROR — the mirror world is REDUCED: the far
-     nations cards, the cloud sea, the LACE relief and the soffit panels
-     leave the reflection (invisible at half-res under ripple and fresnel;
-     they are also the geometry landed AFTER the mirror's 2026-07-08
-     budget verdict — the reflection returns toward its kept cost).
-     Collected once; visibility restored exactly (HALL's own culls kept). */
-  if (!MIRROR.cull){
-    MIRROR.cull = [];
-    scene.traverse(o => {
-      const n = o.name || '';
-      if ((o.isMesh || o.isPoints || o.isSprite) &&
-          (o.userData.extOnly || n === 'LACE.stone' || n === 'LACE.gold' || n.indexOf('P.soffit') === 0))
-        MIRROR.cull.push(o);
-    });
-    for (const s of seaMeshes) MIRROR.cull.push(s);
+/* ================================================================
+   LAW 28 × LAW 31 — THE CITY IN THE GLASS (2026-08-12)
+   The Seer's glass said no to the full-census reflection (the July
+   667.8k verdict had grown to ~850k at the water poses; ?proving
+   failed on his devices). The far-cell sweep proved the burden is the
+   NEAR core — so the reflection now renders a dedicated low-census
+   world instead of the city twice:
+   · KEPT REAL in the glass: the sky dome, the sun, all Points (the
+     stars, the spray), the burning windows and lamps (P.glow*, the
+     glowArch pool rides that prefix), the pearl gates (P.pearl), the
+     hall's dome, and the Tree's canopy glow shells — the light is
+     never an impostor.
+   · EVERYTHING ELSE becomes its measured body: every heavy mesh
+     (unnamed ≥500 tris, and every HERO.* GLB) contributes its world
+     AABB as a white box, merged into ONE draw. City-spanning merges
+     (>60m) and flat slabs (<1.2m tall — a planar mirror cannot see
+     floors) emit nothing. The Tree's trunk gets a hand impostor (its
+     AABB would be a monolith); the great wall gets a hand ring.
+   · The glass world REBUILDS itself every ~900 mirror renders so
+     late-loading GLB heroes trade their full census for a box.
+   At half resolution, under dielectric fresnel and the water's own
+   ripple, silhouette + true light reads as the city — at ~1/8 the
+   mirror-pass census and ~1/10 the draws. */
+function buildGlass(){
+  if (MIRROR.glass){
+    scene.remove(MIRROR.glass);
+    MIRROR.glass.traverse(o => { if (o.isMesh){ o.geometry.dispose();
+      if (o.material !== MAT.white) o.material.dispose(); } });
   }
+  const keep = new Set([sunSprite, ...canopyShells]);
+  const keepName = n => n === 'HALL.dome' || n.indexOf('P.glow') === 0 || n.indexOf('P.pearl') === 0;
+  const hide = [], parts = [];
+  const _bb = new THREE.Box3(), _sz = new THREE.Vector3(), _ct = new THREE.Vector3();
+  scene.traverse(o => {
+    if (o.userData.glassWorld) return;
+    const n = o.name || '';
+    if (o.isSprite){ if (!keep.has(o)) hide.push(o); return; }
+    if (!o.isMesh) return;                                   /* Points stay in the glass */
+    if (o.material && o.material.uniforms === skyUni) return;/* the heaven stays */
+    if (keepName(n) || keep.has(o)) return;                  /* the fire stays */
+    hide.push(o);
+    if (o.userData.extOnly) return;                          /* cards/sea: no body in the glass */
+    const g = o.geometry;
+    if (!g || !g.attributes || !g.attributes.position) return;
+    const t = (g.index ? g.index.count : g.attributes.position.count) / 3;
+    if (!(t >= 500 && (!n || n.indexOf('HERO.') === 0))) return;
+    _bb.setFromObject(o); _bb.getSize(_sz); _bb.getCenter(_ct);
+    if (_sz.x > 60 || _sz.z > 60) return;                    /* no monolith slabs from spanning merges */
+    if (_sz.y < 1.2) return;                                 /* floors: invisible to a planar mirror */
+    if (_ct.x*_ct.x + _ct.z*_ct.z < 150) return;             /* the Tree's ground — the hand impostor owns it */
+    const b = new THREE.BoxGeometry(_sz.x, _sz.y, _sz.z);
+    b.translate(_ct.x, _ct.y, _ct.z);
+    parts.push(b);
+  });
+  /* the Tree by hand: braid → tapered shaft (the AABB would be a monolith) */
+  const trunk = new THREE.CylinderGeometry(1.15, 3.1, 27, 10);
+  trunk.translate(0, 13.5, 0);
+  parts.push(trunk);
+  /* the great wall by hand: one open ring (its merge spans the city) */
+  const wallR = new THREE.CylinderGeometry(118, 118, 11, 48, 1, true);
+  wallR.translate(0, 5.5, 0);
+  parts.push(wallR);
+  const group = new THREE.Group();
+  group.name = 'GLASS.city'; group.visible = false;
+  group.userData.glassWorld = true;
+  const masses = new THREE.Mesh(
+    mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g)), MAT.white);
+  masses.frustumCulled = false;
+  group.add(masses);
+  /* the Tree's golden crown — the instanced leaves are census the glass
+     cannot afford, so the whole canopy becomes one soft gold sphere
+     (the kept glow shells breathe around it); sized to the real canopy
+     so the pool and the wet plaza keep their crown of light */
+  const heart = new THREE.Mesh(new THREE.SphereGeometry(8.8, 14, 10),
+    new THREE.MeshBasicMaterial({ color: 0xa8843f, transparent: true, opacity: .60, fog: false }));
+  heart.position.y = 30;
+  group.add(heart);
+  scene.add(group);
+  MIRROR.glass = group;
+  MIRROR.glassHide = hide;
+  MIRROR.glassAge = 0;
+}
+function renderMirror(){
+  if (!MIRROR.glass || ++MIRROR.glassAge > 900) buildGlass();
   const c = camera, m = MIRROR.cam;
   m.position.set(c.position.x, -c.position.y, c.position.z);
   _mv1.set(0,0,-1).applyQuaternion(c.quaternion);
@@ -10511,11 +10578,20 @@ function renderMirror(){
   pe[2] = _mClip.x; pe[6] = _mClip.y; pe[10] = _mClip.z + 1 - .003; pe[14] = _mClip.w;
   for (const o of MIRROR.meshes) o.visible = false;
   const hidden = [];
-  for (const o of MIRROR.cull) if (o.visible){ o.visible = false; hidden.push(o); }
+  for (const o of MIRROR.glassHide) if (o.visible){ o.visible = false; hidden.push(o); }
+  MIRROR.glass.visible = true;
+  /* the once-per-frame shadow render must NOT happen here — the city is
+     hidden for the glass, and a shadow map drawn now would be empty (the
+     dapple died city-wide in the first glass battery). Defer it to the
+     composer's main render, where the full scene stands. */
+  const _sn = renderer.shadowMap.needsUpdate;
+  renderer.shadowMap.needsUpdate = false;
   renderer.setRenderTarget(MIRROR.rt);
   renderer.clear();
   renderer.render(scene, m);
   renderer.setRenderTarget(null);
+  renderer.shadowMap.needsUpdate = _sn;
+  MIRROR.glass.visible = false;
   for (const o of hidden) o.visible = true;
   for (const o of MIRROR.meshes) o.visible = true;
 }
