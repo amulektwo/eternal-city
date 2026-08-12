@@ -1108,6 +1108,27 @@ const archGlowTex = canvasTex(512, (g,w,h)=>{
 MAT.glowArch = new THREE.MeshStandardMaterial({ color:0xfff3d2, emissive:0xffd98a,
   emissiveIntensity:2.1, roughness:.4, alphaMap:archGlowTex, alphaTest:.5 });
 
+/* THE GOLD FROM ABOVE (2026-08-12): from the Wings the street-gold fields
+   read matte mustard — a horizontal metal mirrors the ZENITH (the one
+   cool-pale region of the evened heaven) and at metalness .95 it has no
+   diffuse for the key to warm; dim yellow IS khaki to the eye. Roughness
+   was measured DEAD as a lever (the evened sky's mips all average to the
+   same color), and a uniform inner fire is unlawful (eye-level street
+   gold already sits at 1.75 vs the 1.8 bloom line — measured; "the golden
+   street ran too hot" precedent). The lawful fire is VIEW-SCALED:
+   emissive × pow(dot(V,N), 1.6) — full at normal incidence (the aerial,
+   exactly where metal reflectance dims), zero at grazing (the kept
+   eye-level look, preserved by construction). Street-gold family only. */
+MAT.goldSt.onBeforeCompile = sh => {
+  sh.fragmentShader = sh.fragmentShader.replace(
+    '#include <emissivemap_fragment>',
+    `#include <emissivemap_fragment>
+    {
+      float dn = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+      totalEmissiveRadiance += vec3(0.912, 0.563, 0.142) * 0.60 * pow(dn, 1.6);
+    }`);
+};
+
 /* shared animated/registry lists */
 const tickers = [], nameplates = [], banners = [], waterDiscs = [],
       flames = [], glows = [], beams = [], particleMeshes = [], fruits = [],
