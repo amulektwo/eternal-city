@@ -768,8 +768,14 @@ const INTZ = { z: 0 };   /* V-6 — the interior light zone (sanctuary + hall): 
    every gate; time + hour-breathing amplitude (no red in the ramp) */
 const NACRE = { t: { value: 0 }, amp: { value: .12 } };
 /* LOOP 10 — THE RIVER OF LIFE: shared water registry. One material
-   family, world-anchored noise (seams impossible), per-segment flow. */
-const RIVER = { time: { value: 0 }, tint: { value: new THREE.Color(1, 1, 1) }, mats: [] };
+   family, world-anchored noise (seams impossible), per-segment flow.
+   LAW 31 · THE LIVING MIRROR: the water drinks from the SAME planar
+   mirror the wet-marble floors already render (GOAL 1, section 21) —
+   mirTex/mirMat are wired there after the RT exists; mirAmp eases
+   0↔1 with the mirror's own 55m gate. At mirAmp 0 every water shader
+   is bit-identical to its pre-mirror output. */
+const RIVER = { time: { value: 0 }, tint: { value: new THREE.Color(1, 1, 1) }, mats: [],
+                mirTex: { value: null }, mirMat: { value: new THREE.Matrix4() }, mirAmp: { value: 0 } };
 /* LOOP 11 · PASS A — THE PILGRIM'S COMPASS: gaze-driven name-glyphs
    (one atlas, one instanced billboard mesh) + the DOM compass petal */
 const WAYFARE = { glyphs: [], mesh: null, alphaAttr: null, compassOn: false };
@@ -779,21 +785,24 @@ function riverMat(flowX, flowZ, alpha, perVertexFlow){
     defines: perVertexFlow ? { AFLOW: 1 } : {},
     uniforms: { uTime: RIVER.time, uTint: RIVER.tint,
                 uFlow: { value: new THREE.Vector2(flowX, flowZ) },
-                uAlpha: { value: alpha } },
-    vertexShader: `varying vec3 vW; varying vec2 vF;
+                uAlpha: { value: alpha },
+                uMirror: RIVER.mirTex, uMirMat: RIVER.mirMat, uWAmp: RIVER.mirAmp },
+    vertexShader: `varying vec3 vW; varying vec2 vF; varying vec4 vM;
       #ifdef AFLOW
       attribute vec2 aFlow;
       #endif
-      uniform vec2 uFlow;
+      uniform vec2 uFlow; uniform mat4 uMirMat;
       void main(){ vW = (modelMatrix*vec4(position,1.0)).xyz;
+        vM = uMirMat * vec4(vW, 1.0);
         #ifdef AFLOW
         vF = aFlow;
         #else
         vF = uFlow;
         #endif
         gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `uniform float uTime, uAlpha; uniform vec3 uTint;
-      varying vec3 vW; varying vec2 vF;
+    fragmentShader: `uniform float uTime, uAlpha, uWAmp; uniform vec3 uTint;
+      uniform sampler2D uMirror;
+      varying vec3 vW; varying vec2 vF; varying vec4 vM;
       float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
       float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
         return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
@@ -803,7 +812,23 @@ function riverMat(flowX, flowZ, alpha, perVertexFlow){
         float b = n2(p*5.1 + 7.0 - vF*uTime*0.6);
         float glint = smoothstep(.55, .95, a*.55 + b*.55);
         vec3 col = mix(vec3(.55,.72,.90), vec3(.98,1.0,1.0), glint) * uTint;
-        gl_FragColor = vec4(col, (uAlpha + glint*.38));
+        float aOut = uAlpha + glint*.38;
+        /* LAW 31 — the rill holds the city: the shared mirror, its
+           projective uv rippled by the water's own noise; dielectric
+           fresnel (near-blind head-on, silver at grazing); projector
+           edge-fade so an unfed frustum edge is simply flowing water. */
+        vec4 mp = vM; mp.xy += (vec2(a, b) - .5) * .045 * mp.w;
+        vec3 refl = texture2DProj(uMirror, mp).rgb;
+        vec3 V = normalize(cameraPosition - vW);
+        float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 2.2);
+        vec2 uvp = mp.xy / max(mp.w, 1e-5);
+        float mw = uWAmp * (0.20 + 0.55*fres)
+          * smoothstep(0.0,.05,uvp.x) * smoothstep(1.0,.95,uvp.x)
+          * smoothstep(0.0,.05,uvp.y) * smoothstep(1.0,.95,uvp.y);
+        if (mp.w <= 0.0) mw = 0.0;
+        col = mix(col, refl, mw);
+        aOut = mix(aOut, max(aOut, 0.86), mw);
+        gl_FragColor = vec4(col, aOut);
       }`
   });
   RIVER.mats.push(m);
@@ -4048,10 +4073,17 @@ function addBuilding(x,z,ry,big,enter){
     /* the living water — one shader ribbon flowing toward the wall */
     const strMat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false,
-      uniforms:{ uTime:{value:0} },
-      vertexShader:`varying vec2 vUv;
-        void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-      fragmentShader:`uniform float uTime; uniform vec3 uWTint; varying vec2 vUv;
+      uniforms:{ uTime:{value:0},
+                 uMirror: RIVER.mirTex, uMirMat: RIVER.mirMat, uWAmp: RIVER.mirAmp },
+      vertexShader:`varying vec2 vUv; varying vec3 vW; varying vec4 vM;
+        uniform mat4 uMirMat;
+        void main(){ vUv = uv;
+          vW = (modelMatrix*vec4(position,1.0)).xyz;
+          vM = uMirMat * vec4(vW, 1.0);
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime, uWAmp; uniform vec3 uWTint;
+        uniform sampler2D uMirror;
+        varying vec2 vUv; varying vec3 vW; varying vec4 vM;
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
         float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
           return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
@@ -4062,7 +4094,21 @@ function addBuilding(x,z,ry,big,enter){
           float glint = smoothstep(.55, .95, a*.55 + b*.55);
           float edge = smoothstep(0.0,.18,vUv.y)*smoothstep(1.0,.82,vUv.y);
           vec3 col = mix(vec3(.42,.62,.86), vec3(.95,.99,1.0), glint) * uWTint;
-          gl_FragColor = vec4(col, (0.52 + glint*.4) * edge);
+          float aOut = (0.52 + glint*.4) * edge;
+          /* LAW 31 — the canal holds the wall and the bridges (shared
+             mirror; see riverMat for the construction) */
+          vec4 mp = vM; mp.xy += (vec2(a, b) - .5) * .05 * mp.w;
+          vec3 refl = texture2DProj(uMirror, mp).rgb;
+          vec3 V = normalize(cameraPosition - vW);
+          float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 2.2);
+          vec2 uvp = mp.xy / max(mp.w, 1e-5);
+          float mw = uWAmp * (0.24 + 0.55*fres) * edge
+            * smoothstep(0.0,.05,uvp.x) * smoothstep(1.0,.95,uvp.x)
+            * smoothstep(0.0,.05,uvp.y) * smoothstep(1.0,.95,uvp.y);
+          if (mp.w <= 0.0) mw = 0.0;
+          col = mix(col, refl, mw);
+          aOut = mix(aOut, max(aOut, 0.88) * edge, mw);
+          gl_FragColor = vec4(col, aOut);
         }`
     });
     strMat.uniforms.uWTint = RIVER.tint;
@@ -4916,9 +4962,16 @@ function addBuilding(x,z,ry,big,enter){
        disc); Law 31 honored — no envmap cheat, no unpriced SSR. */
     const poolMat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false,
-      uniforms:{ uTime:{value:0} },
-      vertexShader:`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-      fragmentShader:`uniform float uTime; varying vec2 vUv;
+      uniforms:{ uTime:{value:0},
+                 uMirror: RIVER.mirTex, uMirMat: RIVER.mirMat, uWAmp: RIVER.mirAmp },
+      vertexShader:`varying vec2 vUv; varying vec3 vW; varying vec4 vM;
+        uniform mat4 uMirMat;
+        void main(){ vUv = uv;
+          vW = (modelMatrix*vec4(position,1.0)).xyz;
+          vM = uMirMat * vec4(vW, 1.0);
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uTime, uWAmp; uniform sampler2D uMirror;
+        varying vec2 vUv; varying vec3 vW; varying vec4 vM;
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
         float n2(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
           return mix(mix(h2(i),h2(i+vec2(1,0)),u.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),u.x), u.y); }
@@ -4928,6 +4981,24 @@ function addBuilding(x,z,ry,big,enter){
           if (R > 1.0) discard;
           /* crystal base deepening toward center */
           vec3 col = mix(vec3(.55,.72,.86), vec3(.30,.46,.66), 1.0-R);
+          /* LAW 31 — THE LIVING MIRROR: the pool holds the Tree and the
+             colonnade in the SAME planar render the wet floors drink
+             from; the reflection lies UNDER the living surface — the
+             dapples, the root-rings, the welling ride on top unchanged.
+             Slow-breathing ripple bends the image; crystal depth keeps
+             a stronger head-on floor than the marble (water, not stone). */
+          vec4 mp = vM;
+          float rip = n2(c*16.0 + vec2(uTime*.10, -uTime*.08));
+          mp.xy += (vec2(rip, n2(c*16.0 + 31.7 + vec2(-uTime*.07, uTime*.09))) - .5) * .035 * mp.w;
+          vec3 refl = texture2DProj(uMirror, mp).rgb;
+          vec3 V = normalize(cameraPosition - vW);
+          float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 2.2);
+          vec2 uvp = mp.xy / max(mp.w, 1e-5);
+          float mw = uWAmp * (0.30 + 0.50*fres)
+            * smoothstep(0.0,.05,uvp.x) * smoothstep(1.0,.95,uvp.x)
+            * smoothstep(0.0,.05,uvp.y) * smoothstep(1.0,.95,uvp.y);
+          if (mp.w <= 0.0) mw = 0.0;
+          col = mix(col, refl, mw);
           /* golden dapples — the canopy's light on the water */
           float dap = n2(c*22.0 + vec2(uTime*.14, -uTime*.11));
           dap = smoothstep(.62,.95,dap);
@@ -4948,7 +5019,9 @@ function addBuilding(x,z,ry,big,enter){
           col += vec3(.85,.95,1.0)*well*.34;
           col += vec3(1.0,.97,.88)*smoothstep(.12,.0,R)*(.46 + .14*sin(uTime*1.7));
           float edge = smoothstep(1.0,.86,R);
-          gl_FragColor = vec4(col, (.62 + dap*.18) * edge);
+          float aOut = (.62 + dap*.18) * edge;
+          aOut = mix(aOut, max(aOut, 0.92) * edge, mw);   /* the mirror gives the water body */
+          gl_FragColor = vec4(col, aOut);
         }`
     });
     const pool = new THREE.Mesh(new THREE.CircleGeometry(8.6, 40).rotateX(-PI/2), poolMat);
@@ -10384,12 +10457,33 @@ if (MIRROR.on){
     scene.add(mesh);
     MIRROR.meshes.push(mesh); MIRROR.mats.push(mat);
   }
+  /* LAW 31 · THE LIVING MIRROR — the water drinks from the same render:
+     hand the RT + projector matrix (the SAME Matrix4 instance renderMirror
+     mutates) to the river registry. No new target, no new render. */
+  RIVER.mirTex.value = MIRROR.rt.texture;
+  RIVER.mirMat.value = MIRROR.texMat;
   if (SHADOWS) renderer.shadowMap.autoUpdate = false;   /* animate marks needsUpdate once per frame */
 }
 const _mv1 = new THREE.Vector3(), _mv2 = new THREE.Vector3(),
       _mv3 = new THREE.Vector3(), _mv4 = new THREE.Vector3(),
       _mPlane = new THREE.Plane(), _mClip = new THREE.Vector4(), _mQ = new THREE.Vector4();
 function renderMirror(){
+  /* LAW 31 · THE LIVING MIRROR — the mirror world is REDUCED: the far
+     nations cards, the cloud sea, the LACE relief and the soffit panels
+     leave the reflection (invisible at half-res under ripple and fresnel;
+     they are also the geometry landed AFTER the mirror's 2026-07-08
+     budget verdict — the reflection returns toward its kept cost).
+     Collected once; visibility restored exactly (HALL's own culls kept). */
+  if (!MIRROR.cull){
+    MIRROR.cull = [];
+    scene.traverse(o => {
+      const n = o.name || '';
+      if ((o.isMesh || o.isPoints || o.isSprite) &&
+          (o.userData.extOnly || n === 'LACE.stone' || n === 'LACE.gold' || n.indexOf('P.soffit') === 0))
+        MIRROR.cull.push(o);
+    });
+    for (const s of seaMeshes) MIRROR.cull.push(s);
+  }
   const c = camera, m = MIRROR.cam;
   m.position.set(c.position.x, -c.position.y, c.position.z);
   _mv1.set(0,0,-1).applyQuaternion(c.quaternion);
@@ -10416,10 +10510,13 @@ function renderMirror(){
   _mClip.multiplyScalar(2 / _mClip.dot(_mQ));
   pe[2] = _mClip.x; pe[6] = _mClip.y; pe[10] = _mClip.z + 1 - .003; pe[14] = _mClip.w;
   for (const o of MIRROR.meshes) o.visible = false;
+  const hidden = [];
+  for (const o of MIRROR.cull) if (o.visible){ o.visible = false; hidden.push(o); }
   renderer.setRenderTarget(MIRROR.rt);
   renderer.clear();
   renderer.render(scene, m);
   renderer.setRenderTarget(null);
+  for (const o of hidden) o.visible = true;
   for (const o of MIRROR.meshes) o.visible = true;
 }
 
@@ -10598,14 +10695,19 @@ function animate(){
   watchdog(t, dt);
 
   /* GOAL 1 — the mirror floor: shadows render once per frame; the mirror
-     pass runs only near a mirrored floor (Tree plaza / Fountain Court) */
+     pass runs only near a mirrored floor (Tree plaza / Fountain Court).
+     LAW 31 · THE LIVING MIRROR adds the canal reach as a third center so
+     the water keeps its reflection to the west grate, and eases the
+     water-side amplitude with the same gate (no pop at the 55m line). */
   if (MIRROR.on){
     if (SHADOWS) renderer.shadowMap.needsUpdate = true;
     const cx = camera.position.x, cz = camera.position.z;
-    MIRROR.near = Math.min(Math.hypot(cx, cz), Math.hypot(cx + 52, cz - 8)) < 55;
+    MIRROR.near = Math.min(Math.hypot(cx, cz), Math.hypot(cx + 52, cz - 8)) < 55
+               || Math.hypot(cx + 93, cz - 2.5) < 42;
     for (const o of MIRROR.meshes) o.visible = MIRROR.near;
     if (MIRROR.near) renderMirror();
   }
+  RIVER.mirAmp.value += (((MIRROR.on && MIRROR.near) ? 1 : 0) - RIVER.mirAmp.value) * Math.min(1, dt*3);
 
   composer.render();
 }
