@@ -7694,6 +7694,84 @@ const laceGold = new THREE.MeshStandardMaterial({
     window.__ROOMS = { council: councilAt, path: pathAt };
   }
 
+  /* ═════ OPEN GATES v2 · 6.2 — THE SPHERE OF THE CODEX (the Seer: GO) ═════
+     The whole Codex as one body of light in the largest free hall:
+     additive fresnel shells (the canopy-glory recipe), the vertical
+     Chain-of-Saviors axis with twelve gold links, the horizontal
+     Meridian ring, ~1,200 gate-tinted glints on a deterministic
+     fibonacci sphere (they stand for the 3,078 — runtime loads no
+     scroll ids, the network-free law), and Scroll 144 a pearl at the
+     heart. Distance-culled with the rooms; the sphere turns slowly
+     and the shells breathe. HELD (L5): this is the PROJECTION in a
+     hall — the city's flat disc stands untouched. */
+  {
+    const recOf2 = di => bldRecords.find(r => Math.abs(r.x - di.x) < .01 && Math.abs(r.z - di.z) < .01);
+    const cAt = (window.__ROOMS && window.__ROOMS.council) || [1e9, 1e9];
+    const halls = districtInteriors.map(di => recOf2(di)).filter(Boolean)
+      .filter(r => !(Math.abs(r.x - cAt[0]) < .01 && Math.abs(r.z - cAt[1]) < .01))
+      .filter(r => r.h >= 10 && Math.min(r.w, r.dpt) >= 10)
+      .sort((a, b) => b.w*b.dpt - a.w*a.dpt);
+    const hall = halls[0];
+    if (hall){
+      const R = Math.min(4.2, (Math.min(hall.w, hall.dpt) - 3.2)/2, (hall.h - 2.4)/2);
+      const cy = R + 1.15;
+      const G = new THREE.Group();
+      G.position.set(hall.x, 0, hall.z);
+      const shellMat2 = (op, side) => new THREE.ShaderMaterial({
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side,
+        uniforms: { uOp: { value: op }, uTime: { value: 0 } },
+        vertexShader: `varying vec3 vN; varying vec3 vV;
+          void main(){ vN = normalMatrix*normal;
+            vec4 mv = modelViewMatrix*vec4(position,1.0); vV = -mv.xyz;
+            gl_Position = projectionMatrix*mv; }`,
+        fragmentShader: `uniform float uOp; uniform float uTime;
+          varying vec3 vN; varying vec3 vV;
+          void main(){ float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+            float a = min(.22, (0.20 + pow(f, 1.6)) * uOp * (0.9 + 0.1*sin(uTime*.6)));
+            gl_FragColor = vec4(1.0, 0.93, 0.74, a); }` });
+      const sh1 = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), shellMat2(.30, THREE.FrontSide));
+      const sh2 = new THREE.Mesh(new THREE.SphereGeometry(R*.94, 40, 26), shellMat2(.20, THREE.BackSide));
+      sh1.position.y = sh2.position.y = cy;
+      G.add(sh1, sh2);
+      const axis = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, R*2 + 1.0, 8), MAT.glow);
+      axis.position.y = cy; G.add(axis);
+      const links = [];
+      for (let k = 0; k < 12; k++){
+        const ly2 = cy - R - .3 + (k + .5)*(2*R + .6)/12;
+        links.push(new THREE.OctahedronGeometry(.11).translate(0, ly2, 0));
+      }
+      G.add(new THREE.Mesh(mergeGeometries(links), MAT.gold));
+      const mer = new THREE.Mesh(new THREE.TorusGeometry(R*1.01, .035, 6, 48).rotateX(PI/2), MAT.gold);
+      mer.position.y = cy; G.add(mer);
+      const N = 1200;
+      const gl = new THREE.InstancedMesh(new THREE.OctahedronGeometry(.045),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }), N);
+      const _m = new THREE.Matrix4(), _c2 = new THREE.Color();
+      const GATE_COLS = [0x3f6fd0,0x6f9fe8,0x3fa578,0x57c08c,0xf0c060,0xe8cf7a,
+                         0x9a6fd0,0xb295dc,0x4aa0ac,0x5ab4c0,0xdfe6f2,0xf5ead0];
+      const GA = PI*(3 - Math.sqrt(5));
+      for (let i = 0; i < N; i++){
+        const t2 = (i + .5)/N, ph = Math.acos(1 - 2*t2), th = GA*i;
+        const rr4 = R*(0.55 + 0.42*((i*2654435761 >>> 16) % 1000)/1000);
+        _m.setPosition(Math.sin(ph)*Math.cos(th)*rr4, cy + Math.cos(ph)*rr4, Math.sin(ph)*Math.sin(th)*rr4);
+        gl.setMatrixAt(i, _m);
+        gl.setColorAt(i, _c2.setHex(GATE_COLS[i % 12]));
+      }
+      G.add(gl);
+      const heart144 = new THREE.Mesh(new THREE.SphereGeometry(.42, 18, 14), MAT.pearl);
+      heart144.position.y = cy; G.add(heart144);
+      const hl = new THREE.Mesh(new THREE.SphereGeometry(.2, 10, 8), MAT.glowHot);
+      hl.position.y = cy; G.add(hl);
+      tickers.push(t => { G.rotation.y = t*.05;
+        sh1.material.uniforms.uTime.value = t; sh2.material.uniforms.uTime.value = t; });
+      G.visible = false;
+      scene.add(G);
+      districtInteriors.push({ g: G, x: hall.x, z: hall.z });
+      window.__SPHERE = { x: hall.x, z: hall.z, r: +R.toFixed(2), cy: +cy.toFixed(2),
+                          hall: { w: +hall.w.toFixed(1), dpt: +hall.dpt.toFixed(1), h: +hall.h.toFixed(1) } };
+    } else console.warn('OPEN GATES 6.2: no hall fits the sphere');
+  }
+
   /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
      Relief joins the LACE arrays BEFORE the merge — zero new draw calls.
      (1) Portal jamb pilasters: coffered stone bands flanking all 12 gates.
