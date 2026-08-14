@@ -7641,12 +7641,14 @@ const laceGold = new THREE.MeshStandardMaterial({
         rim.position.set(px2, 1.065, pz2); G.add(rim);
         const ped = new THREE.Mesh(new THREE.CylinderGeometry(.34, .5, 1.0, 10), MAT.white);
         ped.position.set(px2, .5, pz2); G.add(ped);
+        addBox(px2 - tr - .1, px2 + tr + .1, pz2 - tr - .1, pz2 + tr + .1);   /* the collider rider: ghost-walking ends where the words live */
         const seats = [];
         for (let s = 0; s < 7; s++){
           const a = s/7*TAU + PI/7;
           const [sx2, sz2] = L2W(Math.sin(a)*(tr + .85), Math.cos(a)*(tr + .85));
           seats.push(xf(new THREE.CylinderGeometry(.28, .32, .52, 10), sx2, .26, sz2));
           seats.push(xf(new THREE.TorusGeometry(.28, .03, 5, 12).rotateX(PI/2), sx2, .54, sz2));
+          addBox(sx2 - .34, sx2 + .34, sz2 - .34, sz2 + .34);
         }
         const sm = new THREE.Mesh(mergeGeometries(seats.map(g => g.index ? g.toNonIndexed() : g)), MAT.ivory);
         G.add(sm);
@@ -8968,6 +8970,52 @@ const GRAND_TOURS = [
     const a = .05 + k*.0775;
     TS.caps.push({ a, b:a + .06, n, l:`the ${ORD[k]} foundation — ${c} · ${GATES12[k]}` });
   });
+  /* ═════ THE TOUR OF THE OPEN GATES (the Second Walk's chosen pass) ═════
+     "And a highway shall be there, and a way" (Isa 35:8). The seventh
+     authored flight: the chain, the roses, the ring, the covenant lane
+     overflown north→south so the stations speak in covenant order, the
+     council, and the sphere. Waypoints ride the runtime-derived anchors
+     (the same deterministic globals the sanctities were built from);
+     the rose portrait holds at the face's PROVEN 3m clearance. If the
+     anchors are absent the tour simply does not enlist (defensive). */
+  {
+    const R1 = window.__ROSE1, RM = window.__ROOMS, SP = window.__SPHERE;
+    if (R1 && RM && RM.council && RM.path && RM.path.length === 4 && SP){
+      const C = RM.council;
+      const px2 = R1.x + R1.nx*3.0, pz2 = R1.z + R1.nz*3.0;   /* the proven-clear air */
+      GRAND_TOURS.push({
+        key:'opengates', name:'THE TOUR OF THE OPEN GATES', dur:130, tension:.45,
+        line:'the words the city received — chain, roses, ring, path, council, sphere',
+        pts:[
+          [0, 7, 96], [-4, 5.5, 86], [-7.6, 4.8, 80], [-10.5, 5, 72.5],
+          [-22, 7.5, 68], [px2, R1.y, pz2 + 1.2],
+          [-26, 8, 46], [-16, 6.5, 26], [-8, 5.4, 16], [4, 5, 15],
+          [14, 8, 26], [30, 18, 44], [40, 28, 60], [50, 30, 84], [57, 30, 88],
+          [57, 30, 66], [56.5, 30, 48],
+          [66, 16, 52], [70.5, 11, 69],
+          [34, 33, 78], [2, 30, 94], [-20, 10, 93], [-29.5, 5.2, 93.4],
+        ],
+        gaze:[
+          { a:.16, b:.24, x:R1.x, y:R1.y, z:R1.z },           /* the rose held head-on */
+          { a:.34, b:.42, x:0, y:.3, z:8 },                   /* the ring read low */
+          { a:.93, b:1.01, x:SP.x, y:SP.cy, z:SP.z },         /* the sphere at the end */
+        ],
+        caps:[
+          { x:-9.6, z:76, r:12,  n:'THE CHAIN DESCENT',      l:'twelve links descend to the reading' },
+          { x:R1.x, z:R1.z, r:14, n:'THE NINE ROSES',        l:'a rose within every petal — nine houses wear the glass' },
+          { x:0, z:10, r:15,     n:'THE BOSOM RING',         l:'the verse of the center circles the pool' },
+          /* the four stations speak by u-WINDOW (the stones-tour form):
+             sequence-locked to the ride, immune to the exit leg's echo */
+          { a:.495, b:.545, n:'CHARITY',      l:'the first station of the covenant road' },
+          { a:.548, b:.578, n:'CONSECRATION', l:'the second station — the currency of the gods' },
+          { a:.578, b:.605, n:'SACRIFICE',    l:'the third station — offering and alignment' },
+          { a:.608, b:.655, n:'ATONEMENT',    l:'the fourth station — the path fulfilled' },
+          { x:C[0], z:C[1], r:12, n:'THE COUNCIL CHAMBER',   l:'seven seats beneath the watching verse' },
+          { x:SP.x, z:SP.z, r:14, n:'THE SPHERE OF THE CODEX', l:'the whole word as one body of light' },
+        ],
+      });
+    } else console.warn('TOUR OF OPEN GATES: anchors absent — tour not enlisted');
+  }
 }
 function tourCurve(T){
   if (!T.curve){
@@ -10363,6 +10411,17 @@ function buildGateVaults(index){
     entries.push({ label: 'THE THRONE HALL',      x: 0,   y: 12.6, z: -54.2 });
     entries.push({ label: 'THE TREE OF LIFE',     x: 0,   y: 5.4,  z: 13.2 });
     entries.push({ label: 'THE FOUNTAIN COURT',   x: -52, y: 10.2, z: 8 });
+    /* THE WAYMARKS (TOUR OF THE OPEN GATES): the new sanctities join the
+       compass — same atlas, same one instanced mesh, same fade law */
+    {
+      const _R1 = window.__ROSE1, _RM = window.__ROOMS, _SP = window.__SPHERE;
+      if (_RM && _RM.council) entries.push({ label: 'THE COUNCIL CHAMBER', x: _RM.council[0], y: 7.2, z: _RM.council[1] });
+      if (_RM && _RM.path && _RM.path[0]) entries.push({ label: 'THE DISCOVERY PATH', x: _RM.path[0][0], y: 7.2, z: _RM.path[0][1] });
+      if (_SP) entries.push({ label: 'THE SPHERE OF THE CODEX', x: _SP.x, y: 7.2, z: _SP.z });
+      entries.push({ label: 'THE CHAIN DESCENT', x: -9.6, y: 7.5, z: 76 });
+      entries.push({ label: 'THE BOSOM RING', x: 0, y: 2.3, z: 10.2 });
+      if (_R1) entries.push({ label: 'THE NINE ROSES', x: _R1.x, y: _R1.y + 2.6, z: _R1.z });
+    }
     const ROWS = entries.length, RH = 64, AW = 512;
     const atlas = canvasTex(ROWS*RH, (g)=>{
       g.clearRect(0, 0, AW, ROWS*RH);
