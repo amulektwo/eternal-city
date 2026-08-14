@@ -7339,16 +7339,30 @@ const laceGold = new THREE.MeshStandardMaterial({
     P.gold.push(xf(new THREE.BoxGeometry(1.47, .07, .12), CDX + 1.1, .985, CDZ, PI/2));
   }
 
-  /* ═════ OPEN GATES v2 · 2B — THE FRACTAL ROSE (prototype, rose #1) ═════
-     One jewel-glass rose window hosted in an EXISTING blind-arcade niche
-     (THE CARVED FACES) on the nearest qualifying prism to the Gate-2
-     lectern. The glass is a 3×3 ATLAS: nine roses will share this ONE
-     material and ONE mesh forever (+1 draw total, amortized across all
-     nine; Phase 5 stamps the other eight tiles). Fractal law: each outer
-     petal-eye carries a six-wedge rose-within-the-rose. The nameplate
-     stands BLANK (canon waits behind the sheet). Sanctuary-rose glory
-     idiom (emissive 2.3 — the lawful precedent above the bloom line). */
+  /* ═════ OPEN GATES v2 · 2B+5A — THE NINE FRACTAL ROSES (canon approved) ═════
+     Nine jewel-glass roses, a mini-rose burning in every petal eye
+     (the fractal law), stamped from ONE 3×3 atlas into ONE merged mesh
+     with ONE material (+1 draw for all nine, forever). Beneath each, a
+     stone plate with its APPROVED name (sheet 1D) — all plates plus the
+     chain tablet's word share ONE text-atlas mesh (+1 draw). Surrounds,
+     keystones and slabs ride the LACE merges (zero draws). Rose #1
+     faces the Gate-2 lectern; the other eight take the districts by
+     sector, each face chosen FACING + CLEAR (the Phase-2 loop's law).
+     Palettes vary within color law — no two alike, no red (L4/Law 29). */
   {
+    const ROSE_NAMES = ['JOSEPH','JACOB & ESAU','ABRAHAM & ISAAC','NEPHI & LAMAN',
+      'CAIN & ABEL','MOSES & AARON','THE PRODIGAL SAVIOR','CAPTAIN MORONI','ENOCH'];
+    const PALS = [
+      [['#1e3f8f','#e8a83c','#3f6fd0','#caa64a','#1c7a4f','#e8a83c'], ['#4a6fd0','#f0c060','#6f9fe8','#e8cf7a','#3fa578','#f0c060']],
+      [['#1c7a4f','#caa64a','#2e9e6b','#e8a83c','#1e5f42','#caa64a'], ['#3fa578','#e8cf7a','#57c08c','#f0c060','#2e7a58','#e8cf7a']],
+      [['#caa64a','#f5ead0','#e8a83c','#fdf6e6','#b8912f','#f5ead0'], ['#f0c060','#fff6de','#e8cf7a','#fdf9ee','#d9b45a','#fff6de']],
+      [['#16337a','#6f9fe8','#1e3f8f','#9fc0f0','#122a66','#6f9fe8'], ['#3f6fd0','#c0d4f5','#4a6fd0','#dbe6f8','#2e56b0','#c0d4f5']],
+      [['#2e6b46','#e8a83c','#1c7a4f','#caa64a','#245c3c','#e8a83c'], ['#57a678','#f0c060','#3fa578','#e8cf7a','#468a62','#f0c060']],
+      [['#5a3f96','#caa64a','#6a3fa0','#e8a83c','#4a3380','#caa64a'], ['#8a6fc0','#f0c060','#9a7fd0','#e8cf7a','#7a5fb0','#f0c060']],
+      [['#1e6e7a','#caa64a','#2e8a96','#e8a83c','#175a64','#caa64a'], ['#4aa0ac','#f0c060','#5ab4c0','#e8cf7a','#3a8e9a','#f0c060']],
+      [['#2a4a9e','#dfe6f2','#1e3f8f','#f2f5fa','#223f88','#dfe6f2'], ['#5a7fd0','#ffffff','#4a6fd0','#f6f8fc','#3f63b8','#ffffff']],
+      [['#e8d9a8','#6a3fa0','#f5ead0','#9a6fd0','#dcc98e','#6a3fa0'], ['#f5ecc8','#8a6fc0','#fdf6e6','#b295dc','#eee0b0','#8a6fc0']],
+    ];
     const ROSE_ATLAS = canvasTex(1026, (g, w, h)=>{
       g.clearRect(0, 0, w, h);
       const T = w/3;
@@ -7363,8 +7377,9 @@ const laceGold = new THREE.MeshStandardMaterial({
         g.fillStyle = 'rgba(255,244,214,.9)';
         g.beginPath(); g.arc(cx, cy, r*.30, 0, TAU); g.fill();
       };
-      const rose = (tx, ty, pal, inner)=>{
-        const cx = tx*T + T/2, cy = ty*T + T/2, R = T/2 - 8;
+      for (let k = 0; k < 9; k++){
+        const [pal, inner] = PALS[k];
+        const cx = (k % 3)*T + T/2, cy = Math.floor(k/3)*T + T/2, R = T/2 - 8;
         for (let i = 0; i < 12; i++){
           g.fillStyle = pal[i % pal.length];
           g.beginPath(); g.moveTo(cx, cy);
@@ -7376,7 +7391,6 @@ const laceGold = new THREE.MeshStandardMaterial({
           g.beginPath(); g.moveTo(cx, cy);
           g.arc(cx, cy, R*.55, a0, a0 + TAU/12); g.closePath(); g.fill();
         }
-        /* THE FRACTAL: a rose within every petal-eye */
         for (let i = 0; i < 12; i++){
           const a = (i+.5)/12*TAU;
           mini(cx + Math.cos(a)*R*.775, cy + Math.sin(a)*R*.775, R*.115, inner);
@@ -7392,70 +7406,292 @@ const laceGold = new THREE.MeshStandardMaterial({
         g.beginPath(); g.arc(cx, cy, R - 5, 0, TAU); g.stroke();
         g.beginPath(); g.arc(cx, cy, R*.55, 0, TAU); g.stroke();
         g.beginPath(); g.arc(cx, cy, R*.22, 0, TAU); g.stroke();
-      };
-      /* tile 0 — rose #1 (JOSEPH): sapphire-and-gold house palette */
-      rose(0, 0, ['#1e3f8f','#e8a83c','#3f6fd0','#caa64a','#1c7a4f','#e8a83c'],
-                 ['#4a6fd0','#f0c060','#6f9fe8','#e8cf7a','#3fa578','#f0c060']);
+      }
     });
-    /* the host and its face must be FACING and CLEAR: pass 2's raycast
-       found the best-facing face buried 11cm behind a back-to-back
-       neighbor. A face qualifies only if the air 3m out from its
-       center lies inside no other building's footprint. First clear
-       face of the nearest qualifying host wins (deterministic). */
+    /* the text atlas: nine names + the chain tablet's approved word
+       (sheet 1F, Scroll 8054, markers stripped) — LEGIBLE WORD keyline */
+    const CHAIN_LINE = 'This is why we are called to become Saviors on Mount Zion.';
+    const PLATE_ATLAS = canvasTex(1024, (g, w, h)=>{
+      g.clearRect(0, 0, w, h);
+      const RH = h/10;
+      const put = (row, text, sub, fs)=>{
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.lineJoin = 'round'; g.strokeStyle = 'rgba(52,36,10,.92)';
+        g.font = `${fs}px Cinzel, Georgia, serif`;
+        while (g.measureText(text).width > w - 60 && fs > 20){ fs--; g.font = `${fs}px Cinzel, Georgia, serif`; }
+        const cy = row*RH + (sub ? RH*.38 : RH*.5);
+        g.lineWidth = 7; g.strokeText(text, w/2, cy);
+        g.fillStyle = '#ffe9b0'; g.fillText(text, w/2, cy);
+        if (sub){
+          g.font = `26px Cinzel, Georgia, serif`;
+          g.lineWidth = 5; g.strokeText(sub, w/2, row*RH + RH*.78);
+          g.fillStyle = '#d9c489'; g.fillText(sub, w/2, row*RH + RH*.78);
+        }
+      };
+      ROSE_NAMES.forEach((n, i)=> put(i, n, null, 58));
+      put(9, CHAIN_LINE, 'SCROLL 8054', 34);
+    });
     const inFoot = (b2, px, pz) => {
       const dx = px - b2.x, dz = pz - b2.z;
       const lx = Math.cos(b2.ry)*dx - Math.sin(b2.ry)*dz;
       const lz = Math.sin(b2.ry)*dx + Math.cos(b2.ry)*dz;
       return Math.abs(lx) < b2.w/2 + .6 && Math.abs(lz) < b2.dpt/2 + .6;
     };
-    let picked = null;
-    for (const b of bldRecords){
-      if (!(b.h >= 12 && b.w >= 9 && Math.hypot(b.x + 6.8, b.z - 76) < 42)) continue;
+    const pickFace = (b, tx, tz)=>{
       const W2 = (lx, lz) => [ b.x + Math.cos(b.ry)*lx + Math.sin(b.ry)*lz,
                                b.z - Math.sin(b.ry)*lx + Math.cos(b.ry)*lz ];
-      const dl = Math.hypot(-6.8 - b.x, 76 - b.z);
-      const dirX = (-6.8 - b.x)/dl, dirZ = (76 - b.z)/dl;
-      /* .45 proud of the wall: the CARVED-FACES arcade relief runs .30
-         deep — the window mounts OVER the carving, never inside it */
-      const FACES4 = [
+      const dl = Math.hypot(tx - b.x, tz - b.z) || 1;
+      const dirX = (tx - b.x)/dl, dirZ = (tz - b.z)/dl;
+      const F4 = [
         { fp: W2( b.w/2 + .45, 0), yaw: b.ry + PI/2, fw: b.dpt },
         { fp: W2(-(b.w/2 + .45), 0), yaw: b.ry - PI/2, fw: b.dpt },
         { fp: W2(0,  b.dpt/2 + .45), yaw: b.ry,        fw: b.w  },
         { fp: W2(0, -(b.dpt/2 + .45)), yaw: b.ry + PI,  fw: b.w  },
       ].sort((a, c) => (Math.sin(c.yaw)*dirX + Math.cos(c.yaw)*dirZ)
                      - (Math.sin(a.yaw)*dirX + Math.cos(a.yaw)*dirZ));
-      for (const f of FACES4){
+      for (const f of F4){
         const qx = f.fp[0] + Math.sin(f.yaw)*3, qz = f.fp[1] + Math.cos(f.yaw)*3;
-        if (bldRecords.some(o => o !== b && inFoot(o, qx, qz))) continue;
-        picked = { b, fp: f.fp, outYaw: f.yaw, fw: f.fw };
-        break;
+        if (!bldRecords.some(o => o !== b && inFoot(o, qx, qz))) return f;
       }
-      if (picked) break;
-    }
-    if (picked){
-      const { b, fp, outYaw, fw } = picked;
-      const ry2 = b.h*.52, rr3 = Math.min(1.55, fw*.16);
-      const geo = new THREE.CircleGeometry(rr3, 24);
-      { const uv = geo.attributes.uv;
-        for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)/3, 1 - (1 - uv.getY(i))/3); }
-      const roseM = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x000000,
-        emissive: 0xffffff, emissiveMap: ROSE_ATLAS, emissiveIntensity: 2.3, side: THREE.DoubleSide }));
-      roseM.name = 'ROSE.fractal';
-      roseM.position.set(fp[0], ry2, fp[1]);
-      roseM.rotation.y = outYaw;
-      scene.add(roseM);
-      /* gold surround ring + keystone — rides the LACE gold merge */
+      return null;
+    };
+    const roseGeos = [], plateGeos = [], used = new Set();
+    const tileUVrose = (geo, k)=>{
+      const uv = geo.attributes.uv, col = k % 3, row = (k / 3) | 0;
+      for (let i = 0; i < uv.count; i++)
+        uv.setXY(i, (uv.getX(i) + col)/3, (uv.getY(i) + (2 - row))/3);
+      return geo;
+    };
+    const rowUVplate = (geo, row)=>{
+      const uv = geo.attributes.uv;
+      for (let i = 0; i < uv.count; i++)
+        uv.setXY(i, uv.getX(i), (uv.getY(i) + (9 - row))/10);
+      return geo;
+    };
+    const placeRose = (k, b, f)=>{
+      const fp = f.fp, outYaw = f.yaw;
+      const ry2 = b.h*.52, rr3 = Math.min(1.55, f.fw*.16);
+      roseGeos.push(tileUVrose(xf(new THREE.CircleGeometry(rr3, 24), fp[0], ry2, fp[1], outYaw), k));
       LG2.push(tileUV(xf(new THREE.TorusGeometry(rr3 + .09, .085, 6, 24).rotateY(PI/2), fp[0], ry2, fp[1], outYaw - PI/2), 4));
       LG2.push(tileUV(xf(new THREE.ConeGeometry(.09, .3, 4), fp[0], ry2 + rr3 + .28, fp[1], outYaw), 1));
-      /* the BLANK nameplate beneath (canon waits): stone slab + gilt frame */
       LS.push(tileUV(xf(new THREE.BoxGeometry(1.5, .44, .12), fp[0], ry2 - rr3 - .55, fp[1], outYaw), 2, 1));
       LG2.push(tileUV(xf(new THREE.BoxGeometry(1.62, .06, .15), fp[0], ry2 - rr3 - .30, fp[1], outYaw), 3));
       LG2.push(tileUV(xf(new THREE.BoxGeometry(1.62, .06, .15), fp[0], ry2 - rr3 - .80, fp[1], outYaw), 3));
-      window.__ROSE1 = { x: fp[0], y: ry2, z: fp[1], nx: Math.sin(outYaw), nz: Math.cos(outYaw),
-                         host: { x: b.x, z: b.z, h: b.h } };
-    } else {
-      console.warn('OPEN GATES 2B: no qualifying rose host near the Gate-2 lectern');
+      plateGeos.push(rowUVplate(xf(new THREE.PlaneGeometry(1.42, .40),
+        fp[0] + Math.sin(outYaw)*.075, ry2 - rr3 - .55, fp[1] + Math.cos(outYaw)*.075, outYaw), k));
+      used.add(b);
+      if (k === 0) window.__ROSE1 = { x: fp[0], y: ry2, z: fp[1], nx: Math.sin(outYaw), nz: Math.cos(outYaw) };
+    };
+    /* rose #1 — the Gate-2 witness (JOSEPH) */
+    for (const b of bldRecords){
+      if (!(b.h >= 12 && b.w >= 9 && Math.hypot(b.x + 6.8, b.z - 76) < 42)) continue;
+      const f = pickFace(b, -6.8, 76);
+      if (f){ placeRose(0, b, f); break; }
     }
+    /* roses #2-#9 — one per 45° sector, faces cleared toward the center */
+    for (let k = 1; k < 9; k++){
+      const secA = (k - 1)*PI/4 + PI/8;
+      let done = false;
+      for (const b of bldRecords){
+        if (done || used.has(b)) continue;
+        if (!(b.h >= 12 && b.w >= 9)) continue;
+        const r = Math.hypot(b.x, b.z);
+        if (r < 40 || r > 112) continue;
+        let da = Math.atan2(b.x, b.z) - secA;
+        while (da > PI) da -= TAU; while (da < -PI) da += TAU;
+        if (Math.abs(da) > PI/7) continue;
+        const f = pickFace(b, 0, 0);
+        if (f){ placeRose(k, b, f); done = true; }
+      }
+      if (!done) console.warn('OPEN GATES 5A: no host for rose', k, ROSE_NAMES[k]);
+    }
+    /* 5B — the chain tablet takes its approved word (one more quad in
+       the SAME text-atlas mesh; the 2A tablet stands at −8.5, 1.28, 76
+       facing the lectern) */
+    plateGeos.push(rowUVplate(xf(new THREE.PlaneGeometry(1.30, .46), -8.5 + .062, 1.28, 76, PI/2), 9));
+    if (roseGeos.length){
+      const roses = new THREE.Mesh(
+        mergeGeometries(roseGeos.map(g => g.index ? g.toNonIndexed() : g)),
+        new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff,
+          emissiveMap: ROSE_ATLAS, emissiveIntensity: 2.3, side: THREE.DoubleSide }));
+      roses.name = 'ROSE.fractal'; roses.frustumCulled = false;
+      scene.add(roses);
+    }
+    const plates = new THREE.Mesh(
+      mergeGeometries(plateGeos.map(g => g.index ? g.toNonIndexed() : g)),
+      new THREE.MeshBasicMaterial({ map: PLATE_ATLAS, transparent: true, side: THREE.DoubleSide }));
+    plates.name = 'ROSE.plates'; plates.frustumCulled = false;
+    scene.add(plates);
+  }
+
+  /* ═════ OPEN GATES v2 · 3A — THE BOSOM MARKER (canon approved, 1A) ═════
+     The approved verse — D&C 88:13 byte-exact as Scroll 731 carries it —
+     laid as a gold ring of light around the Tree's pool (r 9.6–10.9,
+     inside the wet-marble ring at 13). White-gold letters, dark keyline
+     (LEGIBLE WORD), emissive 1.15 — beneath the bloom line, zero red. */
+  {
+    const VERSE = '"The light which is in all things, which giveth life to all things, which is the law by which all things are governed, even the power of God who sitteth upon His throne, who is in the bosom of eternity, who is in the midst of all things."   ·   D&C 88:13   ·   ';
+    const RING_R0 = 9.6, RING_R1 = 10.9;
+    const ringTex = canvasTex(2048, (g, w, h)=>{
+      g.clearRect(0, 0, w, h);
+      g.save(); g.translate(w, 0); g.scale(-1, 1);   /* mirrored at the source: planar-mapped onto the floor, the verse reads upright from OUTSIDE the ring */
+      const cx = w/2, cy = h/2;
+      const rPix = ((RING_R0 + RING_R1)/2) / RING_R1 * (w/2);
+      g.font = '46px Cinzel, Georgia, serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+      const arc = 1 / VERSE.length * TAU;
+      const SEQ = [...VERSE].reverse();   /* observed: source-flip + upright glyphs leave the ORDER mirrored — the reversed string closes the loop */
+      for (let i = 0; i < SEQ.length; i++){
+        const a = -PI/2 + i*arc;
+        g.save();
+        g.translate(cx + Math.cos(a)*rPix, cy + Math.sin(a)*rPix);
+        g.rotate(a - PI/2);   /* +PI: the source-flip righted the order; this rights the glyphs */
+        g.strokeStyle = 'rgba(52,36,10,.92)'; g.lineWidth = 6;
+        g.strokeText(SEQ[i], 0, 0);
+        g.fillStyle = '#fff3d2'; g.fillText(SEQ[i], 0, 0);
+        g.restore();
+      }
+      g.restore();
+    });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(RING_R0, RING_R1, 96).rotateX(-PI/2),
+      new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff,
+        emissiveMap: ringTex, emissiveIntensity: 1.15, map: ringTex,
+        transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    ring.position.y = .065;
+    ring.name = 'BOSOM.ring';
+    scene.add(ring);
+  }
+
+  /* ═════ OPEN GATES v2 · 4A+4B — THE CONSECRATED ROOMS (canon approved) ═════
+     Five existing enterable district rooms consecrated: the COUNCIL
+     CHAMBER (the largest room — round table, SEVEN unnamed seats,
+     Abraham 4:18 verbatim on the ceiling canvas, one central light)
+     and the DISCOVERY PATH (four rooms on one avenue, covenant order:
+     Charity → Consecration → Sacrifice → Atonement — approved wall
+     texts, one focal light each, warmth and height varying, never
+     color-law). Every group joins districtInteriors — the standing
+     distance-culling pays the budget (zero cost beyond ~60m). */
+  {
+    const recOf = di => bldRecords.find(r => Math.abs(r.x - di.x) < .01 && Math.abs(r.z - di.z) < .01);
+    const homes = districtInteriors.map(di => ({ di, rec: recOf(di) })).filter(hh => hh.rec);
+    const mkText = (lines, w, hgt, fs, flip)=> canvasTex(1024, (g)=>{
+      g.clearRect(0, 0, 1024, 1024);
+      if (flip){ g.translate(1024, 0); g.scale(-1, 1); }   /* for down-facing planes read from below */
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+      const n = lines.length, lh = Math.min(120, 900/n);
+      lines.forEach((ln, i)=>{
+        let f = ln.big ? fs : Math.round(fs*.62);
+        g.font = `${f}px Cinzel, Georgia, serif`;
+        while (g.measureText(ln.t).width > 964 && f > 18){ f--; g.font = `${f}px Cinzel, Georgia, serif`; }
+        const cy = 512 + (i - (n-1)/2)*lh;
+        g.strokeStyle = 'rgba(52,36,10,.92)'; g.lineWidth = 6;
+        g.strokeText(ln.t, 512, cy);
+        g.fillStyle = ln.big ? '#ffe9b0' : '#f4e6c4';
+        g.fillText(ln.t, 512, cy);
+      });
+    });
+    const wrap = (s, max)=>{ const out = []; let cur = '';
+      for (const wd of s.split(' ')){
+        if ((cur + ' ' + wd).trim().length > max){ out.push(cur.trim()); cur = wd; }
+        else cur += ' ' + wd;
+      }
+      if (cur.trim()) out.push(cur.trim());
+      return out;
+    };
+    const consecrate = (hh, kind, title, text, source, warmth, lightY)=>{
+      const { di, rec } = hh;
+      const G = new THREE.Group();
+      const L2W = (lx, lz) => [ rec.x + Math.cos(rec.ry)*lx + Math.sin(rec.ry)*lz,
+                                rec.z - Math.sin(rec.ry)*lx + Math.cos(rec.ry)*lz ];
+      const ceil = Math.min(rec.h - .9, 5.4);
+      /* the focal light — a pendant of glory on a gold stem */
+      const [px2, pz2] = L2W(0, 0);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, ceil - lightY, 6), MAT.gold);
+      stem.position.set(px2, (ceil + lightY)/2, pz2); G.add(stem);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(.20, 12, 8),
+        new THREE.MeshStandardMaterial({ color: 0xfff3d2, emissive: warmth, emissiveIntensity: 2.0, roughness: .4 }));
+      lamp.position.set(px2, lightY, pz2); G.add(lamp);
+      if (kind === 'council'){
+        /* the round table and the SEVEN unnamed seats */
+        const tr = Math.min(rec.w, rec.dpt)*.20;
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(tr, tr, .09, 24), MAT.white);
+        top.position.set(px2, 1.02, pz2); G.add(top);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(tr, .045, 6, 24).rotateX(PI/2), MAT.gold);
+        rim.position.set(px2, 1.065, pz2); G.add(rim);
+        const ped = new THREE.Mesh(new THREE.CylinderGeometry(.34, .5, 1.0, 10), MAT.white);
+        ped.position.set(px2, .5, pz2); G.add(ped);
+        const seats = [];
+        for (let s = 0; s < 7; s++){
+          const a = s/7*TAU + PI/7;
+          const [sx2, sz2] = L2W(Math.sin(a)*(tr + .85), Math.cos(a)*(tr + .85));
+          seats.push(xf(new THREE.CylinderGeometry(.28, .32, .52, 10), sx2, .26, sz2));
+          seats.push(xf(new THREE.TorusGeometry(.28, .03, 5, 12).rotateX(PI/2), sx2, .54, sz2));
+        }
+        const sm = new THREE.Mesh(mergeGeometries(seats.map(g => g.index ? g.toNonIndexed() : g)), MAT.ivory);
+        G.add(sm);
+        /* the ceiling canvas — Abraham 4:18 VERBATIM (canon: no in-corpus
+           source; scripture stands in as approved on the sheet) */
+        const lines = wrap(text, 34).map(t => ({ t, big: true }));
+        lines.push({ t: source, big: false });
+        const ct = mkText(lines, 0, 0, 64);
+        const cp = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(rec.w*.62, 6.4), Math.min(rec.w*.62, 6.4)),
+          new THREE.MeshBasicMaterial({ map: ct, transparent: true, side: THREE.DoubleSide }));
+        cp.rotation.x = PI/2; cp.rotation.z = -rec.ry + PI;   /* unflipped canvas, half-turned: reads TRUE from the room's entry side */
+        cp.position.set(px2, ceil - .06, pz2); G.add(cp);
+        /* the door plaque — the room's name (a label, not a quote) */
+        const pt = mkText([{ t: 'THE COUNCIL CHAMBER', big: true }], 0, 0, 72);
+        const pp = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0),
+          new THREE.MeshBasicMaterial({ map: pt, transparent: true, side: THREE.DoubleSide }));
+        const [dx2, dz2] = L2W(0, rec.dpt/2 - .30);
+        pp.position.set(dx2, 2.6, dz2); pp.rotation.y = rec.ry; G.add(pp);
+      } else {
+        /* a Discovery station: the wall canvas — title + approved word */
+        const lines = [{ t: title, big: true }, { t: '', big: false }];
+        for (const ln of wrap(text, 30)) lines.push({ t: ln, big: false });
+        lines.push({ t: source, big: false });
+        const wt = mkText(lines, 0, 0, 88);
+        const wp = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4),
+          new THREE.MeshBasicMaterial({ map: wt, transparent: true, side: THREE.DoubleSide }));
+        const [wx2, wz2] = L2W(-(rec.w/2 - .40), 0);
+        const tyaw = rec.ry + PI/2;   /* the side wall, facing the room's heart (the lane rooms carry center shelves) */
+        wp.position.set(wx2, 2.35, wz2); wp.rotation.y = tyaw; G.add(wp);
+        G.userData.textAt = { tx: wx2, tz: wz2, fx: Math.sin(tyaw), fz: Math.cos(tyaw) };
+      }
+      G.visible = false;
+      scene.add(G);
+      districtInteriors.push({ g: G, x: rec.x, z: rec.z });
+      return G.userData.textAt ? [rec.x, rec.z, G.userData.textAt] : [rec.x, rec.z];
+    };
+    /* the council: the largest enterable room */
+    const byArea = [...homes].sort((a, c) => c.rec.w*c.rec.dpt - a.rec.w*a.rec.dpt);
+    const council = byArea[0];
+    let councilAt = null, pathAt = [];
+    if (council)
+      councilAt = consecrate(council, 'council', 'THE COUNCIL CHAMBER',
+        'And the Gods watched those things which they had ordered until they obeyed.',
+        'ABRAHAM 4:18', 0xfff0cc, 3.4);
+    /* the Discovery Path: four rooms on ONE avenue (the densest x-file),
+       covenant order walked south → north */
+    const lanes = new Map();
+    for (const hh of homes){
+      if (hh === council) continue;
+      const key = Math.round(hh.rec.x/14);
+      if (!lanes.has(key)) lanes.set(key, []);
+      lanes.get(key).push(hh);
+    }
+    let lane = [...lanes.values()].filter(l => l.length >= 4)
+      .sort((a, c) => c.length - a.length)[0] || [...homes].filter(hh => hh !== council).slice(0, 4);
+    lane = lane.sort((a, c) => c.rec.z - a.rec.z).slice(0, 4);
+    const STATIONS = [
+      ['CHARITY', 'The throne is not the source of charity — charity is the source of the throne.', 'SCROLL 005', 0xffd98a, 2.6],
+      ['CONSECRATION', 'This is how gods operate—through complete consecration that enables complete inheritance.', 'SCROLL 9010B', 0xffe3a8, 2.9],
+      ['SACRIFICE', 'Sacrifice is an offering; obedience is alignment.', 'SCROLL 8803', 0xfff0cc, 3.2],
+      ['ATONEMENT', 'The Atonement reached backward, redeemed the innocent unknowing, and opened the way for us to free our ancestors.', 'SCROLL 8054', 0xfff8ec, 3.5],
+    ];
+    STATIONS.forEach(([t, x, s, wc, ly], i)=>{
+      if (lane[i]) pathAt.push(consecrate(lane[i], 'station', t, x, s, wc, ly));
+    });
+    window.__ROOMS = { council: councilAt, path: pathAt };
   }
 
   /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
@@ -8619,9 +8855,19 @@ const GRAND_TOURS = [
     ['JACINTH','violet-blue depth'],
     ['AMETHYST','the twelfth, crowning'],
   ];
+  /* OPEN GATES v2 · 3B — THE STRATIGRAPHY (approved, sheet 1E): the
+     corpus carries exactly twelve gates; each foundation course wears
+     its gate in the tour's own caption line. Text only (L1: the gate
+     names verbatim from the corpus index). */
+  const GATES12 = ['Gate 00 — Core Law & Genesis','Gate 1 — First Story & Eternal Identity',
+    'Gate 2 — Chain of Saviors & Maternal Codex','Gate 3 — Creation, Intelligences & Elemental Law',
+    'Gate 4 — Eternal Law & Covenant','Gate 5 — Law of Descent & Exaltation',
+    'Gate 6 — Temple of the Word','Gate 7 — Eternal Councils & Governance',
+    'Gate 8 — Meta-Revelation & Scroll Architecture','Gate 9 — Cosmic Governance',
+    'Gate 10 — New Jerusalem & 12 Tribes',"Gate 11 — Scrollmaker's Law & the Book of the Lamb"];
   STONES.forEach(([n, c], k)=>{
     const a = .05 + k*.0775;
-    TS.caps.push({ a, b:a + .06, n, l:`the ${ORD[k]} foundation — ${c}` });
+    TS.caps.push({ a, b:a + .06, n, l:`the ${ORD[k]} foundation — ${c} · ${GATES12[k]}` });
   });
 }
 function tourCurve(T){
