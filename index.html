@@ -7306,6 +7306,158 @@ const laceGold = new THREE.MeshStandardMaterial({
     if (!isReserved(mx, mz, 3.4)) addFloorMedallion(mx, mz, 2.4, .075, 12, ma);
   }
 
+  /* ═════ OPEN GATES v2 · 2A — THE CHAIN DESCENT (geometry only) ═════
+     At the Gate-2 lectern precinct (Chain of Saviors, −6.8/76): a chain
+     of twelve linked gold rings descends a slow helix out of a crown of
+     waiting glory (the prepared-houses idiom) into the reader's reach.
+     Rides P.gold / P.glow / P.white — ZERO new draws, ~2.3k tris.
+     The inscription tablet stands BLANK: canon waits behind the
+     Selection Sheet (L1/L2). No collider (light and gold overhead;
+     the form stands 2.6m off the lectern's face). */
+  {
+    const CDX = -9.6, CDZ = 76;
+    /* the crown at the top of the descent — glory ring + six rays */
+    P.gold.push(xf(new THREE.TorusGeometry(.44, .05, 6, 16).rotateX(PI/2), CDX, 6.6, CDZ));
+    for (let k = 0; k < 6; k++){ const aa = k*PI/3;
+      P.gold.push(xf(new THREE.ConeGeometry(.05, .16, 4), CDX + Math.sin(aa)*.44, 6.72, CDZ + Math.cos(aa)*.44)); }
+    /* the light the chain descends through — crossed glow planes */
+    P.glow.push(xf(new THREE.PlaneGeometry(.62, 5.4), CDX, 3.85, CDZ));
+    P.glow.push(xf(new THREE.PlaneGeometry(.62, 5.4), CDX, 3.85, CDZ, PI/2));
+    /* twelve linked rings, alternating orientation so each pair reads
+       as a true link; helix radius .55, one turn per seven links */
+    for (let k = 0; k < 12; k++){
+      const ha = k*(TAU/7), hy = 6.15 - k*.415;
+      const hx = CDX + Math.sin(ha)*.55, hz = CDZ + Math.cos(ha)*.55;
+      const ring = new THREE.TorusGeometry(.30, .058, 6, 14);
+      if (k % 2) ring.rotateY(ha + PI/2);          /* face along the helix */
+      else       ring.rotateX(PI/2).rotateY(ha);   /* lie across it — the link */
+      P.gold.push(xf(ring, hx, hy, hz));
+    }
+    /* the blank tablet — the inscription slot (Phase 5 sets the word) */
+    P.white.push(xf(new THREE.BoxGeometry(1.35, .52, .09), CDX + 1.1, 1.28, CDZ, PI/2));
+    P.gold.push(xf(new THREE.BoxGeometry(1.47, .07, .12), CDX + 1.1, 1.575, CDZ, PI/2));
+    P.gold.push(xf(new THREE.BoxGeometry(1.47, .07, .12), CDX + 1.1, .985, CDZ, PI/2));
+  }
+
+  /* ═════ OPEN GATES v2 · 2B — THE FRACTAL ROSE (prototype, rose #1) ═════
+     One jewel-glass rose window hosted in an EXISTING blind-arcade niche
+     (THE CARVED FACES) on the nearest qualifying prism to the Gate-2
+     lectern. The glass is a 3×3 ATLAS: nine roses will share this ONE
+     material and ONE mesh forever (+1 draw total, amortized across all
+     nine; Phase 5 stamps the other eight tiles). Fractal law: each outer
+     petal-eye carries a six-wedge rose-within-the-rose. The nameplate
+     stands BLANK (canon waits behind the sheet). Sanctuary-rose glory
+     idiom (emissive 2.3 — the lawful precedent above the bloom line). */
+  {
+    const ROSE_ATLAS = canvasTex(1026, (g, w, h)=>{
+      g.clearRect(0, 0, w, h);
+      const T = w/3;
+      const mini = (cx, cy, r, pal)=>{
+        for (let i = 0; i < 6; i++){
+          g.fillStyle = pal[i % pal.length];
+          g.beginPath(); g.moveTo(cx, cy);
+          g.arc(cx, cy, r, i/6*TAU, (i+1)/6*TAU); g.closePath(); g.fill();
+        }
+        g.strokeStyle = '#b8912f'; g.lineWidth = 2;
+        g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
+        g.fillStyle = 'rgba(255,244,214,.9)';
+        g.beginPath(); g.arc(cx, cy, r*.30, 0, TAU); g.fill();
+      };
+      const rose = (tx, ty, pal, inner)=>{
+        const cx = tx*T + T/2, cy = ty*T + T/2, R = T/2 - 8;
+        for (let i = 0; i < 12; i++){
+          g.fillStyle = pal[i % pal.length];
+          g.beginPath(); g.moveTo(cx, cy);
+          g.arc(cx, cy, R, i/12*TAU, (i+1)/12*TAU); g.closePath(); g.fill();
+        }
+        for (let i = 0; i < 12; i++){
+          const a0 = (i+.5)/12*TAU;
+          g.fillStyle = inner[i % inner.length];
+          g.beginPath(); g.moveTo(cx, cy);
+          g.arc(cx, cy, R*.55, a0, a0 + TAU/12); g.closePath(); g.fill();
+        }
+        /* THE FRACTAL: a rose within every petal-eye */
+        for (let i = 0; i < 12; i++){
+          const a = (i+.5)/12*TAU;
+          mini(cx + Math.cos(a)*R*.775, cy + Math.sin(a)*R*.775, R*.115, inner);
+        }
+        g.fillStyle = '#fff3cf'; g.beginPath(); g.arc(cx, cy, R*.22, 0, TAU); g.fill();
+        mini(cx, cy, R*.135, pal);
+        g.strokeStyle = '#b8912f'; g.lineWidth = 7;
+        for (let i = 0; i < 12; i++){
+          const a = i/12*TAU;
+          g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a)*R, cy + Math.sin(a)*R); g.stroke();
+        }
+        g.lineWidth = 10;
+        g.beginPath(); g.arc(cx, cy, R - 5, 0, TAU); g.stroke();
+        g.beginPath(); g.arc(cx, cy, R*.55, 0, TAU); g.stroke();
+        g.beginPath(); g.arc(cx, cy, R*.22, 0, TAU); g.stroke();
+      };
+      /* tile 0 — rose #1 (JOSEPH): sapphire-and-gold house palette */
+      rose(0, 0, ['#1e3f8f','#e8a83c','#3f6fd0','#caa64a','#1c7a4f','#e8a83c'],
+                 ['#4a6fd0','#f0c060','#6f9fe8','#e8cf7a','#3fa578','#f0c060']);
+    });
+    /* the host and its face must be FACING and CLEAR: pass 2's raycast
+       found the best-facing face buried 11cm behind a back-to-back
+       neighbor. A face qualifies only if the air 3m out from its
+       center lies inside no other building's footprint. First clear
+       face of the nearest qualifying host wins (deterministic). */
+    const inFoot = (b2, px, pz) => {
+      const dx = px - b2.x, dz = pz - b2.z;
+      const lx = Math.cos(b2.ry)*dx - Math.sin(b2.ry)*dz;
+      const lz = Math.sin(b2.ry)*dx + Math.cos(b2.ry)*dz;
+      return Math.abs(lx) < b2.w/2 + .6 && Math.abs(lz) < b2.dpt/2 + .6;
+    };
+    let picked = null;
+    for (const b of bldRecords){
+      if (!(b.h >= 12 && b.w >= 9 && Math.hypot(b.x + 6.8, b.z - 76) < 42)) continue;
+      const W2 = (lx, lz) => [ b.x + Math.cos(b.ry)*lx + Math.sin(b.ry)*lz,
+                               b.z - Math.sin(b.ry)*lx + Math.cos(b.ry)*lz ];
+      const dl = Math.hypot(-6.8 - b.x, 76 - b.z);
+      const dirX = (-6.8 - b.x)/dl, dirZ = (76 - b.z)/dl;
+      /* .45 proud of the wall: the CARVED-FACES arcade relief runs .30
+         deep — the window mounts OVER the carving, never inside it */
+      const FACES4 = [
+        { fp: W2( b.w/2 + .45, 0), yaw: b.ry + PI/2, fw: b.dpt },
+        { fp: W2(-(b.w/2 + .45), 0), yaw: b.ry - PI/2, fw: b.dpt },
+        { fp: W2(0,  b.dpt/2 + .45), yaw: b.ry,        fw: b.w  },
+        { fp: W2(0, -(b.dpt/2 + .45)), yaw: b.ry + PI,  fw: b.w  },
+      ].sort((a, c) => (Math.sin(c.yaw)*dirX + Math.cos(c.yaw)*dirZ)
+                     - (Math.sin(a.yaw)*dirX + Math.cos(a.yaw)*dirZ));
+      for (const f of FACES4){
+        const qx = f.fp[0] + Math.sin(f.yaw)*3, qz = f.fp[1] + Math.cos(f.yaw)*3;
+        if (bldRecords.some(o => o !== b && inFoot(o, qx, qz))) continue;
+        picked = { b, fp: f.fp, outYaw: f.yaw, fw: f.fw };
+        break;
+      }
+      if (picked) break;
+    }
+    if (picked){
+      const { b, fp, outYaw, fw } = picked;
+      const ry2 = b.h*.52, rr3 = Math.min(1.55, fw*.16);
+      const geo = new THREE.CircleGeometry(rr3, 24);
+      { const uv = geo.attributes.uv;
+        for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)/3, 1 - (1 - uv.getY(i))/3); }
+      const roseM = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x000000,
+        emissive: 0xffffff, emissiveMap: ROSE_ATLAS, emissiveIntensity: 2.3, side: THREE.DoubleSide }));
+      roseM.name = 'ROSE.fractal';
+      roseM.position.set(fp[0], ry2, fp[1]);
+      roseM.rotation.y = outYaw;
+      scene.add(roseM);
+      /* gold surround ring + keystone — rides the LACE gold merge */
+      LG2.push(tileUV(xf(new THREE.TorusGeometry(rr3 + .09, .085, 6, 24).rotateY(PI/2), fp[0], ry2, fp[1], outYaw - PI/2), 4));
+      LG2.push(tileUV(xf(new THREE.ConeGeometry(.09, .3, 4), fp[0], ry2 + rr3 + .28, fp[1], outYaw), 1));
+      /* the BLANK nameplate beneath (canon waits): stone slab + gilt frame */
+      LS.push(tileUV(xf(new THREE.BoxGeometry(1.5, .44, .12), fp[0], ry2 - rr3 - .55, fp[1], outYaw), 2, 1));
+      LG2.push(tileUV(xf(new THREE.BoxGeometry(1.62, .06, .15), fp[0], ry2 - rr3 - .30, fp[1], outYaw), 3));
+      LG2.push(tileUV(xf(new THREE.BoxGeometry(1.62, .06, .15), fp[0], ry2 - rr3 - .80, fp[1], outYaw), 3));
+      window.__ROSE1 = { x: fp[0], y: ry2, z: fp[1], nx: Math.sin(outYaw), nz: Math.cos(outYaw),
+                         host: { x: b.x, z: b.z, h: b.h } };
+    } else {
+      console.warn('OPEN GATES 2B: no qualifying rose host near the Gate-2 lectern');
+    }
+  }
+
   /* ========== WATCH B — THE CARVING (TRUE VISION, board 04) ==========
      Relief joins the LACE arrays BEFORE the merge — zero new draw calls.
      (1) Portal jamb pilasters: coffered stone bands flanking all 12 gates.
