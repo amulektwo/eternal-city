@@ -2,3 +2,7 @@
 node_modules
 .env
 data/_APPENDIX/
+
+# harness copies + vendored three (probe header law: NEVER committed)
+__*.html
+__three160

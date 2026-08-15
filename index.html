@@ -1428,6 +1428,36 @@ const cloudSprites = [];
    so nothing can z-fight. Bases sink into the sea, tops stay far below
    the cloud dome. Local seeded rng (layout law).
 ================================================================ */
+/* ================================================================
+   OPERATION SISTER CITIES · PHASE 3 — THE ROSTER OF THE NATIONS
+   Declared HERE (above the card bands) because ONE list must rule both
+   the cards' carve and the cities' placement — the Gate-tour discipline.
+   The twelve gates stand at k·30°; REUBEN (k=0) looks down THE CAUSEWAY
+   and receives no nation (L3). THE FIRST CITY (az 18°, r 240, landed
+   2026-08-15) stands between gates 0 and 1 and is never regenerated —
+   her seed and every rng draw are frozen (`first:true`).
+   `?ring=8|12|12L` raises the candidate ring for the Ring Sheet; absent
+   the parameter the roster is the first city alone = production.
+================================================================ */
+const SISTER_ROSTER = (()=>{
+  const list = [{ az: 18, r: 240, seed: 24091, first: true, s: 1, lod: false }];
+  const q = (qs.get('ring') || '').toUpperCase();
+  if (q === '8' || q === '12' || q === '12L'){
+    const gates = q === '8' ? [2,3,5,6,8,9,11] : [1,2,3,4,5,6,7,8,9,10,11];
+    for (const k of gates){
+      const rr = mulberry32(770000 + k*37);
+      /* gate 1 stands 12° off the first city — pushed OUT so the two
+         layer in depth instead of colliding in silhouette (L2: her own
+         radius is part of her identity) */
+      const r = k === 1 ? 296 : 205 + Math.round(rr()*92);
+      const s = 0.82 + rr()*0.50;
+      list.push({ az: k*30, r, seed: 24091 + k*911, first: false, s,
+                  lod: (q === '12L' && r > 248) });
+    }
+  }
+  return list;
+})();
+
 const HORIZON = { u: null };
 {
   /* ================================================================
@@ -1602,13 +1632,18 @@ const HORIZON = { u: null };
       const sw = hrr(.8,1.3), sh = hrr(.75,1.2);
       const col = (hr()*COLS)|0, flip = hr() < .5;
       const hz = Math.min(.82, b.haze + hr()*.12);
-      /* THE FIRST CITY (SISTER CITIES Phase 2) owns az 18°: the near band
-         parts around it (±9°) so the true body is never over-drawn by a
-         nearer depthless card. Every rng draw above is consumed BEFORE the
-         carve, so every other card keeps its exact place (Law 15). */
+      /* THE NATIONS own their bearings: the near band parts ±9° around
+         every roster city so no depthless card over-draws a true body.
+         Every rng draw above is consumed BEFORE the carve, so every
+         surviving card keeps its exact place (Law 15 / Law 40). */
       if (b.r0 === 185){
-        let da = (a - 18*PI/180) % TAU; if (da > PI) da -= TAU; if (da < -PI) da += TAU;
-        if (Math.abs(da) < 9*PI/180) continue;
+        let carved = false;
+        for (const S of SISTER_ROSTER){
+          let da = (a - S.az*PI/180) % TAU;
+          if (da > PI) da -= TAU; if (da < -PI) da += TAU;
+          if (Math.abs(da) < 9*PI/180){ carved = true; break; }
+        }
+        if (carved) continue;
       }
       let g2 = new THREE.PlaneGeometry(b.w*sw, b.hgt*sh);
       uvCol(g2, col, flip);
@@ -1998,93 +2033,165 @@ const FARCITY = { u: null };
 ================================================================ */
 const SISTER = { tick: null };
 {
-  const sr = mulberry32(24091);                       /* 24024+'C' — the approved massing */
-  const srr = (a,b)=> a + sr()*(b-a);
-  const AZ = 18*D2R, R = 240;
-  const CX = Math.sin(AZ)*R, CZ = Math.cos(AZ)*R;
-  const winParts = [], stoneParts = [], giltParts = [];
-  /* windows tile in WORLD space (~16 m per repeat) — the mockup mapped one
-     texture per face and the panes measured 6 cm: 0.16 px at r 240, unreadable */
-  const wbox = (w,h,d,x,y,z,ry=0)=>{
-    const g = new THREE.BoxGeometry(w,h,d);
-    const uv = g.attributes.uv, us = Math.max(.5, ((w+d)/2)/16), vs = Math.max(.5, h/16);
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)*us, uv.getY(i)*vs);
-    winParts.push(xf(g, x,y,z, ry));
-  };
-  const sbox = (w,h,d,x,y,z,ry=0)=> stoneParts.push(xf(new THREE.BoxGeometry(w,h,d), x,y,z, ry));
-  const spire = (r,hgt,x,y,z)=> stoneParts.push(xf(new THREE.ConeGeometry(r,hgt,6), x,y,z));
-  const dome  = (r,x,y,z,sy=1)=> stoneParts.push(xf(new THREE.SphereGeometry(r,10,7,0,TAU,0,PI/2), x,y,z, 0, 1,sy,1));
-  const tip   = (x,y,z,s=1)=> giltParts.push(xf(new THREE.ConeGeometry(.8*s, 3.6*s, 5), x,y,z));
-  const gring = (r,tube,x,y,z)=>{ const g = new THREE.TorusGeometry(r, tube, 5, 28); g.rotateX(PI/2); giltParts.push(xf(g, x,y,z)); };
-  /* the island pedestal — rises out of the cloud sea (tops y −12) */
-  stoneParts.push(xf(new THREE.CylinderGeometry(34, 46, 46, 18), 0, -35, 0));
-  const G = -12;
-  /* the lesser mount (win) + gilt rims — B's treatment, grafted by the pick */
-  [[30, -11, -5], [21, -11, -5], [12, -11, -5]].forEach((t, i)=>{
-    wbox(t[0], 7, t[0], t[1], G + i*7 + 3.5, t[2]);
-    giltParts.push(xf(new THREE.BoxGeometry(t[0]+.7, .45, t[0]+.7), t[1], G + i*7 + 7.1, t[2]));
-  });
-  dome(3.8, -11, G+21, -5); tip(-11, G+21+3.8+1.5, -5, 1);
-  /* the gothic quarter — gilt cap ledge under every spire (the graft) */
-  for (let i = 0; i < 6; i++){
-    const x = 12 + srr(-5, 8), z = 4 + srr(-7, 8);
-    const w = srr(3, 5.5), hgt = srr(13, 32);
-    wbox(w, hgt, w, x, G + hgt/2, z, sr()*PI);
-    giltParts.push(xf(new THREE.BoxGeometry(w+.5, .4, w+.5), x, G + hgt + .2, z));
-    if (sr() < .7){ spire(w*.6, srr(6, 12), x, G + hgt + srr(3, 6), z); tip(x, G + hgt + srr(9, 13), z, .75); }
+  /* ---- ONE NATION, built in local coordinates ----
+     `first` reproduces THE FIRST CITY exactly (seed 24091, every draw in
+     its landed order — she is canon and is never regenerated). Her sisters
+     draw their own recipe from their own seed: which quarters they carry,
+     how many towers, how tall the mount, whether a wall rings them —
+     no two alike (L2, the roses' law). */
+  function nation(spec){
+    const sr = mulberry32(spec.seed);
+    const srr = (a,b)=> a + sr()*(b-a);
+    const win = [], stone = [], gilt = [];
+    const wbox = (w,h,d,x,y,z,ry=0)=>{
+      const g = new THREE.BoxGeometry(w,h,d);
+      const uv = g.attributes.uv, us = Math.max(.5, ((w+d)/2)/16), vs = Math.max(.5, h/16);
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)*us, uv.getY(i)*vs);
+      win.push(xf(g, x,y,z, ry));
+    };
+    const LOD = !!spec.lod;
+    const spire = (r,hgt,x,y,z)=> stone.push(xf(new THREE.ConeGeometry(r,hgt, LOD?5:6), x,y,z));
+    const dome  = (r,x,y,z,sy=1)=> stone.push(xf(new THREE.SphereGeometry(r, LOD?8:10, LOD?5:7, 0,TAU,0,PI/2), x,y,z, 0, 1,sy,1));
+    const tip   = (x,y,z,s=1)=> gilt.push(xf(new THREE.ConeGeometry(.8*s, 3.6*s, 5), x,y,z));
+    const gring = (r,tube,x,y,z)=>{ const g = new THREE.TorusGeometry(r, tube, LOD?4:5, LOD?18:28); g.rotateX(PI/2); gilt.push(xf(g, x,y,z)); };
+    const G = -12;
+    stone.push(xf(new THREE.CylinderGeometry(34, 46, 46, LOD?12:18), 0, -35, 0));
+
+    if (spec.first){
+      /* ===== THE FIRST CITY — frozen canon, draw for draw ===== */
+      [[30, -11, -5], [21, -11, -5], [12, -11, -5]].forEach((t, i)=>{
+        wbox(t[0], 7, t[0], t[1], G + i*7 + 3.5, t[2]);
+        gilt.push(xf(new THREE.BoxGeometry(t[0]+.7, .45, t[0]+.7), t[1], G + i*7 + 7.1, t[2]));
+      });
+      dome(3.8, -11, G+21, -5); tip(-11, G+21+3.8+1.5, -5, 1);
+      for (let i = 0; i < 6; i++){
+        const x = 12 + srr(-5, 8), z = 4 + srr(-7, 8);
+        const w = srr(3, 5.5), hgt = srr(13, 32);
+        wbox(w, hgt, w, x, G + hgt/2, z, sr()*PI);
+        gilt.push(xf(new THREE.BoxGeometry(w+.5, .4, w+.5), x, G + hgt + .2, z));
+        if (sr() < .7){ spire(w*.6, srr(6, 12), x, G + hgt + srr(3, 6), z); tip(x, G + hgt + srr(9, 13), z, .75); }
+      }
+      for (let i = 0; i < 5; i++){
+        const a = (i/5 + .08)*TAU, r = 25;
+        const x = Math.sin(a)*r, z = Math.cos(a)*r;
+        const trr = srr(1.6, 2.3), hgt = srr(11, 24);
+        stone.push(xf(new THREE.CylinderGeometry(trr, trr*1.15, hgt, 8), x, G + hgt/2, z));
+        gring(trr*1.18, .16, x, G + hgt - .3, z);
+        dome(trr*1.35, x, G + hgt, z, 1.35); tip(x, G + hgt + trr*1.8 + 1.4, z, .7);
+      }
+      stone.push(xf(new THREE.CylinderGeometry(28.5, 29.2, 4.5, 22, 1, true), 0, G+2.25, 0));
+      gring(28.6, .22, 0, G+4.55, 0);
+      gring(29.6, .26, 0, G+.15, 0);
+      return { win, stone, gilt, sr };
+    }
+
+    /* ===== HER SISTERS — the recipe is drawn, never authored ===== */
+    const hasMount = sr() < .82, terraces = 2 + (sr()*3|0);
+    const quarterN = LOD ? 3 + (sr()*3|0) : 4 + (sr()*5|0);
+    const towerN   = LOD ? (sr() < .5 ? 0 : 3) : (sr() < .18 ? 0 : 3 + (sr()*4|0));
+    const hasWall  = sr() < .78;
+    const mx = srr(-14, -7), mz = srr(-9, -1);
+    if (hasMount){
+      const base = srr(24, 32), step = srr(6, 8.5);
+      for (let i = 0; i < terraces; i++){
+        const s2 = base - i*(base*.30);
+        wbox(s2, step, s2, mx, G + i*step + step/2, mz);
+        gilt.push(xf(new THREE.BoxGeometry(s2+.7, .45, s2+.7), mx, G + i*step + step + .1, mz));
+      }
+      const cy = G + terraces*step;
+      const dr = srr(3.2, 4.6);
+      dome(dr, mx, cy, mz, srr(.9, 1.4)); tip(mx, cy + dr*1.3 + 1.5, mz, 1);
+    }
+    const qx = srr(8, 16), qz = srr(0, 8);
+    for (let i = 0; i < quarterN; i++){
+      const x = qx + srr(-6, 8), z = qz + srr(-8, 8);
+      const w = srr(2.8, 5.8), hgt = srr(12, 34);
+      wbox(w, hgt, w, x, G + hgt/2, z, sr()*PI);
+      gilt.push(xf(new THREE.BoxGeometry(w+.5, .4, w+.5), x, G + hgt + .2, z));
+      if (sr() < .72){ spire(w*.6, srr(6, 13), x, G + hgt + srr(3, 6.5), z); tip(x, G + hgt + srr(9, 14), z, .75); }
+    }
+    if (towerN){
+      const rr2 = srr(21, 28), ph = sr();
+      for (let i = 0; i < towerN; i++){
+        const a = (i/towerN + ph)*TAU;
+        const x = Math.sin(a)*rr2, z = Math.cos(a)*rr2;
+        const trr = srr(1.5, 2.4), hgt = srr(10, 26);
+        stone.push(xf(new THREE.CylinderGeometry(trr, trr*1.15, hgt, LOD?6:8), x, G + hgt/2, z));
+        gring(trr*1.18, .16, x, G + hgt - .3, z);
+        dome(trr*1.35, x, G + hgt, z, srr(1.1, 1.5)); tip(x, G + hgt + trr*1.8 + 1.4, z, .7);
+      }
+    }
+    if (hasWall){
+      const wr = srr(27, 30.5);
+      stone.push(xf(new THREE.CylinderGeometry(wr, wr+.7, srr(3.5, 5.5), LOD?14:22, 1, true), 0, G+2.25, 0));
+      gring(wr+.1, .22, 0, G + srr(4.2, 5.0), 0);
+    }
+    gring(srr(29, 31), .26, 0, G+.15, 0);
+    return { win, stone, gilt, sr };
   }
-  /* the ring of round towers — a gilt neck ring under every onion dome */
-  for (let i = 0; i < 5; i++){
-    const a = (i/5 + .08)*TAU, r = 25;
-    const x = Math.sin(a)*r, z = Math.cos(a)*r;
-    const tr = srr(1.6, 2.3), hgt = srr(11, 24);
-    stoneParts.push(xf(new THREE.CylinderGeometry(tr, tr*1.15, hgt, 8), x, G + hgt/2, z));
-    gring(tr*1.18, .16, x, G + hgt - .3, z);
-    dome(tr*1.35, x, G + hgt, z, 1.35); tip(x, G + hgt + tr*1.8 + 1.4, z, .7);
+
+  /* ---- raise the roster ---- */
+  const SPLIT = qs.get('ringmode') === 'split';   /* Phase 0: culled-vs-merged forensic */
+  const all = { win: [], stone: [], gilt: [] }, built = [];
+  let firstRng = null;
+  for (const S of SISTER_ROSTER){
+    const a = S.az*D2R, px = Math.sin(a)*S.r, pz = Math.cos(a)*S.r;
+    const N = nation(S);
+    if (S.first) firstRng = N.sr;                     /* her texture draws come next */
+    const place = g => xf(g, px, 0, pz, a + PI, S.s);
+    const P = { tag: S.first ? 'first' : ('g' + S.az),
+                win: N.win.map(place), stone: N.stone.map(place), gilt: N.gilt.map(place) };
+    built.push(P);
+    if (!SPLIT) for (const k of ['win','stone','gilt']) for (const g of P[k]) all[k].push(g);
   }
-  /* the low wall — crowned in gold (the graft) — and the pedestal crown */
-  stoneParts.push(xf(new THREE.CylinderGeometry(28.5, 29.2, 4.5, 22, 1, true), 0, G+2.25, 0));
-  gring(28.6, .22, 0, G+4.55, 0);
-  gring(29.6, .26, 0, G+.15, 0);
-  /* the lit rooms of the nation — warm panes, tiled per ~16 m of facade */
+  /* THE SHARED SKIN — one window texture and one material set for the whole
+     ring (so it can ride 3 draws, L1). The texture is drawn from THE FIRST
+     CITY's own rng, at exactly the point in her stream where it was drawn
+     when she landed: her panes stay byte-identical to the kept build. */
+  const tr = firstRng;
   const winTex = canvasTex(192, (g,w,h)=>{
     g.fillStyle = '#000'; g.fillRect(0,0,w,h);
     for (let y = 12; y < h - 10; y += 14)
       for (let x = 8; x < w - 7; x += 13){
-        if (sr() > .48) continue;
-        const b = 150 + sr()*105;
+        if (tr() > .48) continue;
+        const b = 150 + tr()*105;
         g.fillStyle = 'rgb(' + (b|0) + ',' + (b*.8|0) + ',' + (b*.52|0) + ')';
         g.fillRect(x, y, 6, 8);
       }
   });
   winTex.wrapS = winTex.wrapT = THREE.RepeatWrapping;
-  /* the card-ivory family lift: a small hour-constant emissive floor keeps
-     the stone LUMINOUS through the fog (the mockup read rosy — the soffit
-     idiom is the lawful cure: lift by emission, never by exposure) */
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0xf7efdc, roughness: .85, metalness: .04,
     emissive: new THREE.Color(0xffedc8), emissiveIntensity: .10 });
   const bodyMat  = new THREE.MeshStandardMaterial({ color: 0xf5ecd6, roughness: .82, metalness: .04,
     emissive: new THREE.Color(1, .84, .55), emissiveMap: winTex, emissiveIntensity: 0 });
   const giltMat  = new THREE.MeshStandardMaterial({ color: 0xd9b45f, roughness: .38, metalness: .55,
     emissive: new THREE.Color(1, .85, .46), emissiveIntensity: 0 });
-  const mk = (parts, mat, nm)=>{
+  const mkMesh = (parts, mat, nm)=>{
+    if (!parts.length) return;
     const m = new THREE.Mesh(mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g)), mat);
-    m.position.set(CX, 0, CZ); m.rotation.y = AZ + PI;
     m.name = nm; m.userData.extOnly = true;            /* no body in the glass */
     m.castShadow = m.receiveShadow = false;
     scene.add(m);
   };
-  mk(winParts,   bodyMat,  'SISTER.first.body');
-  mk(stoneParts, stoneMat, 'SISTER.first.stone');
-  mk(giltParts,  giltMat,  'SISTER.first.gilt');
+  if (SPLIT){
+    for (const P of built){
+      mkMesh(P.win,   bodyMat,  'SISTER.' + P.tag + '.body');
+      mkMesh(P.stone, stoneMat, 'SISTER.' + P.tag + '.stone');
+      mkMesh(P.gilt,  giltMat,  'SISTER.' + P.tag + '.gilt');
+    }
+  } else {
+    mkMesh(all.win,   bodyMat,  'SISTER.ring.body');
+    mkMesh(all.stone, stoneMat, 'SISTER.ring.stone');
+    mkMesh(all.gilt,  giltMat,  'SISTER.ring.gilt');
+  }
   SISTER.tick = (h, v)=>{
     const winAmp = 1.30 + 0.24*(1 - h) + 0.97*v;               /* FARCITY verbatim */
     const tipAmp = Math.max(1.05 + 0.95*(1 - h) - 0.35*v, 0.30);
     bodyMat.emissiveIntensity = .80*winAmp;
     giltMat.emissiveIntensity = .50*tipAmp;
   };
-  window.__SISTER = { style: 'C+gilt', x: CX, z: CZ, r: R, az: 18,
-    mats: { stone: stoneMat, body: bodyMat, gilt: giltMat } };
+  window.__SISTER = { roster: SISTER_ROSTER.map(s => ({ az: s.az, r: s.r, lod: s.lod, s: +s.s.toFixed(3) })),
+    split: SPLIT, mats: { stone: stoneMat, body: bodyMat, gilt: giltMat } };
 }
 
 const seaMeshes = [];
