@@ -1430,19 +1430,25 @@ const cloudSprites = [];
 ================================================================ */
 /* ================================================================
    OPERATION SISTER CITIES · PHASE 3 — THE ROSTER OF THE NATIONS
-   Declared HERE (above the card bands) because ONE list must rule both
+   THE RING OF THE NATIONS — declared HERE (above the card bands) because
+   ONE list must rule both
    the cards' carve and the cities' placement — the Gate-tour discipline.
    The twelve gates stand at k·30°; REUBEN (k=0) looks down THE CAUSEWAY
    and receives no nation (L3). THE FIRST CITY (az 18°, r 240, landed
    2026-08-15) stands between gates 0 and 1 and is never regenerated —
    her seed and every rng draw are frozen (`first:true`).
-   `?ring=8|12|12L` raises the candidate ring for the Ring Sheet; absent
-   the parameter the roster is the first city alone = production.
+   THE SEER'S PICK (2026-08-15): **THE TWELVE, LODDED, the band carved** —
+   eleven sisters join THE FIRST CITY, and the nations standing beyond 248 m
+   are built simpler (coarser domes, fewer facets, fewer towers), which no
+   pose can tell from the full build because distance already hides it.
+   `?ring=0` retires the ring to the first city alone (the escape hatch
+   idiom, as `?mirror=0`); `?ring=8|12` raise the Ring Sheet's alternates.
 ================================================================ */
 const SISTER_ROSTER = (()=>{
   const list = [{ az: 18, r: 240, seed: 24091, first: true, s: 1, lod: false }];
-  const q = (qs.get('ring') || '').toUpperCase();
-  if (q === '8' || q === '12' || q === '12L'){
+  const raw = (qs.get('ring') || '').toUpperCase();
+  const q = (raw === '8' || raw === '12' || raw === '12L') ? raw : (raw === '0' ? '' : '12L');
+  if (q){
     const gates = q === '8' ? [2,3,5,6,8,9,11] : [1,2,3,4,5,6,7,8,9,10,11];
     for (const k of gates){
       const rr = mulberry32(770000 + k*37);
