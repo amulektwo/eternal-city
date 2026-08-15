@@ -1965,6 +1965,147 @@ const FARCITY = { u: null };
   FARCITY.u = mat.uniforms;
 }
 
+/* ================================================================
+   OPERATION SISTER CITIES — PHASE 1 SKYLINE MOCKUPS (?skyline=A|B|C)
+   Three massing languages for the Skyline Sheet, built as TRUE geometry
+   at the primary Reuben-facing anchor (az 18°, r 240 — clear of the
+   causeway axis, between the 6-D bands). QUERY-GATED: absent the param
+   nothing builds — production is bit-identical. Not a landing candidate;
+   the Seer picks a language, then Phase 2 builds THE FIRST CITY for keeps.
+   · L1/UPROOTING: architecture only — no figures, no life.
+   · A2: named SISTER.* + userData.extOnly — no body in the glass, ever.
+   · THE HOUR: window/gilt emissives rehost the FARCITY algebra verbatim
+     (winAmp 1.30+0.24(1−h)+0.97v · tipAmp max(1.05+0.95(1−h)−0.35v,.30))
+     scaled to geometry that breathes the REAL 13-C fog — the haze is the
+     engine's, not baked, which is the whole point of Phase 1.
+   · There is no night. The hours are the law's own: noon, the mean,
+     vespers — DEPTH WITHOUT DARKNESS (Rev 21:25 · 22:5).
+   · Law 15: local mulberry32 only — no global rng() draws.
+================================================================ */
+const SISTER = { tick: null };
+{
+  const styleQ = (qs.get('skyline') || '').toUpperCase();
+  if (styleQ === 'A' || styleQ === 'B' || styleQ === 'C'){
+    const sr = mulberry32(24024 + styleQ.charCodeAt(0));
+    const srr = (a,b)=> a + sr()*(b-a);
+    const AZ = 18*D2R, R = 240;
+    const CX = Math.sin(AZ)*R, CZ = Math.cos(AZ)*R;
+    const winParts = [], stoneParts = [], giltParts = [];
+    const wbox = (w,h,d,x,y,z,ry=0)=> winParts.push(xf(new THREE.BoxGeometry(w,h,d), x,y,z, ry));
+    const sbox = (w,h,d,x,y,z,ry=0)=> stoneParts.push(xf(new THREE.BoxGeometry(w,h,d), x,y,z, ry));
+    const spire = (r,hgt,x,y,z)=> stoneParts.push(xf(new THREE.ConeGeometry(r,hgt,6), x,y,z));
+    const dome  = (r,x,y,z,sy=1)=> stoneParts.push(xf(new THREE.SphereGeometry(r,10,7,0,TAU,0,PI/2), x,y,z, 0, 1,sy,1));
+    const tip   = (x,y,z,s=1)=> giltParts.push(xf(new THREE.ConeGeometry(.8*s, 3.6*s, 5), x,y,z));
+    /* the island pedestal — rises out of the cloud sea (tops y −12) */
+    stoneParts.push(xf(new THREE.CylinderGeometry(34, 46, 46, 18), 0, -35, 0));
+    const G = -12;                                   /* the cluster's plaza level */
+
+    if (styleQ === 'A'){
+      /* A · DAUGHTERS OF ZION — the city's own gothic echo: curtain wall,
+         spired towers, domes on drums, one central minster */
+      stoneParts.push(xf(new THREE.CylinderGeometry(29.5, 30.5, 7, 24, 1, true), 0, G+3.5, 0));
+      for (let k = 0; k < 6; k++){
+        const a = k/6*TAU, tx = Math.sin(a)*29.8, tz = Math.cos(a)*29.8;
+        stoneParts.push(xf(new THREE.CylinderGeometry(1.7, 2.1, 11, 6), tx, G+5.5, tz));
+        tip(tx, G+12.8, tz, .9);
+      }
+      for (let i = 0; i < 13; i++){
+        const a = sr()*TAU, r = srr(5, 24);
+        const x = Math.sin(a)*r, z = Math.cos(a)*r;
+        const w = srr(3.5, 7.5), hgt = srr(15, 42);
+        wbox(w, hgt, w, x, G + hgt/2, z, sr()*PI);
+        const k = sr();
+        if (k < .55){ spire(w*.62, srr(7, 15), x, G + hgt + srr(3.5, 7.5), z); tip(x, G + hgt + srr(11, 16), z, .8); }
+        else if (k < .8){ stoneParts.push(xf(new THREE.CylinderGeometry(w*.42, w*.42, 2.4, 8), x, G+hgt+1.2, z)); dome(w*.52, x, G + hgt + 2.4, z); tip(x, G + hgt + 2.4 + w*.52 + 1.6, z, .7); }
+        else { sbox(w*.72, 2.2, w*.72, x, G+hgt+1.1, z); sbox(w*.4, 2, w*.4, x, G+hgt+3.2, z); }
+      }
+      wbox(9, 40, 13, 0, G+20, 0);
+      for (const sx of [-3.2, 3.2]){ spire(2.6, 12, sx, G+46, -4); tip(sx, G+53.5, -4, 1.1); }
+      dome(4.6, 0, G+40, 4.5); tip(0, G+40+4.6+1.6, 4.5, 1);
+    }
+
+    if (styleQ === 'B'){
+      /* B · TEMPLE MOUNTS — one ascending form: five terraces, a crown
+         temple, gilt rims catching the constant key */
+      const TS = [54, 42, 31, 21, 12];
+      TS.forEach((s, i)=>{
+        wbox(s, 8, s, 0, G + i*8 + 4, 0);
+        giltParts.push(xf(new THREE.BoxGeometry(s+.8, .5, s+.8), 0, G + i*8 + 8.1, 0));
+      });
+      for (const cx2 of [-25, 25]) for (const cz2 of [-25, 25]){
+        sbox(3.4, 5, 3.4, cx2, G+2.5, cz2); tip(cx2, G+6.6, cz2, .9);
+      }
+      /* the ascent stair, terrace to terrace, on the city-facing flank */
+      for (let i = 0; i < 4; i++){
+        const s0 = TS[i], s1 = TS[i+1], y0 = G + i*8 + 8;
+        sbox(5, 1.4, (s0 - s1)/2 + 2, 0, y0 + .7, (s1 + (s0 - s1)/2)/2 + s1/2 - 1);
+      }
+      wbox(9.5, 7, 9.5, 0, G + 43.5, 0);
+      dome(4.4, 0, G + 47, 0); tip(0, G + 47 + 4.4 + 1.6, 0, 1.2);
+    }
+
+    if (styleQ === 'C'){
+      /* C · THE MINGLED NATIONS — the roses' law: no two forms alike.
+         A lesser mount, a gothic quarter, a ring of round towers */
+      [[30, -11, -5], [21, -11, -5], [12, -11, -5]].forEach((t, i)=>{
+        wbox(t[0], 7, t[0], t[1], G + i*7 + 3.5, t[2]);
+        giltParts.push(xf(new THREE.BoxGeometry(t[0]+.7, .45, t[0]+.7), t[1], G + i*7 + 7.1, t[2]));
+      });
+      dome(3.8, -11, G+21, -5); tip(-11, G+21+3.8+1.5, -5, 1);
+      for (let i = 0; i < 6; i++){
+        const x = 12 + srr(-5, 8), z = 4 + srr(-7, 8);
+        const w = srr(3, 5.5), hgt = srr(13, 32);
+        wbox(w, hgt, w, x, G + hgt/2, z, sr()*PI);
+        if (sr() < .7){ spire(w*.6, srr(6, 12), x, G + hgt + srr(3, 6), z); tip(x, G + hgt + srr(9, 13), z, .75); }
+      }
+      for (let i = 0; i < 5; i++){
+        const a = (i/5 + .08)*TAU, r = 25;
+        const x = Math.sin(a)*r, z = Math.cos(a)*r;
+        const tr = srr(1.6, 2.3), hgt = srr(11, 24);
+        stoneParts.push(xf(new THREE.CylinderGeometry(tr, tr*1.15, hgt, 8), x, G + hgt/2, z));
+        dome(tr*1.35, x, G + hgt, z, 1.35); tip(x, G + hgt + tr*1.8 + 1.4, z, .7);
+      }
+      stoneParts.push(xf(new THREE.CylinderGeometry(28.5, 29.2, 4.5, 22, 1, true), 0, G+2.25, 0));
+    }
+
+    /* the lit rooms of the nation — warm pinpricks, an emissiveMap the
+       hour drives with FARCITY's own algebra */
+    const winTex = canvasTex(128, (g,w,h)=>{
+      g.fillStyle = '#000'; g.fillRect(0,0,w,h);
+      for (let y = 9; y < h - 7; y += 9)
+        for (let x = 6; x < w - 5; x += 7){
+          if (sr() > .34) continue;
+          const b = 150 + sr()*105;
+          g.fillStyle = 'rgb(' + (b|0) + ',' + (b*.8|0) + ',' + (b*.52|0) + ')';
+          g.fillRect(x, y, 2, 3);
+        }
+    });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0xf1e7d0, roughness: .85, metalness: .04 });
+    const bodyMat  = new THREE.MeshStandardMaterial({ color: 0xefe4c9, roughness: .82, metalness: .04,
+      emissive: new THREE.Color(1, .84, .55), emissiveMap: winTex, emissiveIntensity: 0 });
+    const giltMat  = new THREE.MeshStandardMaterial({ color: 0xd9b45f, roughness: .38, metalness: .55,
+      emissive: new THREE.Color(1, .85, .46), emissiveIntensity: 0 });
+    const mk = (parts, mat, nm)=>{
+      if (!parts.length) return;
+      const m = new THREE.Mesh(mergeGeometries(parts.map(g => g.index ? g.toNonIndexed() : g)), mat);
+      m.position.set(CX, 0, CZ); m.rotation.y = AZ + PI;
+      m.name = nm; m.userData.extOnly = true;          /* A2: no body in the glass */
+      m.castShadow = m.receiveShadow = false;
+      scene.add(m);
+    };
+    mk(winParts,   bodyMat,  'SISTER.' + styleQ + '.body');
+    mk(stoneParts, stoneMat, 'SISTER.' + styleQ + '.stone');
+    mk(giltParts,  giltMat,  'SISTER.' + styleQ + '.gilt');
+    SISTER.tick = (h, v)=>{
+      const winAmp = 1.30 + 0.24*(1 - h) + 0.97*v;               /* FARCITY verbatim */
+      const tipAmp = Math.max(1.05 + 0.95*(1 - h) - 0.35*v, 0.30);
+      bodyMat.emissiveIntensity = .55*winAmp;                     /* geometry breathes real fog */
+      giltMat.emissiveIntensity = .45*tipAmp;
+    };
+    window.__SISTER = { style: styleQ, x: CX, z: CZ, r: R, az: 18 };
+  }
+}
+
 const seaMeshes = [];
 {
   const mat = (op, tint)=> new THREE.ShaderMaterial({
@@ -11248,6 +11389,7 @@ function animate(){
   NACRE.amp.value = .10 + .10*(1 - h) + .08*v;   /* the pearls breathe with the hour */
   if (FARCITY.u) FARCITY.u.uHour.value.set(h, v);   /* LOOP 14-B: the far cities keep the hour */
   if (HORIZON.u) HORIZON.u.uHour.value.set(h, v);   /* THE GLORY OF THE NEARER NATIONS: the near band keeps the hour */
+  if (SISTER.tick) SISTER.tick(h, v);               /* SISTER CITIES Phase 1 mockups (query-gated; null in production) */
   MAT.glowArch.emissiveIntensity = 2.1 + 1.2*v;      /* LOOP 14-D THE GLASS THAT BURNS: windows hold by day, blaze at Vespers (DC dusk) */
   if (HOUR.stars){ HOUR.stars.visible = v > .02;
     HOUR.stars.material.opacity = Math.min(.95, v*1.1); }
