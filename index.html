@@ -522,6 +522,30 @@ import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
+/* ================================================================
+   THE BUILD WITNESS v2 (Law 41 — FRAME PROVENANCE)
+   The document that renders a frame carries its own candidate
+   identity IN THESE SAME BYTES. The value below is the SHA256 of
+   this file's RAW bytes with this one 64-character slot normalized
+   to 64 zeros — so the file can fingerprint itself without a
+   self-reference paradox. Stamped and verified by
+   tools/build-witness.mjs (node stdlib only, zero dependencies).
+
+   WHY NOT A SELF-FETCH: a later no-cache request returns the bytes
+   the ORIGIN serves NOW, not the bytes that produced THIS frame.
+   Behind an edge cache (production carries Cache-Control:
+   max-age=600) those can differ inside a deploy window, so a
+   self-fetch could let an OLD cached document label itself with a
+   NEWER build. An embedded value cannot lie that way: an old
+   document can only ever display its own old identity.
+
+   Inert at runtime: one constant, no network request, no timer, no
+   per-frame work. Visible only in proving mode.
+   LAW: restamp after EVERY source change and BEFORE capturing
+   evidence. A frame from stale-witness bytes is not Law-41 proof.
+================================================================ */
+const BUILD_WITNESS_SHA256 = /*@BUILD_WITNESS@*/'67ed7026cafd97cb4a43dd9a270defd4b303be63a5f6540d8de79fcc209d3265';
+
 try {
 
 /* ================================================================
@@ -11126,6 +11150,9 @@ if (PROVING){
     #pvInfo { font-size:.66rem; letter-spacing:.12em; opacity:.8; white-space:pre-line; min-height:1.1em; }
     #pvSum  { font-size:.72rem; letter-spacing:.08em; text-align:left; white-space:pre; display:none;
       margin:6px auto 2px; max-width:340px; line-height:1.55; }
+    #pvWit  { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.54rem;
+      letter-spacing:.02em; line-height:1.4; opacity:.78; word-break:break-all;
+      white-space:pre-line; margin:8px auto 0; max-width:400px; text-align:center; }
     #proving button { margin-top:10px; padding:12px 26px; font-family:'Cinzel', serif;
       font-size:.8rem; letter-spacing:.24em; color:#f3d98b; background:transparent;
       border:1px solid rgba(212,175,55,.75); border-radius:9px; cursor:pointer; }
@@ -11135,11 +11162,13 @@ if (PROVING){
   panel.id = 'proving';
   panel.innerHTML = `<div id="pvName">THE PROVING ON GLASS</div>
     <div id="pvFps">—</div><div id="pvInfo">10 vantages · ~100 seconds · keep this window front</div>
-    <div id="pvSum"></div><button id="pvBtn">BEGIN THE PROVING</button>`;
+    <div id="pvSum"></div><div id="pvWit"></div><button id="pvBtn">BEGIN THE PROVING</button>`;
   document.body.appendChild(panel);
   const elN = panel.querySelector('#pvName'), elF = panel.querySelector('#pvFps'),
         elI = panel.querySelector('#pvInfo'), elS = panel.querySelector('#pvSum'),
         elB = panel.querySelector('#pvBtn');
+  panel.querySelector('#pvWit').textContent =
+    'BUILD WITNESS · SHA256-NORMALIZED\n' + BUILD_WITNESS_SHA256;
   const floorNow = ()=> FPS_FLOOR;
   let vi = 0, liveTick = null;
   const showLive = ()=> { elF.textContent = fpsAvg.toFixed(0); };
@@ -11665,6 +11694,8 @@ window.__CITY = {
     sustainedFps:wdFps, sustainedAt:wdSampleAt,
     stalls:wdStalls, stallMs:wdStallMs,
     requestedTier:REQUESTED_TIER, actualTier:TIER, transitions:TIER_HISTORY.slice() }; },
+  get buildWitness(){ return { algorithm:'SHA-256-NORMALIZED', sha256:BUILD_WITNESS_SHA256,
+    source:'embedded-document-fingerprint', status:'READY' }; },
   get drawCalls(){ return renderer.info.render.calls; },
   get triangles(){ return renderer.info.render.triangles; },
   setTier(t){ applyTier(Math.max(0, Math.min(2, t|0))); },
