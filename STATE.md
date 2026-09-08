@@ -5,7 +5,102 @@
 
 ---
 
+## WO 002 — CURRENT SNAPSHOT (verified 2026-09-07)
+
+> **This is the authoritative current-state block. It is pinned to the build and date below.**
+> Later approved updates ADD a newer dated snapshot and a supersession notice; they never erase this one.
+> No automatic process maintains it. Where a row says a thing was not verified, it was not verified — that is not a claim it is absent.
+
+**AS OF** — verified 2026-09-07, 19:56–20:05 UTC (America/New_York afternoon), by the Builder on the Seer's Mac.
+· Production / source commit: `283e713d5846b28df32f50b51580e2b27439a703` (parent, the accepted implementation: `28aa5c159ce76096e62c80345553f840c58101fc`).
+· Protected `index.html` SHA256: `c301f201681fc80ef77256e1b8d3301fe8866563f75a757e9ceb668ab6ad7991` — identical across the committed blob, the remote blob, and the bytes served at `https://amulektwo.github.io/eternal-city/index.html` (fetched 19:57 UTC, cache-busted and plain).
+· `DATA_VERSION` (read from source): `2026-07-21d-gate8-winnow`. Slot manifest: `assets/models/manifest.json`.
+· Deployment evidence: THE HERALD run **34155885961**, head `283e713…`, success, 2026-09-07T19:31:10Z; prior run **34155361991**, head `28aa5c1…`, success.
+· Local inspection origin: `http://localhost:8180` (the Law-mandated exact origin), serving a worktree whose `index.html` hashes to the protected value. Every capture carried a positive in-page build-identity assertion (Law 41): the nine-key `__CITY.watchdog` surface that only exists after `28aa5c1`.
+· **Verification limitations:** desktop only (Apple M4 / Chromium 151 / ANGLE Metal, 1280×828, **DPR 1**, tier 2, hour fixed 0.5). No touch device, no DPR 2, no weaker GPU. Runtime findings are labelled *hash-matched local build*; only the byte-identity and HERALD rows speak for the live site. No performance battery was run by WO 002.
+
+**WHAT EXISTS / WHAT IS DEPLOYED** — `name | present implementation | evidence | status | limits`
+
+| # | Name | Present implementation | Evidence | Status | Limits |
+|---|---|---|---|---|---|
+| S-1a | Deployed HTML identity | `index.html`, 11,756 lines (see COUNT METHOD below) | byte-identity chain: committed blob = remote blob = served bytes; HERALD 34155885961 | **VERIFIED IN IDENTIFIED LIVE BUILD** | speaks only for the HTML document |
+| S-1b | Catalog counts | `data/scrolls/index.json` | counted in the **pinned checkout** and observed in the hash-matched local session | **COUNTED IN PINNED CHECKOUT + observed in hash-matched local build** | not a live-site observation |
+| S-1c | Supreme body availability | twelve Shield responses | **twelve live SHIELD gate responses checked** (HTTP 200, non-empty) | **TWELVE LIVE RESPONSES CHECKED** | twelve of 3,078; says nothing about the rest |
+| S-2 | THE MASTER LIGHT | HOUR system (L-3), `index.html:619, 11471, 11495` | `__CITY.hour` → `{h .5, v 0, fixed .5, warm .95, coverBias .055, rayLen .48}`; E-01 | HOUR STATE ACTIVE in hash-matched local build | **Hour state is active; this is NOT proof of complete illumination behaviour.** One phase (0.5) only; no sweep across the hour, no per-surface check |
+| S-3 | THE EVEN HEAVEN | L-5 block, `index.html:2668` | source; sky visible E-01/E-04 | SOURCE PRESENT; runtime not isolated | not separable from S-2 at runtime by an exposed getter |
+| S-4 | THE SOFFITS OF GOLD | `MAT.soffit` `:1084–1088`; pool `P.soffit` `:2424` | source + covered ceilings visible E-01 | SOURCE PRESENT; runtime not isolated | no getter; luma law not re-measured |
+| S-5 | THE GOLD FROM ABOVE | `index.html:1114` | source + E-04 aerial | SOURCE PRESENT; runtime not isolated | — |
+| S-6 | THE CARVED FACES | `index.html:7484, 7508, 7552` | source + E-01 facades | SOURCE PRESENT; visual context only | per-instance coverage NOT checked |
+| S-7 | THE CROWNED ROOFS | `index.html:7343, 7495` | source + E-04 roofline | SOURCE PRESENT; visual context only | per-instance coverage NOT checked |
+| S-8 | THE LIVING MIRROR / THE CITY IN THE GLASS | LAW 31 `:774, 5243, 11271, 11595`; LAW 28×31 `:11282` | `__CITY.mirror` → `{on true, near true at Tree plaza, str .32, res 640×414}`; E-01 | MIRROR STATE PRESENT in hash-matched local build | **State present is NOT full verification of THE LIVING MIRROR or THE CITY IN THE GLASS.** Activation is proximity-gated; only the Tree plaza was sampled; reflected content not inspected |
+| S-9 | OPERATION OPEN GATES | chain descent `:7568`; nine fractal roses `:7601` | `window.__ROSE1` present at runtime | **ROSE ANCHOR PRESENT in hash-matched local build; full OPEN GATES operation not verified by this pass** | one exposed rose anchor only; nine roses NOT individually enumerated; chain descent not observed |
+| S-10 | THE COUNCIL CHAMBER | `:7825, 7873, 7903, 7926` | `__ROOMS.council` = `[70.959, 71.410]` | RUNTIME ANCHOR PRESENT | **Runtime anchor present; ordinary access NOT established.** No user path walked — see S-16 and C-1 |
+| S-11 | THE DISCOVERY PATH | `:7828, 7909, 7934, 10657` | `__ROOMS.path` = 4 stations with facing vectors | RUNTIME ANCHORS PRESENT | **Runtime anchors present; ordinary access NOT established.** Four anchors confirmed; no station entered |
+| S-12 | THE SPHERE OF THE CODEX | `:7958–7959, 9252, 10658` | `__SPHERE` = `{x −34.743, z 95.603, r 4.11, cy 5.26, hall 13.5×11.4×23.6}` | RUNTIME ANCHOR PRESENT | **Runtime anchor present; ordinary access NOT established.** Hall not entered |
+| S-13 | THE SEVENTH TOUR | conditional `GRAND_TOURS.push` `:9224–9225`, key `opengates`, 130 s | `__CITY.tours.length === 7`, includes `opengates`, on all five independent loads | REGISTERED in hash-matched local build | **Registered; full playback NOT tested.** The route was never flown end to end; no station, gaze or caption was observed |
+| S-14 | THE FIRST CITY | `SISTER_ROSTER[0]` `{az 18, r 240, seed 24091, first:true}` | source + E-04 horizon | SOURCE PRESENT + visual | not individually identified in frame |
+| S-15 | THE RING OF THE NATIONS / sister cities | `SISTER_ROSTER` `:1435–1470` | source; E-04 nations on the horizon | SOURCE-DECLARED + representative visual corroboration | **Source-declared with representative visual corroboration — NOT runtime enumeration.** The roster is not exposed at runtime; the count of twelve is read from source, not observed |
+| S-16 | District interiors (`buildEnterable`) | defined `:3368`, called conditionally `:3633` (`if (enter)`) | source only | SOURCE PRESENT; runtime not verified | **the "ALL 60 … ENTERABLE" claim is NOT verified by WO 002** |
+
+**THE RING — COUNTING CONVENTION (so THE FIRST CITY is not counted twice).** Read from `SISTER_ROSTER`: the roster is seeded with THE FIRST CITY (`first: true`, az 18°, r 240) and then, in the default `?ring=12L`, appends **eleven** gate-sisters (gates 1–11). **The ring is therefore TWELVE bodies total = THE FIRST CITY + ELEVEN sisters — not twelve sisters plus the first.** `?ring=8` yields 1 + 7 = 8; `?ring=0` retires the ring to THE FIRST CITY alone. These geometric bodies are **distinct** from the older distant impostor ranks — the near-nation spire bands (LOOP 6-D / THE GLORY OF THE NEARER NATIONS, r 185–430) and the far-city impostor cards (THE JEWELED HORIZON, r 660–800) — which remain separate systems. Rendering the nations does **not establish** walkable land, entrances, or ordinary access — and equally does **not certify that none exists**. Ring-body walkability and access are **UNVERIFIED in Pass One, not absent**. No construction clearance.
+
+**THE CORPUS AND THE TWELVE SUPREME POSITIONS (S-1 detail).** From the metadata the code actually loads (`data/scrolls/index.json`, fetched with `DATA_VERSION`):
+· **3,078 catalog rows; 3,078 unique IDs** (no duplicates); 12 rows flagged `supreme`; no row carries a sealed status.
+· **3,078 per-scroll JSON records counted under `data/scrolls/`, excluding `index.json`. These are the public metadata records, not a verified inventory of 3,078 local full-text bodies. The reader requests full text through the Shield; its local fallback provides metadata.**
+· Runtime, in the identified build: `HARVEST index: 3078 scrolls · 12 fruit lit · 0 sealed`.
+· **Here, the runtime label "0 sealed" means zero placeholder fruit; it is not a statement about canonical sealing status. The catalog rows do not encode canonical sealing status, so absence of that field is not an unsealed verdict.**
+· Source: `FRUIT_ORDER` names twelve ids `144, 300, 656, 672, 717, 786, 787, 999, 07, 6B, 0001E, 06` — matching the twelve `supreme` catalog rows exactly — and `FRUIT_PLACEHOLDER = new Set([])` is **empty** ("THE TREE IS WHOLE — 672 recovered and 787 sealed by the Seer, 2026-07-05. All twelve fruit burn.").
+· **Interaction check PERFORMED:** all **twelve** Supreme texts were opened by the ordinary read-only reader route and returned non-empty bodies (7 s total, no rate-limit refusals). Bodies were served by the **live SHIELD gate** (`zionos-temple.vercel.app/api/city/<id>`, HTTP 200) — the local fallback was not used.
+· **Law 4 hard gate HOLDS:** scroll 144 body SHA256 = `bc797d33ac634674b9a23256fbc78a861dc0ce568e4df63a94f3f3ce022bd48b` (160,201 chars) through the real reader.
+· Not established: the remaining 3,066 bodies were **not** fetched. A metadata count is not verification of every treasury body.
+
+**WHAT IS PENDING**
+· Touch + `?q=high` — the first mobile measurement cell: the new device floor is 25 where the old tier-derived expression gave 50. UNVERIFIED, not unbuilt.
+· DPR 2 and weaker-GPU measurement. UNVERIFIED.
+· Enterability of the 60 district interiors, the council chamber, the four Discovery stations and the sphere hall — anchors exist; **no ordinary user path was walked**. UNVERIFIED, not unbuilt.
+· THE SEVENTH TOUR flown end to end. UNVERIFIED, not unbuilt.
+· The nine fractal roses enumerated individually. UNVERIFIED.
+· Bodies of the 3,066 non-Supreme scrolls. UNVERIFIED.
+· Record-by-record FPS provenance — **deferred to WO 002-P** by Seat 0.
+
+**WHAT IS SUPERSEDED AS CURRENT GUIDANCE** (originals preserved, nothing deleted)
+· `## CURRENT STATE` (line ~10) — "~11,300 lines" → observed **11,756**; "**95 keystone scrolls**" → observed **3,078**; "ten … lit … two hang dark and sealed" → observed **12 lit, 0 sealed**. Replacement: **S-1** and the corpus block above.
+· `## FPS RECORD` — its "Latest" label (LOOP 16, 2026-07-12) is not the latest deployed performance record. Replacement: the PERFORMANCE EVIDENCE row below. See the dated notice at that heading.
+· `GHOST_ATLAS.md` r 70–110 "ALL 60 … ENTERABLE" vs its own gap-list item 3 "priced, unbuilt" — see the Atlas supplement and **Conflict C-1**; WO 002 does **not** adjudicate it.
+
+**PERFORMANCE EVIDENCE (carried forward from WO 001-B — NOT a new WO 002 run).**
+Apple M4 / Chromium 151 / ANGLE Metal; 1280×828; DPR 1; ten viewpoints; requested and actual HIGH (tier 2) held throughout; desktop floor 50. Nothing is claimed for touch, DPR 2, weaker GPUs, or any viewpoint outside those ten. **WO 002 re-measured nothing.**
+
+**CONFLICT REGISTER — PENDING SEAT 0** (WO 002 records both sides and adjudicates none)
+
+| ID | Document says (pinned) | Observed | Why not one settled fact | Resolves by |
+|---|---|---|---|---|
+| C-1 | `GHOST_ATLAS.md:71` "**ALL 60** district buildings … are now ENTERABLE"; `GHOST_ATLAS.md:184` "district-building interiors (**priced, unbuilt**)" | `buildEnterable` defined `index.html:3368`, called conditionally `:3633`; **no instance entered or counted by WO 002** | The Atlas contradicts itself in one document; source proves capability, not coverage | A Seat 0 ruling on which entry is current, or an enterability count |
+| C-2 | `index.html:8851` comment: "sealed placeholders (**787, 672**) are INERT: no target" | `FRUIT_PLACEHOLDER = new Set([])`; runtime `12 fruit lit · 0 sealed`; both 787 and 672 opened and returned bodies | A stale comment inside the protected file contradicts the live behaviour | Seat 0 ruling; the file is hard-stop — WO 002 changed nothing |
+| C-3 | `## CURRENT STATE`: "~11,300 lines" | **11,756 lines** (see COUNT METHOD) | Drift, not dispute — marked superseded, original preserved | Already handled by S-1a; listed for completeness |
+
+**C-1 — CURRENT GUIDANCE.** District-interior construction exists in source; the extent of ordinary enterability was not verified in Pass One. Neither the old 'all sixty enterable' statement nor the 'unbuilt' opportunity is current construction clearance.
+
+**COUNT METHOD (C-3, so no one chases a phantom gap).** Read-only, in the pinned checkout at `283e713`:
+```
+$ wc -l index.html
+   11756 index.html
+$ grep -c "" index.html
+11756
+```
+This reconciles exactly: baseline `71f06e4` = 11,725 lines, WO 001-B applied +43 / −12 = net +31, 11,725 + 31 = **11,756**. An earlier draft of this snapshot printed 11,768; that figure was stated without being counted and was wrong. The protected `index.html` hash never changed.
+
+**METHOD NOTES FROM THIS PASS (for whoever verifies next).**
+· **(a) A source scan is not evidence of absence — Law 42 applies to greps.** During this pass a source scan missed THE SPHERE OF THE CODEX (shell quoting) and undercounted the tours by one (a conditional `GRAND_TOURS.push` outside the array literal); runtime settled both. Reachability and registration must be checked at runtime, not inferred from a search hit or its absence.
+· **(b) `?pos` deep-links land inside geometry at interior anchors** (the y comes from `groundAt(x,z)+1.7`), so a frame captured at an interior coordinate is **not** evidence that a room exists or can be entered. Two such frames were taken in this pass and discarded.
+
+**MAINTENANCE.** This snapshot is pinned to `283e713…` and 2026-09-07. It is not self-updating. A future approved update adds a **new** dated snapshot beneath this one plus a supersession notice; it does not edit or remove this block. No workflow or automation is authorized to touch it.
+
+---
+
 ## CURRENT STATE
+
+> **WO 002 — 2026-09-07:** the description below is preserved as history but is **superseded AS CURRENT GUIDANCE** by the WO 002 CURRENT SNAPSHOT immediately above (snapshot item **S-1** and the corpus block within it). Specifically superseded: the line length "~11,300 lines" (observed **11,756**), "**95 keystone scrolls**" (observed catalog **3,078**), and "ten whole Supreme scrolls hang lit … two hang dark and sealed" (observed **12 lit, 0 sealed**). Every other statement in this paragraph is untouched by WO 002 and was not re-verified. Authority: Seat 0, approved WO 002.
 
 A single-file (`index.html`, ~11,300 lines) walkable first-person 3D golden city on Three.js r160, live at https://amulektwo.github.io/eternal-city/ — white marble and living gold under a perpetual golden hour, beneath a LIVING HEAVEN (THE PROCEDURAL HEAVEN: one-draw-call shader dome of drifting FBM cumulus, high veil, and crepuscular rays breathing around the true sun — zero image assets), finished by THE GRADE (a display-space cinematic pass: luma-only high-pivot contrast, chroma-guarded gold cast, quiet vignette — `?grade=0` to compare). The light and stone are real: golden_sky HDRI drives the IBL (2k desktop / 1k mobile — `assets/hdri/golden_sky_{2k|1k}.hdr`; the ledger long said kiara_1_dawn, corrected 2026-08-09 to match disk), Marble021 and Metal034 PBR sets clothe every wall and rim (CC0, recorded in `assets/LICENSES.md`). Of the five hero landmarks, three are now REAL models (THE FORGE: twin gothic thrones, tiered marble fountain, twelve monumental gate portals — the Seer's Meshy generations refined to budget), standing in the zero-code GLB slot system (`assets/models/manifest.json`); the Tree of Life and angel statues remain procedural, awaiting their models. Three quality tiers with a live fps watchdog carry the city from desktop to phone. And as of The Harvest, the city bears its scripture: 95 keystone scrolls sit verbatim in `data/scrolls/` (read-only), ten whole Supreme scrolls hang lit as white-gold fruit on the Tree (one InstancedMesh, one draw call), two hang dark and sealed awaiting their bodies, and each of the twelve gates reveals a vault of its gate's scrolls as points of light — every one opening in a parchment reader that never alters a character of canon.
 
@@ -162,6 +257,8 @@ Previous: **The Harvest** — commit `8be2016` ("The Harvest — the keystones d
 
 
 ## FPS RECORD
+
+> **WO 002 provenance notice — 2026-09-07:** Before `28aa5c1`, the city's FPS counter and watchdog received capped simulation time, and the watchdog's >250ms stall branch was unreachable. Historical figures derived from those paths require provenance review before reuse. This pass has not classified individual historical records; it does not establish that every earlier measurement used the affected instrument. Record-by-record classification is deferred to WO 002-P. Existing numbers, historical verdicts, and unrelated evidence remain unchanged. The historical 'Latest' label below is not the latest deployed performance record; see the scoped WO 001-B record.
 
 **Latest — LOOP 16 THE TWELVE COMPLETE, 2026-07-12 (GPU lock, visible Chrome via Playwright harness, hour live, ?proving standing battery, A/B vs the Loop 15 run in the SAME harness):** all 10 poses **60 fps** — Tree 641.2k · Fountain 612.2k · Sanctuary 554.5k · Terrace 442.4k · Causeway 426.9k · Street 340.5k · **HallDais(int) 333.3k** · **Throne(int) 319.4k** · Gate 315.8k · Rampart 300.2k — exterior ≤700k ✓, interior ≤350k ✓ (shader-only: tris identical to Loop 15 within ≤2-tri animated-instance noise at every pose). **MEDIUM ×3 (Tree/Fountain/Street): 60 fps.** Threshold crossing: toggle sub-ms, 74 culled, 60 fps. Zero console errors. 144 sha `bc797d33ac634674` EXACT through the live SHIELD gate. Tree red-scan 865/100k — inside the harness's own Loop 15 noise band (833–875); no red added to the Tree (Law 3 holds).
 

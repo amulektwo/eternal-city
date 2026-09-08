@@ -22,6 +22,28 @@
    `__CITY.probe(x,z,...)` (collision truth), `__CITY.tours`. Ask the
    Builder to run any of them for you.
 
+
+## WO 002 — CURRENT OCCUPANCY SUPPLEMENT (verified 2026-09-07)
+
+> **Authoritative feature inventory lives in `STATE.md` → "WO 002 — CURRENT SNAPSHOT (verified 2026-09-07)".** This supplement records only what WO 002 observed about *occupancy and access*, and does not duplicate that inventory.
+> Build: `283e713d5846b28df32f50b51580e2b27439a703`; protected `index.html` SHA256 `c301f201…6ad7991`; every observation carries a positive in-page build-identity assertion (Law 41). Desktop only — Apple M4 / Chromium 151 / ANGLE Metal, 1280×828, DPR 1, tier 2, hour fixed 0.5.
+> **The radial/vertical organization and every protected-zone marking below are unchanged.** Nothing here grants access or construction permission. **An old "OPEN" or "UNBUILT" label is not current clearance**, and absence from one frame is not proof of an empty site.
+
+| zone / anchor | observed occupant | instantiated extent | access status | evidence | pending |
+|---|---|---|---|---|---|
+| r 0–25 Tree plaza | Tree of Life (procedural); **mirror state active at the Tree plaza; reflected content not inspected in Pass One** | `__CITY.mirror` `{on, near:true here, str .32, 640×414}` | walked; **SACRED · IMMOVABLE, unchanged** | E-01 | reflected content inspection |
+| r 70–110 districts | `buildEnterable` present in source, called conditionally | **not counted** | **UNVERIFIED** — see C-1 | source `:3368`, `:3633` | enterability count |
+| ≈(70.96, 71.41) | **THE COUNCIL CHAMBER** anchor | 1 | anchor live; **not entered** | `__ROOMS.council` | ordinary user path |
+| 4 stations on one avenue | **THE DISCOVERY PATH** | **4** anchors w/ facing vectors | anchors live; **not entered** | `__ROOMS.path` (len 4) | station-by-station check |
+| ≈(−34.74, 95.60), hall 13.5×11.4×23.6 | **THE SPHERE OF THE CODEX** | 1 | anchor live; **not entered** | `__SPHERE` | hall entry |
+| gate-2 reach ≈(−37.83, 9.58, 58.61) | **OPEN GATES** rose anchor | 1 of 9 exposed | anchor live | `__ROSE1` | nine roses enumerated |
+| city-wide route | **THE SEVENTH TOUR** (`opengates`, 130 s) | enlisted, 7th of 7 | **enlisted, not flown** | `__CITY.tours` len 7 | end-to-end flight |
+| r 180+ outer world | ring bodies + older impostor ranks | ring = **1 FIRST CITY + 11 sisters = 12** (from source) | **Horizon sampled; ring-body walkability and ordinary access not established in Pass One; no construction clearance** | E-04, `SISTER_ROSTER` | runtime roster not exposed; walkability untested |
+| niches / wayfare | 12 niche spots, 25 wayfare glyphs | 12 / 25 | live | `__CITY.niches`, `__CITY.wayfare` | occupancy of each niche |
+
+**Two interior captures were attempted and FAILED to establish anything.** Deep-linking to the council and sphere anchors placed the camera inside marble geometry; those frames prove a coordinate was reached, not that a room exists or can be entered. They are excluded from evidence. The anchors above stand on runtime getters, not on those frames.
+
+
 ## THE RADIAL MAP (ground level, walkable disc r<130 + roads beyond)
 
 ### r 0–25 · THE TREE OF LIFE PLAZA — **OCCUPIED · SACRED · IMMOVABLE**
@@ -78,6 +100,8 @@
   else) so they cost nothing from the aerial/core — reclaimed ~166k tris
   (aerial 439k, headroom ~261k). CARRIED: benches, deeper apses, named
   halls, figure-house slots for the Seer's Meshy angels.
+
+  > **WO 002 — 2026-09-07:** preserved as history; **UNVERIFIED as current guidance.** WO 002 confirmed the mechanism exists in source (`buildEnterable`, `index.html:3368`, called conditionally at `:3633`) but did **not** enter or enumerate a single interior, so "**ALL 60**" is not established by this order. See gap-list item 3 below, which says the opposite, and STATE.md conflict **C-1** — **PENDING SEAT 0**. **C-1 CURRENT GUIDANCE:** District-interior construction exists in source; the extent of ordinary enterability was not verified in Pass One. Neither the old 'all sixty enterable' statement nor the 'unbuilt' opportunity is current construction clearance.
 - **TWELVE GATE PLAZAS** (§16) at r≈100 on each spoke: gold rings +
   medallions, pilgrim clusters, vault reveal grounds (each gate's scroll
   vault helix appears at ~15m), plaza circuits (keep 13.2m clear of centres).
@@ -151,6 +175,8 @@
   The far cities themselves are a declared Seer ambition ("we may go over
   there and build those ones too").
 
+
+> **WO 002 — 2026-09-07:** the account in this zone predates **THE RING OF THE NATIONS**. It is preserved as history but is **superseded AS CURRENT GUIDANCE** for the outer world by STATE.md snapshot items **S-14 / S-15**. The near-nation spire bands (r 185–430) and far-city impostor cards (r 660–800) described here still stand and are **separate systems** from the later ring. The ring, read from `SISTER_ROSTER`, is **TWELVE bodies = THE FIRST CITY (az 18°, r 240) + ELEVEN gate-sisters** under the default `?ring=12L` — not twelve sisters plus the first. Rendering the nations does **not establish** walkable land, entrances, or ordinary access — and equally does **not certify that none exists**. Walkability and access here are **UNVERIFIED in Pass One, not absent**. No construction clearance.
 ## THE VERTICAL MAP
 - y0: the disc (walkable r<130 via groundAt; platform closures elsewhere).
 - y.25 terrace · y.4 sanctuary floor · y1.4 altar · y1.8 throne-hall dais
@@ -182,6 +208,8 @@
 2. ~~Overlook landings~~ **BUILT (GHOST-BUILD-04)** — outer islets past
    r186 remain open (new domain).
 3. P-A THE OPEN DOORS: district-building interiors (priced, unbuilt).
+
+   > **WO 002 — 2026-09-07:** this line and the r 70–110 entry above ("ALL 60 district buildings … are now ENTERABLE") **contradict each other inside this one document**. WO 002 verified only that `buildEnterable` is defined (`index.html:3368`) and called conditionally (`:3633`); it entered and counted **no** interior. Both statements are preserved unchanged. **DISPUTED — PENDING SEAT 0** (STATE.md snapshot conflict **C-1**). Until ruled, treat these interiors as **UNVERIFIED — not construction clearance**. **C-1 CURRENT GUIDANCE:** District-interior construction exists in source; the extent of ordinary enterability was not verified in Pass One. Neither the old 'all sixty enterable' statement nor the 'unbuilt' opportunity is current construction clearance.
 4. The underside read (the island from the sea below): the HIGHWAY/PAD
    underside is now built (GHOST-BUILD-05, arches+footings rising from the
    cloud); the CITY-DISC underside (r<130, the island's own body from
