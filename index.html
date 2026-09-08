@@ -6341,6 +6341,12 @@ function addBuilding(x,z,ry,big,enter){
     const ia = i*PI/6;
     P.goldSt.push(xf(new THREE.BoxGeometry(.14,.02,.86), DX+Math.sin(ia)*3.14, 1.815, DZ+Math.cos(ia)*3.14, ia));
   }
+  /* WO 008-A — THE STEPS READ: gold nosing on the two lower dais steps,
+     matching the r4.1 ring the top step already wears. Rides P.gold —
+     zero new draws. (Built and measured under WO 007; ordered on its
+     own merit by Seat 0.) */
+  P.gold.push(xf(new THREE.TorusGeometry(6.5,.085,6,44).rotateX(PI/2), DX,.62,DZ));
+  P.gold.push(xf(new THREE.TorusGeometry(5.3,.085,6,40).rotateX(PI/2), DX,1.22,DZ));
   /* ========== LOOP S-1 — THE HOLY OF HOLIES (Rev 4) ==========
      The vision of the throne enters the hall the pilgrim stands in.
      Interior-priced: 2 new draws (sea, bow); lamps and seats ride the
