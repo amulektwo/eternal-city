@@ -544,7 +544,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
    LAW: restamp after EVERY source change and BEFORE capturing
    evidence. A frame from stale-witness bytes is not Law-41 proof.
 ================================================================ */
-const BUILD_WITNESS_SHA256 = /*@BUILD_WITNESS@*/'67ed7026cafd97cb4a43dd9a270defd4b303be63a5f6540d8de79fcc209d3265';
+const BUILD_WITNESS_SHA256 = /*@BUILD_WITNESS@*/'b65a8b31afa5dda2e70c350f26c291d0080a5094fa47fb9027fa8df0b46f3ee8';
 
 try {
 
@@ -6003,6 +6003,17 @@ function addBuilding(x,z,ry,big,enter){
   /* circular wall with a south-facing opening (cylinder theta 0 = +Z);
      open shells must be double-sided or they vanish from inside */
   const whiteDS = MAT.white.clone(); whiteDS.side = THREE.DoubleSide;
+  /* WO 009-A — THE INTERIOR VALUE BAND · DEPTH WITHOUT DARKNESS
+     The pale pixels behind the thrones are this wall. whiteDS is already
+     a HALL-LOCAL clone used by exactly one mesh (the rotunda arc), so
+     lowering its albedo cannot reach MAT.white or any exterior surface.
+     A deeper WARM cream — not grey, not dark — lets the carved thrones
+     and the emerald bow keep their own light and read against a field
+     that no longer matches them. Value only: roughness, metalness,
+     emissive and envMapIntensity are untouched, as is every global
+     light, exposure, bloom and grade. Zero geometry, zero new draws.
+     THE GLORY MAY BREATHE. THE LIGHT MUST NEVER LEAVE. */
+  whiteDS.color.setHex(0xe9e0cd);
   const ivoryDS = MAT.ivory.clone(); ivoryDS.side = THREE.DoubleSide;
   const goldDS  = MAT.gold.clone();  goldDS.side  = THREE.DoubleSide;
   {
